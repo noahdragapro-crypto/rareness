@@ -1153,15 +1153,11 @@ function runSplash() {
 // ---------------- Gate: sign-in, onboarding, access fee ----------------
 const SIGNUP = [
   { dim: 'values', multi: 3, prompt: 'What matters most to you in a partner?', opts: ['Accountability', 'Depth', 'Intelligence', 'Humour', 'Artistic', 'Awareness', 'Ambition', 'Honesty'] },
-  { dim: 'lifestyle', multi: 2, prompt: 'Your ideal Friday night?', opts: ['Dinner out with friends', 'A cosy night in', 'Dancing until late', 'Trying something new'] },
   { dim: 'personality', multi: 3, prompt: 'Friends would describe you as…', opts: ['Accountability', 'Depth', 'Intelligence', 'Humour', 'Artistic', 'Awareness', 'Ambition', 'Honesty'] },
-  { dim: 'goals', multi: 2, prompt: 'What are you looking for?', opts: ['A long-term relationship', 'Something that grows slowly', 'To find a community', 'New people to meet', 'Not sure yet'] },
-  { dim: 'routine', prompt: 'When are you at your best?', opts: ['Early morning', 'During the day', 'Late at night'] }
+  { dim: 'goals', multi: 2, prompt: 'What are you looking for?', opts: ['A long-term relationship', 'Something that grows slowly', 'To find a community', 'New people to meet', 'Not sure yet'] }
 ];
-// Aura quick test, right after the photo: the first three are required, the rest can be skipped for now
-// Order: what matters in a partner, interests, how friends describe you, what you're looking for (required), then the rest
-const TEST = [SIGNUP[0], { dim: 'interests' }, SIGNUP[2], SIGNUP[3], SIGNUP[1], SIGNUP[4], { dim: 'bio' }];
-const REQUIRED = 4;
+// Aura quick test, right after the photo: what matters in a partner, interests, how friends describe you, what you're looking for
+const TEST = [SIGNUP[0], { dim: 'interests' }, SIGNUP[1], SIGNUP[2]];
 const Q0 = 2; // first quick-test step, after basics and photo
 const STEPS = Q0 + TEST.length;
 const gate = $('#gate');
@@ -1274,16 +1270,12 @@ function gateOnboard() {
   } else {
     const k = i - Q0, q = TEST[k];
     const head = stepsBar(i) + backBtn + '<p class="label">Aura quick test · ' + (k + 1) + ' of ' + TEST.length + '</p>';
-    const skip = k >= REQUIRED ? '<button class="link" id="skip" style="align-self:center;color:var(--ink2)">Skip the rest for now</button>' : '';
     const next = () => { if (k === TEST.length - 1) finishOnboarding(); else { G.step++; gateOnboard(); } };
-    const wire = () => {
-      gate.querySelector('[data-back]').onclick = () => { G.step--; gateOnboard(); };
-      if (skip) $('#skip').onclick = () => finishOnboarding();
-    };
+    const wire = () => { gate.querySelector('[data-back]').onclick = () => { G.step--; gateOnboard(); }; };
     if (q.dim === 'interests') {
       showGate(head + '<h1 class="largetitle">What are your interests?</h1><p class="lead">Pick at least 3.</p>' +
         '<div class="chips grid">' + INTERESTS.map((l) => '<button class="chip' + (G.interests.includes(l) ? ' on' : '') + '" data-int="' + esc(l) + '">' + esc(l) + '</button>').join('') + '</div>' +
-        '<div class="grow"></div><button class="primary" id="go"' + (G.interests.length < 3 ? ' disabled' : '') + '>Continue</button>' + skip,
+        '<div class="grow"></div><button class="primary" id="go"' + (G.interests.length < 3 ? ' disabled' : '') + '>Continue</button>',
         () => {
           wire();
           gate.querySelectorAll('[data-int]').forEach((b) => b.onclick = () => {
@@ -1293,23 +1285,12 @@ function gateOnboard() {
           });
           $('#go').onclick = next;
         });
-    } else if (q.dim === 'bio') {
-      showGate(head + '<h1 class="largetitle">Describe yourself in a sentence or two</h1>' +
-        '<label class="hide" for="obBio">About you</label><textarea id="obBio" maxlength="160" placeholder="What would your best friend say about you?">' + esc(G.bio ?? me.bio ?? '') + '</textarea>' +
-        '<p class="fine">Shown on your profile. The AI reads it to shape your aura.</p><div class="grow"></div><button class="primary" id="go" disabled>Finish</button>' + skip,
-        () => {
-          wire();
-          const ta = $('#obBio'), go = $('#go');
-          const ok = () => { G.bio = ta.value; go.disabled = ta.value.trim().length < 10; };
-          ta.oninput = ok; ok();
-          go.onclick = next;
-        });
-    } else if (q.multi) {
+    } else {
       // Several answers allowed: tap to toggle, then Continue
       const sel = () => (G.answers[q.dim] ||= []);
       showGate(head + '<h1 class="largetitle">' + esc(q.prompt) + '</h1><p class="lead">Pick up to ' + q.multi + '.</p>' +
         '<div class="opts grid' + (q.opts.every((o) => o.length <= 12) ? ' g3' : '') + '">' + q.opts.map((o) => '<button class="opt' + (sel().includes(o) ? ' on' : '') + '" aria-pressed="' + sel().includes(o) + '" data-o="' + esc(o) + '">' + esc(o) + '</button>').join('') + '</div>' +
-        '<div class="grow"></div><button class="primary" id="go"' + (sel().length ? '' : ' disabled') + '>Continue</button>' + skip,
+        '<div class="grow"></div><button class="primary" id="go"' + (sel().length ? '' : ' disabled') + '>' + (k === TEST.length - 1 ? 'Read my aura' : 'Continue') + '</button>',
         () => {
           wire();
           gate.querySelectorAll('[data-o]').forEach((b) => b.onclick = () => {
@@ -1319,35 +1300,22 @@ function gateOnboard() {
           });
           $('#go').onclick = next;
         });
-    } else {
-      showGate(head + '<h1 class="largetitle">' + esc(q.prompt) + '</h1>' +
-        '<div class="opts grid' + (q.opts.every((o) => o.length <= 12) ? ' g3' : '') + '" role="radiogroup">' + q.opts.map((o) => '<button class="opt' + (G.answers[q.dim] === o ? ' on' : '') + '" role="radio" aria-checked="' + (G.answers[q.dim] === o) + '" data-o="' + esc(o) + '">' + esc(o) + '</button>').join('') + '</div>' +
-        '<div class="grow"></div>' + skip,
-        () => {
-          wire();
-          gate.querySelectorAll('[data-o]').forEach((b) => b.onclick = () => {
-            G.answers[q.dim] = b.dataset.o;
-            gate.querySelectorAll('[data-o]').forEach((x) => { x.classList.toggle('on', x === b); x.setAttribute('aria-checked', x === b); });
-            setTimeout(next, 260);
-          });
-        });
     }
   }
 }
 
 async function finishOnboarding() {
-  const bio = (G.bio || '').trim();
   showGate('<div class="grow"></div><div style="display:flex;justify-content:center">' + bubbleHTML(youObj(), 190) + '</div>' +
     '<h1 class="largetitle" style="text-align:center">Reading your aura…</h1><p class="lead" style="text-align:center;margin:0 auto">This takes a few seconds.</p><div style="display:flex;justify-content:center"><div class="spinner"></div></div><div class="grow"></div>');
   try {
     await API.signupAnswers(uid, [
       ...SIGNUP.filter((q) => G.answers[q.dim]?.length).map((q) => {
         const a = G.answers[q.dim];
-        return { dim: q.dim, prompt: q.prompt, data: Array.isArray(a) ? { choice: a.join(', '), choices: a } : { choice: a } };
+        return { dim: q.dim, prompt: q.prompt, data: { choice: a.join(', '), choices: a } };
       }),
       { dim: 'interests', prompt: 'What are your interests?', data: { choices: G.interests } }
     ]);
-    me = await API.saveProfile(uid, { ...(bio.length >= 10 ? { bio } : {}), interests: G.interests, onboarded: true });
+    me = await API.saveProfile(uid, { interests: G.interests, onboarded: true });
   } catch (e) { fail(e); gateOnboard(); return; }
   try { await API.api('match'); } catch (e) { console.error(e); }
   me = await API.myProfile(uid);

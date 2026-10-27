@@ -90,7 +90,7 @@ npm run build
 
 1. Page 1: first name, email, gender, who they're looking for, city. For now there is no email check: entering an email signs you straight in (`api/auth/email.ts`), and a returning member only needs their email. Their country is taken from Vercel's location header and can be changed in the profile. To limit who can get in, set `TESTER_EMAILS` to a comma-separated list. Bring back email verification before a public launch, since anyone who knows a member's email can sign in as them.
 2. Page 2: photo (with reframing) and a status (optional, 20 characters).
-3. Aura quick test: what matters in a partner, interests (at least 3), how friends describe them and what they're looking for are required (some questions take several answers); the rest (three questions and a sentence about themselves) can be skipped for now. Claude reads it and shows their aura.
+3. Aura quick test, four questions: what matters in a partner, interests (at least 3), how friends describe them, and what they're looking for. Claude reads it and shows their aura.
 4. Pay $5 once in Stripe Checkout.
 5. The app: Agenda (today's three exercises, plus upcoming days and what's done), Cloud and Chats. Their profile opens from the bubble in the top-right corner.
 
