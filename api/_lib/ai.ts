@@ -156,10 +156,17 @@ export function basicPair(a: { profile: Profile; answers: Answer[] }, b: { profi
     const inter = [...A].filter((s) => B.has(s)).length, uni = new Set([...A, ...B]).size;
     return uni ? inter / uni : 0;
   };
-  const signup = (p: typeof a, dim: string) => p.answers.find((x) => x.kind === "signup" && x.dim === dim)?.data.choice;
+  // Sign-up answers can hold one choice or several; overlap counts as agreement
+  const signup = (p: typeof a, dim: string) => {
+    const d = p.answers.find((x) => x.kind === "signup" && x.dim === dim)?.data;
+    if (!d) return null;
+    return Array.isArray(d.choices) ? (d.choices as string[]) : d.choice != null ? [String(d.choice)] : null;
+  };
   const same = (dim: string) => {
     const x = signup(a, dim), y = signup(b, dim);
-    return x != null && y != null ? (x === y ? 1 : 0.35) : 0.5;
+    if (!x || !y) return 0.5;
+    const shared = x.filter((v) => y.includes(v)).length;
+    return shared ? 0.6 + 0.4 * (shared / Math.min(x.length, y.length)) : 0.35;
   };
   const picks = (p: typeof a) => new Map(p.answers.filter((x) => x.kind === "t").flatMap((x) => ((x.data.picks as { a: string; b: string; pick: string }[]) ?? []).map((k) => [`${k.a}|${k.b}`, k.pick] as const)));
   const pa = picks(a), pb = picks(b);

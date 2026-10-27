@@ -54,7 +54,7 @@ const PAIRS = [
   ['Podcast', 'Playlist', 'interests'], ['Talk it out', 'Sleep on it', 'personality'], ['Gym', 'Outdoors', 'routine'], ['Settle down', 'Explore', 'goals'], ['Text', 'Call', 'personality'],
   ['Brunch', 'Dinner', 'lifestyle'], ['Spontaneous trip', 'Planned holiday', 'personality'], ['Kids someday', 'Not for me', 'goals'], ['Sunrise', 'Sunset', 'routine']
 ];
-const INTERESTS = ['Art', 'Books', 'Chess', 'Cinema', 'Coffee', 'Cooking', 'Dancing', 'Design', 'Fashion', 'Gaming', 'Hiking', 'Jazz', 'Live music', 'Longevity', 'Photography', 'Plants', 'Running', 'Swimming', 'Travel', 'Wine', 'Yoga'];
+const INTERESTS = ['Longevity', 'Art', 'Science', 'Business', 'Books', 'Chess', 'Cinema', 'Coffee', 'Cooking', 'Dancing', 'Design', 'Fashion', 'Gaming', 'Hiking', 'Jazz', 'Live music', 'Photography', 'Plants', 'Running', 'Swimming', 'Travel', 'Wine', 'Yoga'];
 
 // ---------------- App state ----------------
 let uid = null, me = null, myAnswers = [], people = [], chatList = [], config = { paywall: false };
@@ -1145,10 +1145,10 @@ function runSplash() {
 
 // ---------------- Gate: sign-in, onboarding, access fee ----------------
 const SIGNUP = [
-  { dim: 'values', prompt: 'What matters most to you in a partner?', opts: ['Honesty', 'Kindness', 'Ambition', 'Humour', 'Loyalty', 'Curiosity'] },
-  { dim: 'lifestyle', prompt: 'Your ideal Friday night?', opts: ['Dinner out with friends', 'A cosy night in', 'Dancing until late', 'Trying something new'] },
-  { dim: 'personality', prompt: 'Friends would describe you as…', opts: ['Calm', 'Curious', 'Playful', 'Driven', 'Warm', 'Bold'] },
-  { dim: 'goals', prompt: 'What are you looking for?', opts: ['A long-term relationship', 'Something that grows slowly', 'Not sure yet', 'New people to meet'] },
+  { dim: 'values', multi: 3, prompt: 'What matters most to you in a partner?', opts: ['Honesty', 'Kindness', 'Ambition', 'Humour', 'Loyalty', 'Curiosity'] },
+  { dim: 'lifestyle', multi: 2, prompt: 'Your ideal Friday night?', opts: ['Dinner out with friends', 'A cosy night in', 'Dancing until late', 'Trying something new'] },
+  { dim: 'personality', multi: 3, prompt: 'Friends would describe you as…', opts: ['Calm', 'Curious', 'Playful', 'Driven', 'Warm', 'Bold'] },
+  { dim: 'goals', prompt: 'What are you looking for?', opts: ['A long-term relationship', 'Something that grows slowly', 'To find a community', 'New people to meet', 'Not sure yet'] },
   { dim: 'routine', prompt: 'When are you at your best?', opts: ['Early morning', 'During the day', 'Late at night'] }
 ];
 // Aura quick test, right after the photo: the first three are required, the rest can be skipped for now
@@ -1288,6 +1288,21 @@ function gateOnboard() {
           ta.oninput = ok; ok();
           go.onclick = next;
         });
+    } else if (q.multi) {
+      // Several answers allowed: tap to toggle, then Continue
+      const sel = () => (G.answers[q.dim] ||= []);
+      showGate(head + '<h1 class="largetitle">' + esc(q.prompt) + '</h1><p class="lead">Pick up to ' + q.multi + '.</p>' +
+        '<div class="opts">' + q.opts.map((o) => '<button class="opt' + (sel().includes(o) ? ' on' : '') + '" aria-pressed="' + sel().includes(o) + '" data-o="' + esc(o) + '">' + esc(o) + '</button>').join('') + '</div>' +
+        '<div class="grow"></div><button class="primary" id="go"' + (sel().length ? '' : ' disabled') + '>Continue</button>' + skip,
+        () => {
+          wire();
+          gate.querySelectorAll('[data-o]').forEach((b) => b.onclick = () => {
+            const v = b.dataset.o, a = sel(), j = a.indexOf(v);
+            if (j >= 0) a.splice(j, 1); else if (a.length < q.multi) a.push(v); else { toast('Pick up to ' + q.multi); return; }
+            b.classList.toggle('on', a.includes(v)); b.setAttribute('aria-pressed', a.includes(v)); $('#go').disabled = !a.length;
+          });
+          $('#go').onclick = next;
+        });
     } else {
       showGate(head + '<h1 class="largetitle">' + esc(q.prompt) + '</h1>' +
         '<div class="opts" role="radiogroup">' + q.opts.map((o) => '<button class="opt' + (G.answers[q.dim] === o ? ' on' : '') + '" role="radio" aria-checked="' + (G.answers[q.dim] === o) + '" data-o="' + esc(o) + '">' + esc(o) + '</button>').join('') + '</div>' +
@@ -1310,7 +1325,10 @@ async function finishOnboarding() {
     '<h1 class="largetitle" style="text-align:center">Reading your aura…</h1><p class="lead" style="text-align:center;margin:0 auto">This takes a few seconds.</p><div style="display:flex;justify-content:center"><div class="spinner"></div></div><div class="grow"></div>');
   try {
     await API.signupAnswers(uid, [
-      ...SIGNUP.filter((q) => G.answers[q.dim]).map((q) => ({ dim: q.dim, prompt: q.prompt, data: { choice: G.answers[q.dim] } })),
+      ...SIGNUP.filter((q) => G.answers[q.dim]?.length).map((q) => {
+        const a = G.answers[q.dim];
+        return { dim: q.dim, prompt: q.prompt, data: Array.isArray(a) ? { choice: a.join(', '), choices: a } : { choice: a } };
+      }),
       { dim: 'interests', prompt: 'What are your interests?', data: { choices: G.interests } }
     ]);
     me = await API.saveProfile(uid, { ...(bio.length >= 10 ? { bio } : {}), interests: G.interests, onboarded: true });
