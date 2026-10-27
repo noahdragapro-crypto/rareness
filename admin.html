@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Rareness Dashboard</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap">
+<style>
+:root{--bg:#fcfcfb;--card:#fff;--ink:#111114;--ink2:#5b5b63;--ink3:#8d8d95;--line:rgba(17,17,20,.1);--bar:#3D8FE0;--good:#2f8a52;--serif:'Instrument Serif',Georgia,serif;--sans:'Instrument Sans',system-ui,sans-serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1a1a19;--card:#222221;--ink:#f2f2ef;--ink2:#b2b2ab;--ink3:#86867f;--line:rgba(255,255,255,.12);--good:#6cc68e}}
+:root[data-theme="dark"]{--bg:#1a1a19;--card:#222221;--ink:#f2f2ef;--ink2:#b2b2ab;--ink3:#86867f;--line:rgba(255,255,255,.12);--good:#6cc68e}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;-webkit-font-smoothing:antialiased}
+main{max-width:1180px;margin:0 auto;padding:28px 16px 60px;display:flex;flex-direction:column;gap:22px}
+header{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.brand{font-family:var(--serif);font-style:italic;font-size:22px}
+h1{font-family:var(--serif);font-weight:400;font-size:44px;line-height:1;margin:4px 0 0;letter-spacing:-.01em}
+h2{font-family:var(--serif);font-weight:400;font-size:26px;margin:0}
+.muted{color:var(--ink2);font-size:13.5px}
+button,select,input{font:inherit;color:inherit}
+.btn{height:36px;padding:0 14px;border:.5px solid var(--line);border-radius:10px;background:var(--card);cursor:pointer}
+.btn:hover{border-color:var(--ink3)}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.tile{background:var(--card);border:.5px solid var(--line);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:4px}
+.tile b{font-family:var(--serif);font-weight:400;font-size:40px;line-height:1}
+.tile span{color:var(--ink2);font-size:13.5px}
+.tile em{font-style:normal;color:var(--ink3);font-size:12.5px}
+.card{background:var(--card);border:.5px solid var(--line);border-radius:14px;padding:16px}
+.chart{position:relative;margin-top:12px}
+.chart svg{display:block;overflow:visible}
+.chart .axis{fill:var(--ink3);font-size:11px}
+.chart .base{stroke:var(--line);stroke-width:1}
+.chart .bar{fill:var(--bar)}
+.chart .hit{fill:transparent;cursor:default}
+.chart .hit:hover+.bar,.chart g:hover .bar{opacity:.8}
+.tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--bg);font-size:12.5px;padding:6px 9px;border-radius:8px;white-space:nowrap;transform:translate(-50%,-110%);opacity:0;transition:opacity .12s}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+.filters input,.filters select{height:36px;padding:0 12px;border:.5px solid var(--line);border-radius:10px;background:var(--bg)}
+.filters input{flex:1;min-width:180px}
+.tablewrap{overflow-x:auto;border-top:.5px solid var(--line)}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{text-align:left;padding:10px 10px;border-bottom:.5px solid var(--line);white-space:nowrap;vertical-align:top}
+th{font-weight:500;color:var(--ink2);font-size:12.5px;position:sticky;top:0;background:var(--card)}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+.yes{color:var(--good)}
+.no{color:var(--ink3)}
+.wrap{white-space:normal;min-width:180px;max-width:280px;color:var(--ink2)}
+.msg{max-width:440px;margin:18vh auto;text-align:center;display:flex;flex-direction:column;gap:12px;align-items:center}
+.msg a{color:var(--ink)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+</style>
+</head>
+<body>
+<main id="root"><p class="muted">Loading…</p></main>
+<script type="module" src="/src/admin.js"></script>
+</body>
+</html>

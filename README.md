@@ -75,6 +75,10 @@ Send them the link. On iPhone: open it in Safari → Share → **Add to Home Scr
 
 The Cloud fills in as more people sign up. Each new member is scored against everyone else right after sign-up.
 
+## Team dashboard
+
+`/admin` (for example `https://rareness-kappa.vercel.app/admin`) shows how many members there are, today's activity, new members per day, and a searchable list of every member, with a CSV download. Only emails in the `ADMIN_EMAILS` variable in Vercel can open it: log in to the app with that email first, then open `/admin`.
+
 ## Running it locally
 
 ```bash
