@@ -649,7 +649,8 @@ const distFor = (c) => 108 + (1 - c) * spread;
 let B = [], youEl, moved = false, touched = store.get('rareness.hint') === 'seen', pendingMatch = null;
 function buildCloud(list = []) {
   const keep = new Map(B.map((b) => [b.id, b]));
-  spread = list.length < 12 ? 300 : 560;
+  const few = list.length < 12;
+  spread = few ? 260 : 560;
   world.innerHTML = '';
   [90, 75, 60, 45].forEach((p) => {
     const d = distFor(p / 100), el = document.createElement('div');
@@ -660,10 +661,11 @@ function buildCloud(list = []) {
   youEl = document.createElement('div'); youEl.className = 'bub'; youEl.style.cssText = 'width:96px;height:96px;transform:translate(-48px,-48px);z-index:2';
   world.appendChild(youEl); refreshYou();
   B = withGhosts(list).map((p, i) => {
-    const r = p.size || 24 + p.compat * p.compat * 48, dist = distFor(p.compat), ang = i * 2.39996 + .7, D = Math.round(r * 2);
+    // Size follows how much you share: with few members everyone is big (radius 38 to 82), the closest biggest
+    const r = p.size || (few ? 38 + p.compat * 44 : 24 + p.compat * p.compat * 48), dist = distFor(p.compat), ang = i * 2.39996 + .7, D = Math.round(r * 2);
     const was = keep.get(p.id);
     const b = Object.assign(p, { r, dist, hx: Math.cos(ang) * dist, hy: Math.sin(ang) * dist, vx: 0, vy: 0, press: 0, bumpUntil: was?.bumpUntil || 0,
-      p1: Math.random() * 6.28, p2: Math.random() * 6.28, w1: .16 + Math.random() * .2, w2: .15 + Math.random() * .2, amp: 18 + Math.random() * 22, wob: Math.random() * 6.28 });
+      p1: Math.random() * 6.28, p2: Math.random() * 6.28, w1: .11 + Math.random() * .1, w2: .1 + Math.random() * .1, p3: Math.random() * 6.28, p4: Math.random() * 6.28, amp: 10 + Math.random() * 10, wob: Math.random() * 6.28 });
     const el = document.createElement('div'); el.className = 'bub'; el.style.width = el.style.height = D + 'px';
     el.innerHTML = '<div class="drop"></div><button class="ball" aria-label="' + esc(p.ghost ? 'An empty bubble' : nameAge(p) + ', ' + p.score + '% in common') + '">' +
       bubbleHTML(p.ghost ? { w: p.w, clear: true } : { w: p.w, photo: p.photo }, D) + '</button><span class="bumpbadge hide">' + ICON.bump + '</span>' +
@@ -685,13 +687,13 @@ function buildCloud(list = []) {
 }
 // Empty glass bubbles keep the Cloud full while it has few people: part of the look, not people.
 // Their sizes and rings are fixed per slot so they don't jump when the Cloud reloads.
-const GHOSTS = 34;
+// Always smaller than any person, so size keeps meaning "how much you share".
+const GHOSTS = 18;
 function withGhosts(list) {
   const out = [...list];
   for (let i = 0; out.length < GHOSTS; i++) {
     const h = (k) => { const x = Math.sin((i + 1) * 12.9898 + k * 78.233) * 43758.5453; return x - Math.floor(x); };
-    // Mostly small and mid-sized, a few large; kept out of the centre so real people stand out
-    out.push({ id: 'ghost-' + i, ghost: true, status: '', bumped: false, compat: .3 + h(1) * .65, size: 9 + Math.pow(h(9), 2.2) * 52, w: DIMS.map((_, k) => .2 + h(k + 2)) });
+    out.push({ id: 'ghost-' + i, ghost: true, status: '', bumped: false, compat: .25 + h(1) * .65, size: 14 + h(9) * 14, w: DIMS.map((_, k) => .2 + h(k + 2)) });
   }
   return out;
 }
@@ -780,12 +782,14 @@ function step(dt) {
   t += dt;
   const m = reduced ? .35 : 1, GAP = 4, ZONE = 16;
   for (const b of B) {
-    let tx = b.hx + Math.sin(t * b.w1 + b.p1) * b.amp * m, ty = b.hy + Math.cos(t * b.w2 + b.p2) * b.amp * m, k = 1.1;
+    // Drift like something in water: two slow waves per axis that never quite repeat, and a gentle bob
+    let tx = b.hx + (Math.sin(t * b.w1 + b.p1) + .55 * Math.sin(t * b.w1 * 2.37 + b.p3)) * b.amp * m,
+      ty = b.hy + (Math.cos(t * b.w2 + b.p2) + .55 * Math.sin(t * b.w2 * 1.91 + b.p4) + .35 * Math.sin(t * .9 + b.p1)) * b.amp * m, k = .8;
     if (b.bumpUntil) {
       if (t < b.bumpUntil) { const d = Math.hypot(b.hx, b.hy) || 1, dd = b.r + YOU_R + GAP; tx = b.hx / d * dd; ty = b.hy / d * dd; k = 6; }
       else { b.bumpUntil = 0; pendingMatch = b; }
     }
-    b.ax = (tx - b.x) * k - b.vx * (k > 2 ? 3 : 1.05); b.ay = (ty - b.y) * k - b.vy * (k > 2 ? 3 : 1.05);
+    b.ax = (tx - b.x) * k - b.vx * (k > 2 ? 3 : 1.25); b.ay = (ty - b.y) * k - b.vy * (k > 2 ? 3 : 1.25);
     b.press *= Math.pow(.15, dt);
   }
   for (let i = 0; i < B.length; i++) {

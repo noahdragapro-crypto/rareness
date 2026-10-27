@@ -20,7 +20,7 @@ Values, Lifestyle, Interests, Personality, Goals and Routine. Each has a colour 
 
 - **Aura**: how strongly each dimension shows in one member, plus a one-line portrait. Recomputed when they have new answers.
 - **Match**: for each pair, an overall score from 0 to 100 and how much each dimension contributes. The contributions are the colours of the ring around a bubble, and the score sets its size and distance in the Cloud.
-- For the friends test, everyone sees everyone whatever their country (`supabase/migrations/0003_friends_test.sql`). To limit the Cloud to one country later, run `0002_cloud_everyone.sql` and set `SAME_COUNTRY=on` in Vercel.
+- While the community is small, everyone with an account and a name shows in everyone's Cloud (`supabase/migrations/0004_show_everyone.sql`); `0003_friends_test.sql` brings back the "looking for" and finished-sign-up rules. To limit the Cloud to one country later, run `0002_cloud_everyone.sql` and set `SAME_COUNTRY=on` in Vercel.
 - Pairs are rescored only when either person has answered something new, after a member finishes their three daily exercises and once a day by the cron job.
 - Without an Anthropic key (or if a call fails), a rule-based matcher compares sign-up answers, interests, this-or-that picks and routine instead.
 - Members' text is passed to Claude as data inside tags. It can't change how scores are computed.
