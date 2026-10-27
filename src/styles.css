@@ -72,6 +72,9 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:1.5px so
 .tab .lock{position:absolute;top:8px;right:12px;width:13px;height:13px;border-radius:50%;background:var(--ink);color:#fff;display:none;place-items:center}
 .tab .lock svg{width:8px;height:8px;transform:none}
 .tab.locked .lock{display:grid}
+/* Unread messages on the Chats tab */
+.tab .tabbadge{position:absolute;top:6px;right:8px;min-width:17px;height:17px;padding:0 5px;border-radius:9px;background:#F5A6D8;color:#111114;font-size:11px;line-height:17px;font-weight:500;text-align:center;box-shadow:0 0 0 2px #fff}
+.tab.locked .tabbadge{display:none}
 
 /* ---------- Pushed pages ---------- */
 .page{position:absolute;inset:0;z-index:50;background:var(--bg);transform:translateX(100%);transition:transform .5s var(--ease);box-shadow:-20px 0 50px rgba(17,17,20,.10)}
@@ -150,6 +153,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:1.5px so
 .cloudhead{position:absolute;z-index:6;left:0;right:0;top:0;padding:calc(env(safe-area-inset-top,0px) + 50px) max(18px,env(safe-area-inset-right,0px)) 40px max(18px,env(safe-area-inset-left,0px));
   display:flex;align-items:flex-start;justify-content:space-between;gap:12px;background:linear-gradient(180deg,#fff 0%,rgba(255,255,255,.88) 60%,rgba(255,255,255,0));pointer-events:none}
 .cloudhead>*{pointer-events:auto}
+.cityfilter{align-self:flex-start;margin-top:6px;height:34px;padding:0 30px 0 14px;border:0;border-radius:17px;font:inherit;font-size:14px;color:var(--ink);cursor:pointer;-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23111114' stroke-width='1.4'%3E%3Cpath d='M7 10l5 5 5-5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;background-size:14px}
 .zoomctl{position:absolute;z-index:6;right:max(14px,env(safe-area-inset-right,0px));bottom:calc(env(safe-area-inset-bottom,0px) + 92px);display:flex;flex-direction:column;align-items:center;border-radius:24px;padding:3px}
 .zoomctl button{width:42px;height:42px;border:0;background:transparent;border-radius:21px;display:grid;place-items:center;cursor:pointer;color:var(--ink)}
 .zoomctl button svg{width:19px;height:19px}
@@ -357,3 +361,5 @@ input[type=range]{width:100%;accent-color:#111114}
 .legend{right:calc(max(14px,env(safe-area-inset-right,0px)) + 58px)}
 .mebtn{transform-origin:100% 0}
 .mebtn.compact{top:calc(env(safe-area-inset-top,0px) + 4px);transform:scale(.78)}
+/* Lists (city) look like the other fields */
+select.field{font:inherit;font-size:16px;color:var(--ink);-webkit-appearance:none;appearance:none;padding-right:38px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23111114' stroke-width='1.4'%3E%3Cpath d='M7 10l5 5 5-5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;background-size:16px}

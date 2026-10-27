@@ -563,9 +563,9 @@ async function renderProfile() {
 
     '<section class="section" aria-label="Basics"><h2 class="h2">Basics</h2><div class="grid2">' +
       field('pName', 'Name', me.name, 'First name', 24, 'given-name') + field('pPron', 'Pronouns', me.pronouns, 'she/her', 16) +
-      field('pJob', 'Work', me.job, 'What you do', 40) + field('pCity', 'City', me.city, 'Where you live', 40, 'address-level2') +
+      field('pJob', 'Work', me.job, 'What you do', 40) + '<label class="lbl" for="pCity">City<select class="field" id="pCity">' + cityOptions(me.city) + '</select></label>' +
       field('pHeight', 'Height (cm)', me.height_cm, '172', 3, '', 'numeric') + field('pLang', 'Languages', me.languages, 'French, English', 60) +
-    '</div><label class="lbl" for="pCountry">Country<select class="field" id="pCountry">' + countryOptions(me.country) + '</select></label>' +
+    '</div>' +
     '<p class="label">Your Cloud shows people from the same country.</p></section>' +
 
     '<section class="section" aria-label="Show me"><h2 class="h2">Show me</h2><div class="chips">' +
@@ -590,10 +590,9 @@ async function renderProfile() {
   cnt();
   const head = () => { $('#meName').textContent = me.name || 'Your name'; $('#meSub').textContent = [ageOf(me.birthdate), me.city].filter(Boolean).join(' · ') || 'Add your city'; };
   const bind = (id, key, after, num) => { $('#' + id).oninput = (e) => { let v = e.target.value; if (num) { v = v.replace(/\D/g, ''); e.target.value = v; } saveSoon({ [key]: num ? (v ? Number(v) : null) : v.trim() }); if (after) after(); }; };
-  bind('pName', 'name', () => { head(); refreshYou(); }); bind('pCity', 'city', head);
+  bind('pName', 'name', () => { head(); refreshYou(); }); $('#pCity').onchange = (e) => { if (!e.target.value) return; saveSoon({ city: e.target.value }); head(); };
   bind('pPron', 'pronouns'); bind('pHeight', 'height_cm', null, true); bind('pJob', 'job'); bind('pLang', 'languages');
   $('#pBio').oninput = (e) => { saveSoon({ bio: e.target.value }); cnt(); };
-  $('#pCountry').onchange = (e) => { if (!e.target.value) return; saveSoon({ country: e.target.value }); setTimeout(() => API.api('match').then(loadCloud).catch(console.error), 900); };
   $('#pStatus').oninput = (e) => {
     const v = clip(e.target.value, 20); if (v !== e.target.value) e.target.value = v;
     saveSoon({ status: v }); cnt(); refreshYou();
@@ -644,15 +643,19 @@ $('#meBtn').onclick = openProfile;
 const stage = $('#stage'), world = $('#world');
 const view = { s: .78, px: 0, py: 30, anim: null };
 const YOU_R = 48;
-const distFor = (c) => 130 + (1 - c) * 860;
+// How far a bubble floats from you. With only a few members the whole Cloud (rings included) draws in close.
+let spread = 560;
+const distFor = (c) => 108 + (1 - c) * spread;
 let B = [], youEl, moved = false, touched = store.get('rareness.hint') === 'seen', pendingMatch = null;
 function buildCloud(list = []) {
   const keep = new Map(B.map((b) => [b.id, b]));
+  spread = list.length < 12 ? 300 : 560;
   world.innerHTML = '';
   [90, 75, 60, 45].forEach((p) => {
     const d = distFor(p / 100), el = document.createElement('div');
     el.className = 'ring'; el.style.cssText = 'width:' + d * 2 + 'px;height:' + d * 2 + 'px;left:' + -d + 'px;top:' + -d + 'px';
-    el.innerHTML = '<span class="ringlab">' + p + '% in common</span>'; world.appendChild(el);
+    // Rings sit close together when the Cloud is drawn in, so only every other one is labelled
+    el.innerHTML = spread < 400 && (p === 75 || p === 45) ? '' : '<span class="ringlab">' + p + '% in common</span>'; world.appendChild(el);
   });
   youEl = document.createElement('div'); youEl.className = 'bub'; youEl.style.cssText = 'width:96px;height:96px;transform:translate(-48px,-48px);z-index:2';
   world.appendChild(youEl); refreshYou();
@@ -660,7 +663,7 @@ function buildCloud(list = []) {
     const r = p.size || 24 + p.compat * p.compat * 48, dist = distFor(p.compat), ang = i * 2.39996 + .7, D = Math.round(r * 2);
     const was = keep.get(p.id);
     const b = Object.assign(p, { r, dist, hx: Math.cos(ang) * dist, hy: Math.sin(ang) * dist, vx: 0, vy: 0, press: 0, bumpUntil: was?.bumpUntil || 0,
-      p1: Math.random() * 6.28, p2: Math.random() * 6.28, w1: .22 + Math.random() * .22, w2: .2 + Math.random() * .22, amp: 14 + Math.random() * 16, wob: Math.random() * 6.28 });
+      p1: Math.random() * 6.28, p2: Math.random() * 6.28, w1: .16 + Math.random() * .2, w2: .15 + Math.random() * .2, amp: 18 + Math.random() * 22, wob: Math.random() * 6.28 });
     const el = document.createElement('div'); el.className = 'bub'; el.style.width = el.style.height = D + 'px';
     el.innerHTML = '<div class="drop"></div><button class="ball" aria-label="' + esc(p.ghost ? 'An empty bubble' : nameAge(p) + ', ' + p.score + '% in common') + '">' +
       bubbleHTML(p.ghost ? { w: p.w, clear: true } : { w: p.w, photo: p.photo }, D) + '</button><span class="bumpbadge hide">' + ICON.bump + '</span>' +
@@ -672,7 +675,7 @@ function buildCloud(list = []) {
   });
   for (let it = 0; it < 300; it++) {
     for (let i = 0; i < B.length; i++) for (let j = i + 1; j < B.length; j++) {
-      const a = B[i], c = B[j], dx = c.hx - a.hx, dy = c.hy - a.hy, d = Math.hypot(dx, dy) || .01, min = a.r + c.r + 30;
+      const a = B[i], c = B[j], dx = c.hx - a.hx, dy = c.hy - a.hy, d = Math.hypot(dx, dy) || .01, min = a.r + c.r + 10;
       if (d < min) { const o = (min - d) / 2, nx = dx / d, ny = dy / d; a.hx -= nx * o; a.hy -= ny * o; c.hx += nx * o; c.hy += ny * o; }
     }
     for (const b of B) { const d = Math.hypot(b.hx, b.hy) || .01, nd = d + (b.dist - d) * .12; b.hx *= nd / d; b.hy *= nd / d; }
@@ -775,14 +778,14 @@ if (touched) $('#hint').hidden = true;
 let t = 0, last = performance.now();
 function step(dt) {
   t += dt;
-  const m = reduced ? .35 : 1, GAP = 6, ZONE = 26;
+  const m = reduced ? .35 : 1, GAP = 4, ZONE = 16;
   for (const b of B) {
-    let tx = b.hx + Math.sin(t * b.w1 + b.p1) * b.amp * m, ty = b.hy + Math.cos(t * b.w2 + b.p2) * b.amp * m, k = 1.4;
+    let tx = b.hx + Math.sin(t * b.w1 + b.p1) * b.amp * m, ty = b.hy + Math.cos(t * b.w2 + b.p2) * b.amp * m, k = 1.1;
     if (b.bumpUntil) {
       if (t < b.bumpUntil) { const d = Math.hypot(b.hx, b.hy) || 1, dd = b.r + YOU_R + GAP; tx = b.hx / d * dd; ty = b.hy / d * dd; k = 6; }
       else { b.bumpUntil = 0; pendingMatch = b; }
     }
-    b.ax = (tx - b.x) * k - b.vx * (k > 2 ? 3 : 1.2); b.ay = (ty - b.y) * k - b.vy * (k > 2 ? 3 : 1.2);
+    b.ax = (tx - b.x) * k - b.vx * (k > 2 ? 3 : 1.05); b.ay = (ty - b.y) * k - b.vy * (k > 2 ? 3 : 1.05);
     b.press *= Math.pow(.15, dt);
   }
   for (let i = 0; i < B.length; i++) {
@@ -791,13 +794,13 @@ function step(dt) {
       const c = B[j], dx = c.x - a.x, dy = c.y - a.y, min = a.r + c.r + GAP;
       if (Math.abs(dx) > min + ZONE || Math.abs(dy) > min + ZONE) continue;
       const d = Math.hypot(dx, dy) || .01; if (d >= min + ZONE) continue;
-      const k = (min + ZONE - d) / ZONE, f = k * k * 240, nx = dx / d, ny = dy / d;
+      const k = (min + ZONE - d) / ZONE, f = k * k * 160, nx = dx / d, ny = dy / d;
       a.ax -= nx * f; a.ay -= ny * f; c.ax += nx * f; c.ay += ny * f;
       a.press = Math.max(a.press, Math.min(1, k)); c.press = Math.max(c.press, Math.min(1, k));
       if (d < min) { const o = (min - d) / 2; a.x -= nx * o; a.y -= ny * o; c.x += nx * o; c.y += ny * o; }
     }
     const d = Math.hypot(a.x, a.y) || .01, min = a.r + YOU_R + GAP;
-    if (d < min + ZONE && !a.bumpUntil) { const k = (min + ZONE - d) / ZONE, f = k * k * 240; a.ax += a.x / d * f; a.ay += a.y / d * f; a.press = Math.max(a.press, Math.min(1, k)); }
+    if (d < min + ZONE && !a.bumpUntil) { const k = (min + ZONE - d) / ZONE, f = k * k * 160; a.ax += a.x / d * f; a.ay += a.y / d * f; a.press = Math.max(a.press, Math.min(1, k)); }
     if (d < min) { a.x *= min / d; a.y *= min / d; a.press = 1; }
   }
   for (const b of B) { b.vx += b.ax * dt; b.vy += b.ay * dt; b.x += b.vx * dt; b.y += b.vy * dt; }
@@ -837,17 +840,26 @@ function toBubble(row) {
   };
 }
 let cloudLoaded = false;
+let cityFilter = store.get('rareness.city') || '';
+const shown = () => (cityFilter ? people.filter((p) => p.city === cityFilter) : people);
+function renderCityFilter() {
+  const el = $('#cityFilter'); if (!el) return;
+  const here = [...new Set(people.map((p) => p.city).filter(Boolean).concat(cityFilter ? [cityFilter] : []))].sort();
+  el.innerHTML = '<option value="">All cities</option>' + here.map((c) => '<option' + (c === cityFilter ? ' selected' : '') + '>' + esc(c) + '</option>').join('');
+  el.onchange = () => { cityFilter = el.value; store.set('rareness.city', cityFilter); buildCloud(shown()); renderCloudEmpty(); };
+}
 async function loadCloud() {
   try {
     people = (await API.cloud()).map(toBubble);
     cloudLoaded = true;
-    buildCloud(people);
+    renderCityFilter();
+    buildCloud(shown());
     renderCloudEmpty();
   } catch (e) { console.error(e); }
 }
 function renderCloudEmpty() {
   let el = $('#cloudEmpty');
-  if (people.length) { if (el) el.remove(); return; }
+  if (shown().length) { if (el) el.remove(); return; }
   if (!el) {
     el = document.createElement('div'); el.id = 'cloudEmpty';
     el.style.cssText = 'position:absolute;left:24px;right:24px;top:calc(50% + 70px);text-align:center;display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none';
@@ -922,7 +934,7 @@ async function blockPerson(b, btn) {
   try {
     await API.block(uid, b.id);
     popPage();
-    people = people.filter((p) => p.id !== b.id); buildCloud(people); loadChats();
+    people = people.filter((p) => p.id !== b.id); buildCloud(shown()); loadChats();
     toast((b.name || 'They') + ' won’t see you, and you won’t see them.');
   } catch (e) { fail(e); }
 }
@@ -948,6 +960,9 @@ async function loadChats() {
   try { chatList = await API.chats(uid); renderChats(); } catch (e) { console.error(e); }
 }
 function renderChats() {
+  const unread = chatList.filter((c) => c.unread).length, badge = $('#chatBadge');
+  badge.hidden = !unread; badge.textContent = unread > 9 ? '9+' : unread;
+  $('.tab[data-tab="2"]').setAttribute('aria-label', unread ? 'Chats, ' + unread + ' unread' : 'Chats');
   $('#chatsBody').innerHTML = '<header style="display:flex;flex-direction:column;gap:6px"><span class="brand">Rareness</span><h1 class="largetitle">Chats</h1><p class="label" style="font-size:14px;line-height:1.45">A chat opens only when you both bump each other. Nobody sees who bumped them.</p></header>' +
     (chatList.length ? '<section aria-label="Conversations" class="hair">' + chatList.map((c) => {
       const p = c.other, last = c.last;
@@ -1176,6 +1191,15 @@ const Q0 = 2; // first quick-test step, after basics and photo
 const STEPS = Q0 + TEST.length;
 const gate = $('#gate');
 const COUNTRIES = 'AD AE AF AG AL AM AO AR AT AU AZ BA BB BD BE BF BG BH BI BJ BN BO BR BS BT BW BY BZ CA CD CF CG CH CI CL CM CN CO CR CU CV CY CZ DE DJ DK DM DO DZ EC EE EG ER ES ET FI FJ FM FR GA GB GD GE GH GM GN GQ GR GT GW GY HK HN HR HT HU ID IE IL IN IQ IR IS IT JM JO JP KE KG KH KI KM KN KR KW KZ LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME MG MH MK ML MM MN MO MR MT MU MV MW MX MY MZ NA NE NG NI NL NO NP NR NZ OM PA PE PG PH PK PL PR PS PT PW PY QA RE RO RS RU RW SA SB SC SD SE SG SI SK SL SM SN SO SR SS ST SV SY SZ TD TG TH TJ TL TM TN TO TR TT TV TW TZ UA UG US UY UZ VA VC VE VN VU WS XK YE ZA ZM ZW'.split(' ');
+// Fixed city list, so everyone's city matches and the Cloud can be filtered by it
+const CITIES = ['Amsterdam', 'Athens', 'Barcelona', 'Berlin', 'Brussels', 'Buenos Aires', 'Copenhagen', 'Dubai', 'Dublin', 'Geneva',
+  'Hong Kong', 'Istanbul', 'Lisbon', 'London', 'Los Angeles', 'Lyon', 'Madrid', 'Marseille', 'Melbourne', 'Mexico City', 'Miami',
+  'Milan', 'Montreal', 'New York', 'Paris', 'Prague', 'Rome', 'San Francisco', 'São Paulo', 'Seoul', 'Singapore', 'Stockholm',
+  'Sydney', 'Tel Aviv', 'Tokyo', 'Toronto', 'Vienna', 'Zurich', 'Other'];
+function cityOptions(sel, first = 'Choose your city') {
+  const list = sel && !CITIES.includes(sel) ? [sel, ...CITIES] : CITIES; // keep a city typed before the list existed
+  return '<option value="">' + first + '</option>' + list.map((c) => '<option' + (c === sel ? ' selected' : '') + '>' + esc(c) + '</option>').join('');
+}
 function countryOptions(sel) {
   let names; try { names = new Intl.DisplayNames([navigator.language || 'en'], { type: 'region' }); } catch (e) { names = { of: (c) => c }; }
   const list = COUNTRIES.map((c) => [c, names.of(c) || c]).sort((a, b) => a[1].localeCompare(b[1]));
@@ -1214,25 +1238,30 @@ function gateBasics(msg) {
     '<h1 class="largetitle">' + (signedIn ? 'Hello. Who are you?' : 'Bump into your perfect bubble.') + '</h1>' +
     '<form id="f" style="display:flex;flex-direction:column;gap:14px" novalidate>' +
       field('obName', 'First name', p.name, 'Your first name', 24, 'given-name') +
+      field('obAge', 'Age', p.age ?? ageOf(p.birthdate) ?? '', 'Your age', 2, 'off', 'numeric') +
       (signedIn ? '' : '<label class="lbl" for="email">Email<input class="field" id="email" type="email" autocomplete="email" inputmode="email" value="' + esc(G.email) + '" placeholder="you@example.com"></label>') +
       '<div class="lbl">I am<div class="chips" style="margin-top:2px">' + GENDERS.map(([v, l]) => '<button type="button" class="chip' + (p.gender === v ? ' on' : '') + '" data-g="' + v + '">' + l + '</button>').join('') + '</div></div>' +
       '<div class="lbl">Looking for<div class="chips" style="margin-top:2px">' + SHOW.map(([v, l]) => '<button type="button" class="chip' + ((p.show_me || 'everyone') === v ? ' on' : '') + '" data-s="' + v + '">' + l + '</button>').join('') + '</div></div>' +
-      field('obCity', 'City', p.city, 'Where you live', 40, 'address-level2') +
+      '<label class="lbl" for="obCity">City<select class="field" id="obCity">' + cityOptions(p.city) + '</select></label>' +
       '<p class="err" id="err" role="alert"' + (msg ? '' : ' hidden') + '>' + esc(msg || '') + '</p>' +
       '<div class="grow"></div><button class="primary" id="go">Continue</button>' +
     '</form>' +
-    (signedIn ? '' : '<p class="fine">By continuing you confirm you are 18 or older and agree to the Terms and Privacy Policy. Already joined? Just enter your email.</p>'),
+    (signedIn ? '' : '<p class="fine">By continuing you agree to the Terms and Privacy Policy.</p>' +
+      '<button class="link" id="toLogin" type="button" style="align-self:center">Already a member? Log in</button>'),
     () => {
       let gender = p.gender, show = p.show_me || 'everyone';
+      if (!signedIn) $('#toLogin').onclick = () => gateLogin();
+      $('#obAge').oninput = (e) => { e.target.value = e.target.value.replace(/\D/g, '').slice(0, 2); };
       gate.querySelectorAll('[data-g]').forEach((b) => b.onclick = () => { gender = b.dataset.g; gate.querySelectorAll('[data-g]').forEach((x) => x.classList.toggle('on', x === b)); });
       gate.querySelectorAll('[data-s]').forEach((b) => b.onclick = () => { show = b.dataset.s; gate.querySelectorAll('[data-s]').forEach((x) => x.classList.toggle('on', x === b)); });
       $('#f').onsubmit = async (e) => {
         e.preventDefault();
-        const name = $('#obName').value.trim(), city = $('#obCity').value.trim(), err = $('#err');
+        const name = $('#obName').value.trim(), city = $('#obCity').value, age = parseInt($('#obAge').value, 10), err = $('#err');
         const say = (m) => { err.textContent = m; err.hidden = false; };
         const email = signedIn ? '' : $('#email').value.trim().toLowerCase();
-        G.basics = { name, gender, show_me: show, city };
-        const missing = () => (!name ? 'Add your first name.' : !gender ? 'Choose how you identify.' : !city ? 'Add your city.' : '');
+        G.basics = { name, age: age || '', gender, show_me: show, city };
+        const missing = () => (!name ? 'Add your first name.' : !age ? 'Add your age.' : age < 18 ? 'Rareness is for people 18 and over.' : age > 99 ? 'Check your age.'
+          : !gender ? 'Choose how you identify.' : !city ? 'Choose your city.' : '');
         if (!signedIn) {
           G.email = email;
           if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return say('Enter a valid email address.');
@@ -1252,9 +1281,43 @@ function gateBasics(msg) {
             country = me.country || out.country;
           }
           // Your Cloud shows people from your country; it can be changed later in your profile
-          me = await API.saveProfile(uid, { name, gender, show_me: show, city, country: country || guessCountry() || null });
+          me = await API.saveProfile(uid, { name, birthdate: birthFromAge(age), gender, show_me: show, city, country: country || guessCountry() || null });
           G.step = 1; gateOnboard();
         } catch (x) { console.error(x); busy(go, false, 'Continue'); say(x?.message || 'That didn’t work. Try again.'); }
+      };
+    });
+}
+
+// Only the age is asked; a birth date half a year back keeps it right until the next birthday or so
+function birthFromAge(age) {
+  const d = new Date(); d.setFullYear(d.getFullYear() - age); d.setDate(d.getDate() - 182);
+  return API.dayKey(d);
+}
+
+// Log back in with just the email (no password or code for now)
+function gateLogin(msg) {
+  showGate(
+    backBtn + '<span class="brand">Rareness</span>' +
+    '<div style="display:flex;justify-content:center;padding:10px 0 2px">' + bubbleHTML({ w: [1, 1, 1, 1, 1, 1], clear: true }, 120) + '</div>' +
+    '<h1 class="largetitle">Welcome back.</h1>' +
+    '<form id="f" style="display:flex;flex-direction:column;gap:14px" novalidate>' +
+      '<label class="lbl" for="email">Email<input class="field" id="email" type="email" autocomplete="email" inputmode="email" value="' + esc(G.email) + '" placeholder="The email you joined with"></label>' +
+      '<p class="err" id="err" role="alert"' + (msg ? '' : ' hidden') + '>' + esc(msg || '') + '</p>' +
+      '<div class="grow"></div><button class="primary" id="go">Log in</button>' +
+    '</form>' +
+    '<button class="link" id="toJoin" type="button" style="align-self:center">New here? Create your profile</button>',
+    () => {
+      gate.querySelector('[data-back]').onclick = () => gateBasics();
+      $('#toJoin').onclick = () => gateBasics();
+      $('#email').focus();
+      $('#f').onsubmit = async (e) => {
+        e.preventDefault();
+        const email = $('#email').value.trim().toLowerCase(), err = $('#err');
+        G.email = email;
+        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { err.textContent = 'Enter a valid email address.'; err.hidden = false; return; }
+        const go = $('#go'); busy(go, true, 'Logging in…');
+        try { const out = await API.signInWithEmail(email); await enter(out.user); }
+        catch (x) { console.error(x); gateLogin(x?.message || 'That didn’t work. Try again.'); }
       };
     });
 }
@@ -1385,6 +1448,7 @@ function renderAll() { renderAgenda(); renderChats(); refreshYou(); refreshMeBtn
 
 async function enter(user) {
   uid = user.id;
+  store.set('rareness.member', '1'); // next time this device is signed out, show Log in first
   try { me = await API.myProfile(uid); } catch (e) {
     // The profile row is created by a database trigger; create it if that hasn't happened yet
     await API.sb.from('profiles').insert({ id: uid }).select().single().then(({ data }) => { me = data; });
@@ -1399,7 +1463,7 @@ async function enter(user) {
 async function startApp() {
   hideGate();
   try { myAnswers = await API.myAnswers(uid); } catch (e) { fail(e); }
-  buildCloud(people); renderAll(); paint();
+  buildCloud(shown()); renderAll(); paint();
   loadCloud(); loadChats();
   if (!appStarted) {
     appStarted = true;
@@ -1419,7 +1483,7 @@ async function boot() {
   let s = null;
   try { s = await API.session(); } catch (e) { console.error(e); }
   if (!s) {
-    gateBasics();
+    if (store.get('rareness.member')) gateLogin(); else gateBasics();
     return;
   }
   enter(s.user);

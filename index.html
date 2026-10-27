@@ -35,6 +35,7 @@
           <span class="brand">Rareness</span>
           <h1 class="largetitle">Cloud</h1>
           <p class="muted" style="margin:0;font-size:14px">Closer and bigger means more in common.</p>
+          <label class="hide" for="cityFilter">Show people from</label><select class="cityfilter glass" id="cityFilter"><option value="">All cities</option></select>
         </div>
         <button class="gbtn glass" id="legendBtn" aria-label="What the reflections mean" aria-expanded="false">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><circle cx="12" cy="12" r="8.5"></circle><path d="M7.5 9.5c.6-1.6 1.8-2.7 3.3-3.2M16.8 13c-.3 1.5-1.2 2.8-2.5 3.6"></path></svg>
@@ -78,6 +79,7 @@
     <button class="tab" data-tab="2" aria-label="Chats">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"><path d="M12 3.5c5 0 9 3.4 9 7.6s-4 7.6-9 7.6c-1 0-2-.1-2.9-.4L4.5 20.5l1.3-3.7C4.1 15.4 3 13.4 3 11.1 3 6.9 7 3.5 12 3.5z"></path></svg>
       <span class="lock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg></span>
+      <span class="tabbadge" id="chatBadge" hidden></span>
     </button>
   </nav>
 
