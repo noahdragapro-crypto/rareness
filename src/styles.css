@@ -153,7 +153,6 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:1.5px so
 .cloudhead{position:absolute;z-index:6;left:0;right:0;top:0;padding:calc(env(safe-area-inset-top,0px) + 50px) max(18px,env(safe-area-inset-right,0px)) 40px max(18px,env(safe-area-inset-left,0px));
   display:flex;align-items:flex-start;justify-content:space-between;gap:12px;background:linear-gradient(180deg,#fff 0%,rgba(255,255,255,.88) 60%,rgba(255,255,255,0));pointer-events:none}
 .cloudhead>*{pointer-events:auto}
-.cityfilter{align-self:flex-start;margin-top:6px;height:34px;padding:0 30px 0 14px;border:0;border-radius:17px;font:inherit;font-size:14px;color:var(--ink);cursor:pointer;-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23111114' stroke-width='1.4'%3E%3Cpath d='M7 10l5 5 5-5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;background-size:14px}
 .zoomctl{position:absolute;z-index:6;right:max(14px,env(safe-area-inset-right,0px));bottom:calc(env(safe-area-inset-bottom,0px) + 92px);display:flex;flex-direction:column;align-items:center;border-radius:24px;padding:3px}
 .zoomctl button{width:42px;height:42px;border:0;background:transparent;border-radius:21px;display:grid;place-items:center;cursor:pointer;color:var(--ink)}
 .zoomctl button svg{width:19px;height:19px}

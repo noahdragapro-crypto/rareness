@@ -92,7 +92,7 @@ npm run build
 
 ## The flow for a new member
 
-1. Page 1: first name, age (18+), email, gender, who they're looking for, and a city from a fixed list (the Cloud can be filtered by city). A **Log in** link (shown first on a device that was signed in before) takes just the email. For now there is no email check: entering an email signs you straight in (`api/auth/email.ts`), and a returning member only needs their email. Their country is taken from Vercel's location header and can be changed in the profile. To limit who can get in, set `TESTER_EMAILS` to a comma-separated list. Bring back email verification before a public launch, since anyone who knows a member's email can sign in as them.
+1. Page 1: first name, age (18+), email, gender, who they're looking for, and a city from a fixed list. A **Log in** link (shown first on a device that was signed in before) takes just the email. For now there is no email check: entering an email signs you straight in (`api/auth/email.ts`), and a returning member only needs their email. Their country is taken from Vercel's location header and can be changed in the profile. To limit who can get in, set `TESTER_EMAILS` to a comma-separated list. Bring back email verification before a public launch, since anyone who knows a member's email can sign in as them.
 2. Page 2: photo (with reframing) and a status (optional, 20 characters).
 3. Aura quick test, four questions: what matters in a partner, interests (at least 3), how friends describe them, and what they're looking for. Claude reads it and shows their aura.
 4. Pay $5 once in Stripe Checkout.

@@ -853,26 +853,17 @@ function toBubble(row) {
   };
 }
 let cloudLoaded = false;
-let cityFilter = store.get('rareness.city') || '';
-const shown = () => (cityFilter ? people.filter((p) => p.city === cityFilter) : people);
-function renderCityFilter() {
-  const el = $('#cityFilter'); if (!el) return;
-  const here = [...new Set(people.map((p) => p.city).filter(Boolean).concat(cityFilter ? [cityFilter] : []))].sort();
-  el.innerHTML = '<option value="">All cities</option>' + here.map((c) => '<option' + (c === cityFilter ? ' selected' : '') + '>' + esc(c) + '</option>').join('');
-  el.onchange = () => { cityFilter = el.value; store.set('rareness.city', cityFilter); buildCloud(shown()); renderCloudEmpty(); };
-}
 async function loadCloud() {
   try {
     people = (await API.cloud()).map(toBubble);
     cloudLoaded = true;
-    renderCityFilter();
-    buildCloud(shown());
+    buildCloud(people);
     renderCloudEmpty();
   } catch (e) { console.error(e); }
 }
 function renderCloudEmpty() {
   let el = $('#cloudEmpty');
-  if (shown().length) { if (el) el.remove(); return; }
+  if (people.length) { if (el) el.remove(); return; }
   if (!el) {
     el = document.createElement('div'); el.id = 'cloudEmpty';
     el.style.cssText = 'position:absolute;left:24px;right:24px;top:calc(50% + 70px);text-align:center;display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none';
@@ -947,7 +938,7 @@ async function blockPerson(b, btn) {
   try {
     await API.block(uid, b.id);
     popPage();
-    people = people.filter((p) => p.id !== b.id); buildCloud(shown()); loadChats();
+    people = people.filter((p) => p.id !== b.id); buildCloud(people); loadChats();
     toast((b.name || 'They') + ' won’t see you, and you won’t see them.');
   } catch (e) { fail(e); }
 }
@@ -1204,7 +1195,7 @@ const Q0 = 2; // first quick-test step, after basics and photo
 const STEPS = Q0 + TEST.length;
 const gate = $('#gate');
 const COUNTRIES = 'AD AE AF AG AL AM AO AR AT AU AZ BA BB BD BE BF BG BH BI BJ BN BO BR BS BT BW BY BZ CA CD CF CG CH CI CL CM CN CO CR CU CV CY CZ DE DJ DK DM DO DZ EC EE EG ER ES ET FI FJ FM FR GA GB GD GE GH GM GN GQ GR GT GW GY HK HN HR HT HU ID IE IL IN IQ IR IS IT JM JO JP KE KG KH KI KM KN KR KW KZ LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME MG MH MK ML MM MN MO MR MT MU MV MW MX MY MZ NA NE NG NI NL NO NP NR NZ OM PA PE PG PH PK PL PR PS PT PW PY QA RE RO RS RU RW SA SB SC SD SE SG SI SK SL SM SN SO SR SS ST SV SY SZ TD TG TH TJ TL TM TN TO TR TT TV TW TZ UA UG US UY UZ VA VC VE VN VU WS XK YE ZA ZM ZW'.split(' ');
-// Fixed city list, so everyone's city matches and the Cloud can be filtered by it
+// Fixed city list, so everyone's city is spelled the same in our data
 const CITIES = ['Amsterdam', 'Athens', 'Barcelona', 'Berlin', 'Brussels', 'Buenos Aires', 'Copenhagen', 'Dubai', 'Dublin', 'Geneva',
   'Hong Kong', 'Istanbul', 'Lisbon', 'London', 'Los Angeles', 'Lyon', 'Madrid', 'Marseille', 'Melbourne', 'Mexico City', 'Miami',
   'Milan', 'Montreal', 'New York', 'Paris', 'Prague', 'Rome', 'San Francisco', 'São Paulo', 'Seoul', 'Singapore', 'Stockholm',
@@ -1476,7 +1467,7 @@ async function enter(user) {
 async function startApp() {
   hideGate();
   try { myAnswers = await API.myAnswers(uid); } catch (e) { fail(e); }
-  buildCloud(shown()); renderAll(); paint();
+  buildCloud(people); renderAll(); paint();
   loadCloud(); loadChats();
   if (!appStarted) {
     appStarted = true;
