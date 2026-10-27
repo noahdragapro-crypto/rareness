@@ -54,8 +54,8 @@ const PAIRS = [
   ['Podcast', 'Playlist', 'interests'], ['Talk it out', 'Sleep on it', 'personality'], ['Gym', 'Outdoors', 'routine'], ['Settle down', 'Explore', 'goals'], ['Text', 'Call', 'personality'],
   ['Brunch', 'Dinner', 'lifestyle'], ['Spontaneous trip', 'Planned holiday', 'personality'], ['Kids someday', 'Not for me', 'goals'], ['Sunrise', 'Sunset', 'routine']
 ];
-// Inspired by TikTok's "choose your interests" page
-const INTERESTS = ['Longevity', 'Art', 'Science', 'Business', 'Comedy', 'Dance', 'Music', 'Food', 'Sports', 'Fitness', 'Beauty', 'Fashion', 'Animals', 'Travel', 'Gaming', 'DIY', 'Outdoors', 'Life hacks', 'Family', 'Cars', 'Anime', 'Motivation', 'Books', 'Movies & TV', 'Cooking', 'Technology', 'Finance', 'Gardening', 'Photography', 'Wellness'];
+// Self-development, longevity, nature, business and art: what Rareness members are about
+const INTERESTS = ['Longevity', 'Biohacking', 'Breathwork', 'Cold plunge', 'Fasting', 'Nutrition', 'Sleep', 'Meditation', 'Journaling', 'Stoicism', 'Psychology', 'Philosophy', 'Reading', 'Science', 'Strength', 'Running', 'Yoga', 'Hiking', 'Surfing', 'Mountains', 'Gardening', 'Business', 'Investing', 'AI', 'Art', 'Photography', 'Design', 'Writing', 'Music', 'Ceramics'];
 
 // ---------------- App state ----------------
 let uid = null, me = null, myAnswers = [], people = [], chatList = [], config = { paywall: false };
