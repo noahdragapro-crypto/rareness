@@ -995,21 +995,6 @@ function audio() {
   if (actx.state === 'suspended') actx.resume().catch(() => {});
   return actx;
 }
-// A real pop: a tiny burst of air (filtered noise) plus a quick falling "plip". Smaller bubbles sound higher.
-function popSound(size = 60, vol = 1) {
-  const c = audio(); if (!c) return;
-  const t = c.currentTime + .005, hi = Math.max(.5, Math.min(2.2, 70 / size));
-  const n = c.createBuffer(1, Math.floor(c.sampleRate * .05), c.sampleRate), d = n.getChannelData(0);
-  for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 4);
-  const src = c.createBufferSource(); src.buffer = n;
-  const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1800 * hi; bp.Q.value = 1.4;
-  const g1 = c.createGain(); g1.gain.value = .5 * vol;
-  src.connect(bp).connect(g1).connect(c.destination); src.start(t);
-  const o = c.createOscillator(), g2 = c.createGain();
-  o.type = 'sine'; o.frequency.setValueAtTime(900 * hi, t); o.frequency.exponentialRampToValueAtTime(180 * hi, t + .045);
-  g2.gain.setValueAtTime(.0001, t); g2.gain.exponentialRampToValueAtTime(.32 * vol, t + .004); g2.gain.exponentialRampToValueAtTime(.0001, t + .07);
-  o.connect(g2).connect(c.destination); o.start(t); o.stop(t + .08);
-}
 // The main bubble filling up: a soft rising tone with a watery wobble
 function fillSound(dur = 1.6) {
   const c = audio(); if (!c || c.state !== 'running') return;
@@ -1039,7 +1024,7 @@ function runSplash() {
     sp.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 380, easing: 'ease-out', fill: 'forwards' }).onfinish = () => { cancelAnimationFrame(raf); sp.remove(); };
   };
   const hard = (ms) => { clearTimeout(hardT); hardT = setTimeout(finish, ms); };
-  if (reduced) { word.style.opacity = 1; core.style.transform = 'scale(1)'; sp.addEventListener('click', () => { popSound(150, 1); finish(); }); return; }
+  if (reduced) { word.style.opacity = 1; core.style.transform = 'scale(1)'; sp.addEventListener('click', () => { finish(); }); return; }
 
   const W = sp.clientWidth, H = sp.clientHeight;
   const ring = (x, y, size, delay) => {
@@ -1069,7 +1054,7 @@ function runSplash() {
     b.alive = false;
     const x = W / 2 + b.x, y = H / 2 + b.y;
     b.f.animate([{ transform: 'scale(1)', opacity: 1 }, { transform: 'scale(1.05)', opacity: .85, offset: .35 }, { transform: 'scale(1.1)', opacity: 0 }], { duration: 95, easing: 'ease-in', fill: 'forwards' });
-    ring(x, y, b.r * 2, 0); droplets(x, y, b.r); popSound(b.r * 2, .8);
+    ring(x, y, b.r * 2, 0); droplets(x, y, b.r);
     if (B.every((o) => !o.alive)) setTimeout(finish, 450);
   };
   // After floating for a while the rest pop by themselves, smallest first
@@ -1101,7 +1086,7 @@ function runSplash() {
     word.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 260, fill: 'forwards' });
     core.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 110, easing: 'ease-in', fill: 'forwards' });
     flash.animate([{ transform: 'scale(1)', opacity: .7 }, { transform: 'scale(2.2)', opacity: 0 }], { duration: 650, easing: 'cubic-bezier(.2,.7,.3,1)', fill: 'forwards' });
-    droplets(W / 2, H / 2, 70); popSound(150, 1);
+    droplets(W / 2, H / 2, 70);
 
     // 3. Bubbles drift out of it: 3 large, 6 medium, 9 small
     const sizes = [128, 112, 96, 84, 76, 68, 60, 54, 48, 42, 38, 34, 30, 28, 26, 24, 22, 20];
@@ -1164,7 +1149,6 @@ function runSplash() {
   // playing, the rest wait a little longer. A tap on empty space skips ahead.
   sp.addEventListener('pointerdown', (e) => {
     if (done) return;
-    audio(); // the first touch unlocks sound
     const r = sp.getBoundingClientRect(), x = e.clientX - r.left - W / 2, y = e.clientY - r.top - H / 2;
     if (!burst) { explode(); return; }
     let hit = null, best = Infinity;
