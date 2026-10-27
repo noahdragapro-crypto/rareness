@@ -54,7 +54,8 @@ const PAIRS = [
   ['Podcast', 'Playlist', 'interests'], ['Talk it out', 'Sleep on it', 'personality'], ['Gym', 'Outdoors', 'routine'], ['Settle down', 'Explore', 'goals'], ['Text', 'Call', 'personality'],
   ['Brunch', 'Dinner', 'lifestyle'], ['Spontaneous trip', 'Planned holiday', 'personality'], ['Kids someday', 'Not for me', 'goals'], ['Sunrise', 'Sunset', 'routine']
 ];
-const INTERESTS = ['Longevity', 'Art', 'Science', 'Business', 'Books', 'Chess', 'Cinema', 'Coffee', 'Cooking', 'Dancing', 'Design', 'Fashion', 'Gaming', 'Hiking', 'Jazz', 'Live music', 'Photography', 'Plants', 'Running', 'Swimming', 'Travel', 'Wine', 'Yoga'];
+// Inspired by TikTok's "choose your interests" page
+const INTERESTS = ['Longevity', 'Art', 'Science', 'Business', 'Comedy', 'Dance', 'Music', 'Food', 'Sports', 'Fitness', 'Beauty', 'Fashion', 'Animals', 'Travel', 'Gaming', 'DIY', 'Outdoors', 'Life hacks', 'Family', 'Cars', 'Anime', 'Motivation', 'Books', 'Movies & TV', 'Cooking', 'Technology', 'Finance', 'Home & garden', 'Photography', 'Wellness'];
 
 // ---------------- App state ----------------
 let uid = null, me = null, myAnswers = [], people = [], chatList = [], config = { paywall: false };
@@ -633,7 +634,7 @@ async function renderProfile() {
       [['women', 'Women'], ['men', 'Men'], ['everyone', 'Everyone']].map(([v, l]) => '<button class="chip' + (me.show_me === v ? ' on' : '') + '" data-show="' + v + '" aria-pressed="' + (me.show_me === v) + '">' + l + '</button>').join('') + '</div></section>' +
 
     '<section class="section" aria-label="Interests"><div class="head"><h2 class="h2">Interests</h2><span class="counter" id="iCount">' + (me.interests || []).length + '</span></div><div class="chips">' +
-      INTERESTS.map((l) => '<button class="chip' + ((me.interests || []).includes(l) ? ' on' : '') + '" data-int="' + esc(l) + '" aria-pressed="' + (me.interests || []).includes(l) + '">' + esc(l) + '</button>').join('') + '</div></section>' +
+      [...INTERESTS, ...(me.interests || []).filter((l) => !INTERESTS.includes(l))].map((l) => '<button class="chip' + ((me.interests || []).includes(l) ? ' on' : '') + '" data-int="' + esc(l) + '" aria-pressed="' + (me.interests || []).includes(l) + '">' + esc(l) + '</button>').join('') + '</div></section>' +
 
     '<section class="section" aria-label="Your answers"><h2 class="h2">Your answers</h2>' +
       (answers.length ? answers.map((o) => '<div class="answer"><small>' + new Date(o.day + 'T12:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) + '</small><q>' + esc(o.prompt) + '</q><p>' + esc(o.data.text) + '</p></div>').join('')
@@ -1144,9 +1145,9 @@ function runSplash() {
 
 // ---------------- Gate: sign-in, onboarding, access fee ----------------
 const SIGNUP = [
-  { dim: 'values', multi: 3, prompt: 'What matters most to you in a partner?', opts: ['Honesty', 'Kindness', 'Ambition', 'Humour', 'Loyalty', 'Curiosity'] },
+  { dim: 'values', multi: 3, prompt: 'What matters most to you in a partner?', opts: ['Accountability', 'Depth', 'Intelligence', 'Humour', 'Artistic', 'Awareness', 'Ambition', 'Honesty'] },
   { dim: 'lifestyle', multi: 2, prompt: 'Your ideal Friday night?', opts: ['Dinner out with friends', 'A cosy night in', 'Dancing until late', 'Trying something new'] },
-  { dim: 'personality', multi: 3, prompt: 'Friends would describe you as…', opts: ['Calm', 'Curious', 'Playful', 'Driven', 'Warm', 'Bold'] },
+  { dim: 'personality', multi: 3, prompt: 'Friends would describe you as…', opts: ['Accountability', 'Depth', 'Intelligence', 'Humour', 'Artistic', 'Awareness', 'Ambition', 'Honesty'] },
   { dim: 'goals', multi: 2, prompt: 'What are you looking for?', opts: ['A long-term relationship', 'Something that grows slowly', 'To find a community', 'New people to meet', 'Not sure yet'] },
   { dim: 'routine', prompt: 'When are you at your best?', opts: ['Early morning', 'During the day', 'Late at night'] }
 ];
@@ -1274,7 +1275,7 @@ function gateOnboard() {
     };
     if (q.dim === 'interests') {
       showGate(head + '<h1 class="largetitle">What are your interests?</h1><p class="lead">Pick at least 3.</p>' +
-        '<div class="chips">' + INTERESTS.map((l) => '<button class="chip' + (G.interests.includes(l) ? ' on' : '') + '" data-int="' + esc(l) + '">' + esc(l) + '</button>').join('') + '</div>' +
+        '<div class="chips grid">' + INTERESTS.map((l) => '<button class="chip' + (G.interests.includes(l) ? ' on' : '') + '" data-int="' + esc(l) + '">' + esc(l) + '</button>').join('') + '</div>' +
         '<div class="grow"></div><button class="primary" id="go"' + (G.interests.length < 3 ? ' disabled' : '') + '>Continue</button>' + skip,
         () => {
           wire();
