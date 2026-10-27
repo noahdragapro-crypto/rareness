@@ -31,6 +31,7 @@ const ICON = {
   cam: sv('<path d="M4 8h3l2-3h6l2 3h3v11H4z"></path><circle cx="12" cy="13" r="3.5"></circle>'),
   x: sv('<path d="M6 6l12 12M18 6L6 18"></path>'),
   more: sv('<circle cx="5" cy="12" r="1"></circle><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle>'),
+  smile: sv('<circle cx="12" cy="12" r="9.5"></circle><path d="M8.5 14.2c.9 1.2 2.1 1.8 3.5 1.8s2.6-.6 3.5-1.8"></path><circle cx="9.2" cy="10" r=".6"></circle><circle cx="14.8" cy="10" r=".6"></circle>'),
   send: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"></path></svg>',
   lock: sv('<rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path>'),
   pin: sv('<path d="M12 21s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12z"></path><circle cx="12" cy="9" r="2.5"></circle>'),
@@ -186,6 +187,8 @@ document.querySelectorAll('.scroll[data-nav]').forEach((sc) => {
 function syncMeBtn() {
   const nb = views[cur] && views[cur].querySelector('.navbar');
   $('#meBtn').classList.toggle('compact', Boolean(nb && nb.classList.contains('on')));
+  // On the Cloud your own bubble in the middle opens your profile, so the corner button steps aside
+  $('#meBtn').classList.toggle('oncloud', cur === 1);
 }
 
 
@@ -558,8 +561,8 @@ async function renderProfile() {
       '<label class="hide" for="pStatus">Status</label><input class="field" id="pStatus" maxlength="20" value="' + esc(me.status) + '" placeholder="What’s on your mind">' +
       '<p class="label">Shown above your bubble in other people’s Cloud. Text only, 20 characters.</p></section>' +
 
-    '<section class="section" aria-label="Bio"><div class="head"><h2 class="h2">Bio</h2><span class="counter" id="bCount"></span></div>' +
-      '<p class="label" style="margin:0">Shown on your profile page to everyone in the Cloud and in your chats.</p><label class="hide" for="pBio">Your bio</label><textarea id="pBio" maxlength="160" placeholder="Who you are, what you love, what you’re looking for">' + esc(me.bio) + '</textarea></section>' +
+    '<section class="section" aria-label="About"><div class="head"><h2 class="h2">About</h2><span class="counter" id="bCount"></span></div>' +
+      '<p class="label" style="margin:0">Shown on your profile page to everyone in the Cloud and in your chats.</p><label class="hide" for="pBio">About you</label><textarea id="pBio" maxlength="160" placeholder="Who you are, what you love, what you’re looking for">' + esc(me.bio) + '</textarea></section>' +
 
     '<section class="section" aria-label="Basics"><h2 class="h2">Basics</h2><div class="grid2">' +
       field('pName', 'Name', me.name, 'First name', 24, 'given-name') + field('pPron', 'Pronouns', me.pronouns, 'she/her', 16) +
@@ -662,7 +665,10 @@ function buildCloud(list = []) {
     // Rings sit close together when the Cloud is drawn in, so only every other one is labelled
     el.innerHTML = few ? '' : '<span class="ringlab">' + p + '% in common</span>'; world.appendChild(el);
   });
-  youEl = document.createElement('div'); youEl.className = 'bub'; youEl.style.cssText = 'width:96px;height:96px;transform:translate(-48px,-48px);z-index:2';
+  youEl = document.createElement('div'); youEl.className = 'bub you'; youEl.style.cssText = 'width:96px;height:96px;transform:translate(-48px,-48px);z-index:2';
+  youEl.setAttribute('role', 'button'); youEl.setAttribute('aria-label', 'Your profile'); youEl.tabIndex = 0;
+  youEl.addEventListener('click', () => { if (!moved) openProfile(); });
+  youEl.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openProfile(); } });
   world.appendChild(youEl); refreshYou();
   const ranked = few ? [...list].sort((a, c) => c.score - a.score) : list;
   B = (few ? withGhosts(ranked) : ranked).map((p, i) => {
@@ -882,7 +888,7 @@ async function openPerson(b, opts = {}) {
     '<h1 class="largetitle" style="margin-top:12px">' + esc(nameAge(b)) + '</h1>' +
     '<p class="label" style="font-size:14px">' + esc([b.job, b.city].filter(Boolean).join(' · ')) + '</p></div>' +
     '<div class="stack" style="margin-top:22px">' +
-      '<section class="section" aria-label="Bio" id="theirBio"' + (b.bio ? '' : ' hidden') + '><h2 class="h2">Bio</h2><p class="bio">' + esc(b.bio || '') + '</p></section>' +
+      '<section class="section" aria-label="About" id="theirBio"' + (b.bio ? '' : ' hidden') + '><h2 class="h2">About</h2><p class="bio">' + esc(b.bio || '') + '</p></section>' +
       (b.score == null ? '' : '<section class="box" style="display:flex;flex-direction:column;gap:12px" aria-label="Why you match">' +
         '<div class="head"><h2 class="h2">Why you match</h2><span style="font-family:var(--serif);font-size:36px;line-height:1">' + b.score + '%</span></div>' +
         (b.reason ? '<p class="reason-line">' + esc(b.reason) + '</p>' : '') +
@@ -979,7 +985,7 @@ function renderChats() {
     (chatList.length ? '<section aria-label="Conversations" class="hair">' + chatList.map((c) => {
       const p = c.other, last = c.last;
       return '<button class="crow' + (c.unread ? ' unread' : '') + '" data-thread="' + c.id + '">' + bubbleHTML({ w: dimsToW(c.match?.dims), photo: API.photoUrl(p.photo_path) }, 58) +
-        '<span class="tx"><div><b>' + esc(p.name || 'Someone') + '</b><time>' + ago(c.at) + '</time></div><p>' + (last ? (last.sender_id === uid ? 'You: ' : '') + esc(last.body) : '') + '</p></span>' +
+        '<span class="tx"><div><b>' + esc(p.name || 'Someone') + '</b><time>' + ago(c.at) + '</time></div><p>' + (last ? (last.sender_id === uid ? 'You: ' : '') + esc(msgPreview(last.body)) : '') + '</p></span>' +
         (c.unread ? '<span class="udot" aria-label="Unread"></span>' : '') + '</button>';
     }).join('') + '</section>'
     : '<div class="empty">' + bubbleHTML({ w: [1, 1, 1, 1, 1, 1], plain: true }, 110) + '<h2 class="h2">No chats yet</h2><p class="label" style="font-size:14.5px;line-height:1.45;max-width:280px">Bump people in the Cloud. If they bump you back, you’ll both land here.</p>' +
@@ -988,6 +994,21 @@ function renderChats() {
   const tc = $('#toCloud'); if (tc) tc.onclick = () => goTab(1);
 }
 let openChat = null; // { id, draw(message) }
+// ---------------- Emoji, stickers and GIFs ----------------
+// Stickers and GIFs travel as ordinary messages with a marker, e.g. [[sticker:🫧]] or [[gif:https://…]]
+const EMOJI = '😀 😂 🥹 😊 😍 🥰 😘 😉 😎 🤔 🙃 😴 🥲 😅 😭 🤯 🫶 🙌 👏 👋 🤝 🙏 💪 👀 ❤️ 🧡 💛 💚 💙 💜 🤍 ✨ 🔥 🌊 🌙 ☀️ 🌿 🌸 🍷 ☕️ 🎶 🎉 🫧 💫 😌 🤗 😏 🙈'.split(' ');
+const STICKERS = ['🫧', '💛', '✨', '🌙', '🔥', '🌊', '🌿', '☕️', '🥂', '😘', '🙈', '🤍', '🫶', '🌸', '😴', '🎉'];
+const RICH = /^\[\[(sticker|gif):(.+)\]\]$/;
+const GIF_URL = /^https:\/\/(media\d*|i)\.giphy\.com\/[\w./?=&%-]+$/;
+function rich(body) {
+  const m = RICH.exec(body || '');
+  if (!m) return null;
+  if (m[1] === 'sticker' && STICKERS.includes(m[2])) return { kind: 'sticker', value: m[2] };
+  if (m[1] === 'gif' && GIF_URL.test(m[2])) return { kind: 'gif', value: m[2] };
+  return null;
+}
+const msgPreview = (body) => { const r = rich(body); return r ? (r.kind === 'gif' ? 'GIF' : 'Sticker ' + r.value) : body; };
+
 async function openThread(chatId) {
   let c = chatList.find((x) => x.id === chatId);
   if (!c) { await loadChats(); c = chatList.find((x) => x.id === chatId); }
@@ -995,7 +1016,8 @@ async function openThread(chatId) {
   const p = c.other;
   const head = '<button class="threadhead" id="threadHead" aria-label="See ' + esc(p.name || 'their') + '’s profile">' + bubbleHTML({ w: dimsToW(c.match?.dims), photo: API.photoUrl(p.photo_path) }, 84) + '<b style="font-family:var(--serif);font-size:24px;font-weight:400">' + esc(p.name || 'Someone') + '</b>' + '<span class="label">' + (c.match ? c.match.score + '% in common · ' : '') + 'See profile</span></button>';
   const pg = pushPage(p.name || 'Chat', head + '<div class="thread" id="thread"><div class="spinner" style="align-self:center"></div></div><div style="height:80px"></div>',
-    { footer: '<form class="composer glass" id="composer"><label for="msgIn" class="hide">Message</label><input id="msgIn" autocomplete="off" placeholder="Message ' + esc(p.name || '') + '" maxlength="1000"><button class="send" id="sendBtn" aria-label="Send" disabled>' + ICON.send + '</button></form>' });
+    { footer: '<div class="tray glass" id="tray" hidden><div class="traytabs" role="tablist">' + ['Emoji', 'Stickers', 'GIFs'].map((x, i) => '<button type="button" role="tab" data-tt="' + i + '" aria-selected="' + (i === 0) + '">' + x + '</button>').join('') + '</div><div class="traybody" id="trayBody"></div></div>' +
+      '<form class="composer glass" id="composer"><button type="button" class="traybtn" id="trayBtn" aria-label="Emoji, stickers and GIFs" aria-expanded="false">' + ICON.smile + '</button><label for="msgIn" class="hide">Message</label><input id="msgIn" autocomplete="off" placeholder="Message ' + esc(p.name || '') + '" maxlength="1000"><button class="send" id="sendBtn" aria-label="Send" disabled>' + ICON.send + '</button></form>' });
   const th = pg.querySelector('#thread'), sc = pg.querySelector('.scroll'), inp = pg.querySelector('#msgIn'), sb = pg.querySelector('#sendBtn');
   pg.querySelector('#threadHead').onclick = () => {
     // Their Cloud bubble if they're in it, otherwise what the chat knows about them
@@ -1005,19 +1027,63 @@ async function openThread(chatId) {
       w: c.match ? dimsToW(c.match.dims) : DIMS.map(() => 1), score: c.match?.score ?? null, reason: c.match?.reason || null, bumped: true, chatId: c.id
     }, { fromChat: true });
   };
-  let msgs = [];
-  const draw = () => { th.innerHTML = msgs.map((m) => '<div class="msg ' + (m.sender_id === uid ? 'me' : m.sender_id ? 'them' : 'sys') + '">' + esc(m.body) + '</div>').join(''); sc.scrollTop = sc.scrollHeight; };
+  let msgs = [], readAt = null;
+  const one = (m) => {
+    const who = m.sender_id === uid ? 'me' : m.sender_id ? 'them' : 'sys', r = m.sender_id ? rich(m.body) : null;
+    if (r?.kind === 'sticker') return '<div class="msg sticker ' + who + '" role="img" aria-label="Sticker ' + r.value + '">' + r.value + '</div>';
+    if (r?.kind === 'gif') return '<div class="msg gif ' + who + '"><img src="' + esc(r.value) + '" alt="GIF" loading="lazy"></div>';
+    return '<div class="msg ' + who + '">' + esc(m.body) + '</div>';
+  };
+  // "Read" (or "Sent") under your latest message, from when they last opened the chat
+  const receipt = () => {
+    const mine = [...msgs].reverse().find((m) => m.sender_id === uid);
+    if (!mine || msgs[msgs.length - 1] !== mine) return '';
+    return '<div class="receipt">' + (readAt && readAt >= mine.created_at ? 'Read' : 'Sent') + '</div>';
+  };
+  const draw = () => { th.innerHTML = msgs.map(one).join('') + receipt(); sc.scrollTop = sc.scrollHeight; };
+  const checkRead = () => API.theirRead(chatId, p.id).then((r) => { if (r !== readAt) { readAt = r; draw(); } }).catch(() => {});
   try { msgs = await API.messages(chatId); draw(); } catch (e) { fail(e); }
+  checkRead();
+  const readTimer = setInterval(checkRead, 5000);
   API.markRead(uid, chatId).then(loadChats);
-  openChat = { id: chatId, add(m) { if (!msgs.some((x) => x.id === m.id)) { msgs.push(m); draw(); API.markRead(uid, chatId); } } };
+  openChat = { id: chatId, add(m) { if (!msgs.some((x) => x.id === m.id)) { msgs.push(m); draw(); if (m.sender_id !== uid) { API.markRead(uid, chatId); readAt = m.created_at > (readAt || '') ? m.created_at : readAt; } } } };
   inp.oninput = () => { sb.disabled = !inp.value.trim(); };
+  const sendBody = async (x) => { try { openChat?.add(await API.send(uid, chatId, x)); return true; } catch (err) { fail(err); return false; } };
   pg.querySelector('#composer').onsubmit = async (e) => {
     e.preventDefault();
     const x = inp.value.trim(); if (!x) return;
     inp.value = ''; sb.disabled = true;
-    try { openChat?.add(await API.send(uid, chatId, x)); } catch (err) { fail(err); inp.value = x; sb.disabled = false; }
+    if (!(await sendBody(x))) { inp.value = x; sb.disabled = false; }
   };
-  pg._onPop = () => { openChat = null; loadChats(); };
+  // The tray: emoji go into the message, stickers and GIFs send straight away
+  const tray = pg.querySelector('#tray'), tb = pg.querySelector('#trayBody'), tbtn = pg.querySelector('#trayBtn');
+  let tab = 0, gifQ = '', gifT;
+  const openTray = (on) => { tray.hidden = !on; tbtn.setAttribute('aria-expanded', on); sc.style.paddingBottom = on ? '330px' : ''; if (on) { drawTray(); sc.scrollTop = sc.scrollHeight; } };
+  tbtn.onclick = () => openTray(tray.hidden);
+  tray.querySelectorAll('[data-tt]').forEach((b) => b.onclick = () => { tab = +b.dataset.tt; tray.querySelectorAll('[data-tt]').forEach((x) => x.setAttribute('aria-selected', x === b)); drawTray(); });
+  const loadGifs = async () => {
+    const grid = tb.querySelector('#gifGrid'); if (!grid) return;
+    grid.innerHTML = '<div class="spinner" style="grid-column:1/-1;justify-self:center"></div>';
+    try {
+      const list = await API.gifs(gifQ);
+      grid.innerHTML = list.length ? list.map((g) => '<button type="button" class="gifpick" data-gif="' + esc(g.url) + '"><img src="' + esc(g.preview) + '" alt="GIF" loading="lazy"></button>').join('') : '<p class="label" style="grid-column:1/-1">No GIFs found.</p>';
+      grid.querySelectorAll('[data-gif]').forEach((b) => b.onclick = async () => { if (await sendBody('[[gif:' + b.dataset.gif + ']]')) openTray(false); });
+    } catch (e) { grid.innerHTML = '<p class="label" style="grid-column:1/-1">' + esc(e.message) + '</p>'; }
+  };
+  function drawTray() {
+    if (tab === 0) {
+      tb.innerHTML = '<div class="emojigrid">' + EMOJI.map((x) => '<button type="button" data-em="' + x + '">' + x + '</button>').join('') + '</div>';
+      tb.querySelectorAll('[data-em]').forEach((b) => b.onclick = () => { inp.value += b.dataset.em; sb.disabled = false; });
+    } else if (tab === 1) {
+      tb.innerHTML = '<div class="stickergrid">' + STICKERS.map((x) => '<button type="button" data-st="' + x + '" aria-label="Send sticker ' + x + '">' + x + '</button>').join('') + '</div>';
+      tb.querySelectorAll('[data-st]').forEach((b) => b.onclick = async () => { if (await sendBody('[[sticker:' + b.dataset.st + ']]')) openTray(false); });
+    } else {
+      tb.innerHTML = '<input class="field gifsearch" id="gifQ" placeholder="Search GIFs" value="' + esc(gifQ) + '" autocomplete="off"><div class="gifgrid" id="gifGrid"></div>';
+      tb.querySelector('#gifQ').oninput = (e) => { gifQ = e.target.value; clearTimeout(gifT); gifT = setTimeout(loadGifs, 350); };
+      loadGifs();
+    }
+  }
+  pg._onPop = () => { openChat = null; clearInterval(readTimer); loadChats(); };
 }
 
 

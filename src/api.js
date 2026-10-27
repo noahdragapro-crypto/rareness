@@ -125,6 +125,12 @@ export async function messages(chatId) {
   return check(await sb.from('messages').select('id,sender_id,body,created_at').eq('chat_id', chatId).order('created_at').limit(500));
 }
 export async function send(uid, chatId, body) { return check(await sb.from('messages').insert({ chat_id: chatId, sender_id: uid, body }).select().single()); }
+// When the other person last read this chat (for "Read" under your messages)
+export async function theirRead(chatId, otherId) {
+  const row = check(await sb.from('chat_reads').select('read_at').eq('chat_id', chatId).eq('user_id', otherId).maybeSingle());
+  return row?.read_at || null;
+}
+export async function gifs(q) { return (await api('gifs?q=' + encodeURIComponent(q || ''), 'GET')).gifs; }
 export async function markRead(uid, chatId) { await sb.from('chat_reads').upsert({ chat_id: chatId, user_id: uid, read_at: new Date().toISOString() }); }
 export function onMessages(fn) {
   const ch = sb.channel('messages-' + Math.random().toString(36).slice(2))

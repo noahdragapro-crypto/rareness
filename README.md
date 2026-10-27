@@ -75,6 +75,10 @@ Send them the link. On iPhone: open it in Safari → Share → **Add to Home Scr
 
 The Cloud fills in as more people sign up. Each new member is scored against everyone else right after sign-up.
 
+## Chats
+
+Text, emoji, stickers and GIFs. GIFs need a free GIPHY key in `GIPHY_API_KEY` (developers.giphy.com → Create an app → API). Under your latest message the other person sees nothing new, and you see **Sent** or **Read**; "Read" needs `supabase/migrations/0005_read_receipts.sql`.
+
 ## Team dashboard
 
 `/admin` (for example `https://rareness-kappa.vercel.app/admin`) shows how many members there are, today's activity, new members per day, and a searchable list of every member, with a CSV download. Only emails in the `ADMIN_EMAILS` variable in Vercel can open it: log in to the app with that email first, then open `/admin`.
