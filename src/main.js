@@ -1194,7 +1194,7 @@ function gateBasics(msg) {
   showGate(
     '<span class="brand">Rareness</span>' +
     (signedIn ? stepsBar(0) : '<div style="display:flex;justify-content:center;padding:10px 0 2px">' + bubbleHTML({ w: [1, 1, 1, 1, 1, 1], clear: true }, 120) + '</div>') +
-    '<h1 class="largetitle">' + (signedIn ? 'Hello. Who are you?' : 'The people who share the most with you, closest.') + '</h1>' +
+    '<h1 class="largetitle">' + (signedIn ? 'Hello. Who are you?' : 'Bump into your perfect bubble.') + '</h1>' +
     '<form id="f" style="display:flex;flex-direction:column;gap:14px" novalidate>' +
       field('obName', 'First name', p.name, 'Your first name', 24, 'given-name') +
       (signedIn ? '' : '<label class="lbl" for="email">Email<input class="field" id="email" type="email" autocomplete="email" inputmode="email" value="' + esc(G.email) + '" placeholder="you@example.com"></label>') +
