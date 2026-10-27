@@ -656,18 +656,18 @@ function buildCloud(list = []) {
   });
   youEl = document.createElement('div'); youEl.className = 'bub'; youEl.style.cssText = 'width:96px;height:96px;transform:translate(-48px,-48px);z-index:2';
   world.appendChild(youEl); refreshYou();
-  B = list.map((p, i) => {
+  B = withGhosts(list).map((p, i) => {
     const r = 24 + p.compat * p.compat * 48, dist = distFor(p.compat), ang = i * 2.39996 + .7, D = Math.round(r * 2);
     const was = keep.get(p.id);
     const b = Object.assign(p, { r, dist, hx: Math.cos(ang) * dist, hy: Math.sin(ang) * dist, vx: 0, vy: 0, press: 0, bumpUntil: was?.bumpUntil || 0,
       p1: Math.random() * 6.28, p2: Math.random() * 6.28, w1: .22 + Math.random() * .22, w2: .2 + Math.random() * .22, amp: 14 + Math.random() * 16, wob: Math.random() * 6.28 });
     const el = document.createElement('div'); el.className = 'bub'; el.style.width = el.style.height = D + 'px';
-    el.innerHTML = '<div class="drop"></div><button class="ball" aria-label="' + esc(nameAge(p) + ', ' + p.score + '% in common') + '">' +
-      bubbleHTML({ w: p.w, photo: p.photo }, D) + '</button><span class="bumpbadge hide">' + ICON.bump + '</span>' +
-      '<span class="bname">' + esc(nameAge(p)) + '</span>' + noteHTML(p.status);
+    el.innerHTML = '<div class="drop"></div><button class="ball" aria-label="' + esc(p.ghost ? 'An empty bubble' : nameAge(p) + ', ' + p.score + '% in common') + '">' +
+      bubbleHTML(p.ghost ? { w: p.w, clear: true } : { w: p.w, photo: p.photo }, D) + '</button><span class="bumpbadge hide">' + ICON.bump + '</span>' +
+      '<span class="bname">' + (p.ghost ? '' : esc(nameAge(p))) + '</span>' + noteHTML(p.status);
     world.appendChild(el);
     b.el = el; b.ball = el.querySelector('.ball'); b.nameEl = el.querySelector('.bname'); b.noteEl = el.querySelector('.note'); b.badge = el.querySelector('.bumpbadge');
-    b.ball.addEventListener('click', () => { if (!moved) openPerson(b); });
+    b.ball.addEventListener('click', () => { if (!moved) { if (b.ghost) toast('Waiting for someone new'); else openPerson(b); } });
     return b;
   });
   for (let it = 0; it < 300; it++) {
@@ -679,6 +679,17 @@ function buildCloud(list = []) {
   }
   B.forEach((b) => { const was = keep.get(b.id); b.x = was ? was.x : b.hx; b.y = was ? was.y : b.hy; });
   refreshBadges(); applyLOD(true);
+}
+// Empty glass bubbles keep the Cloud full while it has few people: part of the look, not people.
+// Their sizes and rings are fixed per slot so they don't jump when the Cloud reloads.
+const GHOSTS = 14;
+function withGhosts(list) {
+  const out = [...list];
+  for (let i = 0; out.length < GHOSTS; i++) {
+    const h = (k) => { const x = Math.sin((i + 1) * 12.9898 + k * 78.233) * 43758.5453; return x - Math.floor(x); };
+    out.push({ id: 'ghost-' + i, ghost: true, status: '', bumped: false, compat: .35 + h(1) * .5, w: DIMS.map((_, k) => .2 + h(k + 2)) });
+  }
+  return out;
 }
 function refreshYou() {
   if (!youEl) return;
@@ -819,7 +830,8 @@ function toBubble(row) {
   return {
     id: row.id, name: row.name, age: row.age, city: row.city, job: row.job, status: clip(row.status, 20),
     interests: row.interests || [], photo: API.photoUrl(row.photo_path),
-    score: row.score, compat: Math.max(.05, Math.min(1, (row.score - 25) / 70)), w: dimsToW(row.dims), dims: row.dims,
+    // Someone not scored yet still shows up, mid-distance with an even ring, until matching catches up
+    score: row.score ?? 50, compat: Math.max(.05, Math.min(1, ((row.score ?? 50) - 25) / 70)), w: row.dims ? dimsToW(row.dims) : DIMS.map(() => 1), dims: row.dims || {},
     reason: row.reason, bumped: row.bumped, chatId: row.chat_id
   };
 }
@@ -840,7 +852,7 @@ function renderCloudEmpty() {
     el.style.cssText = 'position:absolute;left:24px;right:24px;top:calc(50% + 70px);text-align:center;display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none';
     $('#v2').appendChild(el);
   }
-  el.innerHTML = '<p class="reason-line">Your Cloud is forming</p><p class="label" style="font-size:14px;line-height:1.45;max-width:300px">We compare your answers with everyone else’s. People appear here as soon as their matches are ready.</p>';
+  el.innerHTML = '<p class="reason-line">Your Cloud is forming</p><p class="label" style="font-size:14px;line-height:1.45;max-width:300px">These bubbles fill with people from your country as they join.</p>';
 }
 
 // ---------------- Person page + bumping ----------------
