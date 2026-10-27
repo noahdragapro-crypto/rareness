@@ -1152,7 +1152,8 @@ const SIGNUP = [
   { dim: 'routine', prompt: 'When are you at your best?', opts: ['Early morning', 'During the day', 'Late at night'] }
 ];
 // Aura quick test, right after the photo: the first three are required, the rest can be skipped for now
-const TEST = [SIGNUP[0], { dim: 'interests' }, SIGNUP[1], SIGNUP[2], SIGNUP[3], SIGNUP[4], { dim: 'bio' }];
+// Order: what matters in a partner, interests, how friends describe you (required), then the rest
+const TEST = [SIGNUP[0], { dim: 'interests' }, SIGNUP[2], SIGNUP[1], SIGNUP[3], SIGNUP[4], { dim: 'bio' }];
 const REQUIRED = 3;
 const Q0 = 2; // first quick-test step, after basics and photo
 const STEPS = Q0 + TEST.length;
@@ -1248,12 +1249,20 @@ function gateOnboard() {
   } else if (i === 1) {
     showGate(stepsBar(i) + backBtn + '<h1 class="largetitle">Your bubble</h1><p class="lead">Add a clear photo of you. It sits inside your bubble in everyone’s Cloud.</p>' +
       '<div style="display:flex;justify-content:center;padding:6px 0"><button id="obPhoto" style="border:0;background:none;padding:0;cursor:pointer;position:relative" aria-label="' + (me.photo_path ? 'Change photo' : 'Add a photo') + '">' + bubbleHTML(youObj(), 176) + '<span class="gbtn glass cam" style="position:absolute;right:2px;bottom:2px">' + ICON.cam + '</span></button></div>' +
+      '<label class="lbl" for="obStatus">Your status<input class="field" id="obStatus" maxlength="20" value="' + esc(G.status ?? me.status ?? '') + '" placeholder="What’s on your mind"></label>' +
+      '<p class="fine" style="margin-top:-6px">Shown above your bubble in other people’s Cloud. 20 characters.</p>' +
       '<p class="err" id="err" role="alert" hidden></p><div class="grow"></div><button class="primary" id="go">' + (me.photo_path ? 'Continue' : 'Add a photo') + '</button>',
       () => {
         gate.querySelector('[data-back]').onclick = () => { G.step--; gateOnboard(); };
+        $('#obStatus').oninput = (e) => { G.status = e.target.value; };
         const pick = () => pickPhoto(async (blob) => { await savePhoto(blob); gateOnboard(); });
         $('#obPhoto').onclick = pick;
-        $('#go').onclick = () => { if (!me.photo_path) return pick(); G.step++; gateOnboard(); };
+        $('#go').onclick = async () => {
+          if (!me.photo_path) return pick();
+          const status = $('#obStatus').value.trim();
+          if (status !== (me.status || '')) { try { me = await API.saveProfile(uid, { status }); } catch (x) { fail(x); return; } }
+          G.step++; gateOnboard();
+        };
       });
   } else {
     const k = i - Q0, q = TEST[k];
