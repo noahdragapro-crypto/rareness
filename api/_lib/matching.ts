@@ -6,8 +6,9 @@ import { aiEnabled, basicPair, computeAura, loadPeople, personCard, scorePair } 
 type Person = Awaited<ReturnType<typeof loadPeople>>[number];
 
 const eligible = (p: Person) => !paywallOn() || Boolean(p.profile.paid_at);
-// Members only ever see people from their own country, so only those pairs are scored
-const sameCountry = (a: Person, b: Person) => a.profile.country === b.profile.country;
+// With SAME_COUNTRY=on, members only see people from their own country, so only those pairs are scored.
+// Off by default for the friends test (see supabase/migrations/0003_friends_test.sql).
+const sameCountry = (a: Person, b: Person) => process.env.SAME_COUNTRY !== "on" || a.profile.country === b.profile.country;
 const lastActivity = (p: Person) => p.answers.reduce((m, a) => (a.created_at > m ? a.created_at : m), "");
 
 async function pool<T>(items: T[], limit: number, deadline: number, fn: (item: T) => Promise<void>) {

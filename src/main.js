@@ -657,7 +657,7 @@ function buildCloud(list = []) {
   youEl = document.createElement('div'); youEl.className = 'bub'; youEl.style.cssText = 'width:96px;height:96px;transform:translate(-48px,-48px);z-index:2';
   world.appendChild(youEl); refreshYou();
   B = withGhosts(list).map((p, i) => {
-    const r = 24 + p.compat * p.compat * 48, dist = distFor(p.compat), ang = i * 2.39996 + .7, D = Math.round(r * 2);
+    const r = p.size || 24 + p.compat * p.compat * 48, dist = distFor(p.compat), ang = i * 2.39996 + .7, D = Math.round(r * 2);
     const was = keep.get(p.id);
     const b = Object.assign(p, { r, dist, hx: Math.cos(ang) * dist, hy: Math.sin(ang) * dist, vx: 0, vy: 0, press: 0, bumpUntil: was?.bumpUntil || 0,
       p1: Math.random() * 6.28, p2: Math.random() * 6.28, w1: .22 + Math.random() * .22, w2: .2 + Math.random() * .22, amp: 14 + Math.random() * 16, wob: Math.random() * 6.28 });
@@ -682,12 +682,13 @@ function buildCloud(list = []) {
 }
 // Empty glass bubbles keep the Cloud full while it has few people: part of the look, not people.
 // Their sizes and rings are fixed per slot so they don't jump when the Cloud reloads.
-const GHOSTS = 14;
+const GHOSTS = 34;
 function withGhosts(list) {
   const out = [...list];
   for (let i = 0; out.length < GHOSTS; i++) {
     const h = (k) => { const x = Math.sin((i + 1) * 12.9898 + k * 78.233) * 43758.5453; return x - Math.floor(x); };
-    out.push({ id: 'ghost-' + i, ghost: true, status: '', bumped: false, compat: .35 + h(1) * .5, w: DIMS.map((_, k) => .2 + h(k + 2)) });
+    // Mostly small and mid-sized, a few large; kept out of the centre so real people stand out
+    out.push({ id: 'ghost-' + i, ghost: true, status: '', bumped: false, compat: .3 + h(1) * .65, size: 9 + Math.pow(h(9), 2.2) * 52, w: DIMS.map((_, k) => .2 + h(k + 2)) });
   }
   return out;
 }
@@ -852,7 +853,7 @@ function renderCloudEmpty() {
     el.style.cssText = 'position:absolute;left:24px;right:24px;top:calc(50% + 70px);text-align:center;display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none';
     $('#v2').appendChild(el);
   }
-  el.innerHTML = '<p class="reason-line">Your Cloud is forming</p><p class="label" style="font-size:14px;line-height:1.45;max-width:300px">These bubbles fill with people from your country as they join.</p>';
+  el.innerHTML = '<p class="reason-line">Your Cloud is forming</p><p class="label" style="font-size:14px;line-height:1.45;max-width:300px">These bubbles fill with people as they join.</p>';
 }
 
 // ---------------- Person page + bumping ----------------
