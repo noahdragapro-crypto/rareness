@@ -54,8 +54,15 @@ const PAIRS = [
   ['Podcast', 'Playlist', 'interests'], ['Talk it out', 'Sleep on it', 'personality'], ['Gym', 'Outdoors', 'routine'], ['Settle down', 'Explore', 'goals'], ['Text', 'Call', 'personality'],
   ['Brunch', 'Dinner', 'lifestyle'], ['Spontaneous trip', 'Planned holiday', 'personality'], ['Kids someday', 'Not for me', 'goals'], ['Sunrise', 'Sunset', 'routine']
 ];
-// Self-development, longevity, nature, business and art: what Rareness members are about
-const INTERESTS = ['Longevity', 'Biohacking', 'Breathwork', 'Cold plunge', 'Fasting', 'Nutrition', 'Sleep', 'Meditation', 'Journaling', 'Stoicism', 'Psychology', 'Philosophy', 'Reading', 'Science', 'Strength', 'Running', 'Yoga', 'Hiking', 'Surfing', 'Mountains', 'Gardening', 'Business', 'Investing', 'AI', 'Art', 'Photography', 'Design', 'Writing', 'Music', 'Ceramics'];
+// Self-development, longevity, nature, business and art, plus a few elements and small joys for fun
+const INTERESTS = [
+  'Longevity', 'Biohacking', 'Breathwork', 'Cold plunge', 'Fasting', 'Nutrition', 'Sleep', 'Meditation', 'Journaling',
+  'Stoicism', 'Psychology', 'Philosophy', 'Reading', 'Science', 'Strength', 'Running', 'Yoga', 'Dancing',
+  'Nature', 'Animals', 'Hiking', 'Surfing', 'Mountains', 'Ocean', 'Forests', 'Gardening', 'Campfires',
+  'Fire', 'Cold', 'Rain', 'Stars', 'Moon', 'Sunrises', 'Silence', 'Saunas', 'Tea',
+  'Dogs', 'Cats', 'Vinyl', 'Poetry', 'Chess', 'Fermenting', 'Business', 'Investing', 'AI',
+  'Art', 'Photography', 'Design', 'Writing', 'Music', 'Ceramics'
+];
 
 // ---------------- App state ----------------
 let uid = null, me = null, myAnswers = [], people = [], chatList = [], config = { paywall: false };
