@@ -1301,7 +1301,7 @@ function gateOnboard() {
       // Several answers allowed: tap to toggle, then Continue
       const sel = () => (G.answers[q.dim] ||= []);
       showGate(head + '<h1 class="largetitle">' + esc(q.prompt) + '</h1><p class="lead">Pick up to ' + q.multi + '.</p>' +
-        '<div class="opts">' + q.opts.map((o) => '<button class="opt' + (sel().includes(o) ? ' on' : '') + '" aria-pressed="' + sel().includes(o) + '" data-o="' + esc(o) + '">' + esc(o) + '</button>').join('') + '</div>' +
+        '<div class="opts grid' + (q.opts.every((o) => o.length <= 12) ? ' g3' : '') + '">' + q.opts.map((o) => '<button class="opt' + (sel().includes(o) ? ' on' : '') + '" aria-pressed="' + sel().includes(o) + '" data-o="' + esc(o) + '">' + esc(o) + '</button>').join('') + '</div>' +
         '<div class="grow"></div><button class="primary" id="go"' + (sel().length ? '' : ' disabled') + '>Continue</button>' + skip,
         () => {
           wire();
@@ -1314,7 +1314,7 @@ function gateOnboard() {
         });
     } else {
       showGate(head + '<h1 class="largetitle">' + esc(q.prompt) + '</h1>' +
-        '<div class="opts" role="radiogroup">' + q.opts.map((o) => '<button class="opt' + (G.answers[q.dim] === o ? ' on' : '') + '" role="radio" aria-checked="' + (G.answers[q.dim] === o) + '" data-o="' + esc(o) + '">' + esc(o) + '</button>').join('') + '</div>' +
+        '<div class="opts grid' + (q.opts.every((o) => o.length <= 12) ? ' g3' : '') + '" role="radiogroup">' + q.opts.map((o) => '<button class="opt' + (G.answers[q.dim] === o ? ' on' : '') + '" role="radio" aria-checked="' + (G.answers[q.dim] === o) + '" data-o="' + esc(o) + '">' + esc(o) + '</button>').join('') + '</div>' +
         '<div class="grow"></div>' + skip,
         () => {
           wire();

@@ -336,6 +336,10 @@ input[type=range]{width:100%;accent-color:#111114}
 .opts{display:flex;flex-direction:column;gap:6px}
 .opt{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:52px;padding:12px 14px;border:.5px solid rgba(17,17,20,.16);border-radius:var(--r);background:#fff;font-size:16px;text-align:left;cursor:pointer}
 .opt.on{background:var(--ink);border-color:var(--ink);color:#fff}
+/* Aura test answers sit in a grid, like the interests */
+.opts.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+.opts.grid.g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.opts.grid .opt{justify-content:center;text-align:center;padding:10px 8px;font-size:15px;line-height:1.25}
 .err{color:#a3192f;font-size:13.5px;margin:0}
 .fine{font-size:12px;line-height:1.45;color:var(--ink2);margin:0}
 .code{letter-spacing:.4em;font-size:22px;text-align:center;font-variant-numeric:tabular-nums}
