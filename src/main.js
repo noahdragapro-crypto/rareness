@@ -55,7 +55,7 @@ const PAIRS = [
   ['Brunch', 'Dinner', 'lifestyle'], ['Spontaneous trip', 'Planned holiday', 'personality'], ['Kids someday', 'Not for me', 'goals'], ['Sunrise', 'Sunset', 'routine']
 ];
 // Inspired by TikTok's "choose your interests" page
-const INTERESTS = ['Longevity', 'Art', 'Science', 'Business', 'Comedy', 'Dance', 'Music', 'Food', 'Sports', 'Fitness', 'Beauty', 'Fashion', 'Animals', 'Travel', 'Gaming', 'DIY', 'Outdoors', 'Life hacks', 'Family', 'Cars', 'Anime', 'Motivation', 'Books', 'Movies & TV', 'Cooking', 'Technology', 'Finance', 'Home & garden', 'Photography', 'Wellness'];
+const INTERESTS = ['Longevity', 'Art', 'Science', 'Business', 'Comedy', 'Dance', 'Music', 'Food', 'Sports', 'Fitness', 'Beauty', 'Fashion', 'Animals', 'Travel', 'Gaming', 'DIY', 'Outdoors', 'Life hacks', 'Family', 'Cars', 'Anime', 'Motivation', 'Books', 'Movies & TV', 'Cooking', 'Technology', 'Finance', 'Gardening', 'Photography', 'Wellness'];
 
 // ---------------- App state ----------------
 let uid = null, me = null, myAnswers = [], people = [], chatList = [], config = { paywall: false };
