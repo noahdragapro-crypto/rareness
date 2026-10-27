@@ -1,6 +1,6 @@
 # Rareness
 
-A dating web app built around daily rituals. New members register their profile, take a one-minute **aura quick test**, and pay a one-time **$5** to unlock the app. Then they answer three short exercises a day, Claude reads their answers to shape an **aura**, and the **Cloud** shows other members as glass bubbles: the more two people share, the closer and bigger the bubble, and the coloured ring shows why. Nobody knows who bumped them until both people bump each other, which opens a chat.
+A dating web app built around daily rituals. New members register their profile, take a one-minute **aura quick test**, and pay a one-time **$5** to unlock the app. Then they do three things a day (meditate for 10 minutes, write what comes to mind when it's clear, take a first step), Claude reads their answers to shape an **aura**, and the **Cloud** shows other members as glass bubbles: the more two people share, the closer and bigger the bubble, and the coloured ring shows why. Nobody knows who bumped them until both people bump each other, which opens a chat.
 
 It runs as a website that members add to their phone's home screen, where it opens full screen like an app.
 
@@ -92,7 +92,7 @@ npm run build
 2. Page 2: photo (with reframing) and a status (optional, 20 characters).
 3. Aura quick test, four questions: what matters in a partner, interests (at least 3), how friends describe them, and what they're looking for. Claude reads it and shows their aura.
 4. Pay $5 once in Stripe Checkout.
-5. The app: Agenda (today's three exercises, plus upcoming days and what's done), Cloud and Chats. Their profile opens from the bubble in the top-right corner.
+5. The app: Agenda (today's three: meditate 10 minutes, a clear-mind reflection, take a first step; plus upcoming days and what's done), Cloud and Chats. Their profile opens from the bubble in the top-right corner.
 
 ## Costs at about 20 members
 

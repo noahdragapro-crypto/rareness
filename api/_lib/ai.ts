@@ -63,12 +63,15 @@ export function personCard(p: Profile, answers: Answer[]): string {
   if (p.status) lines.push(`Status: ${clip(p.status, 20)}`);
   const signup = answers.filter((a) => a.kind === "signup");
   for (const a of signup) lines.push(`Sign-up (${a.dim}): ${clip(a.prompt, 120)} -> ${clip(a.data.choice ?? a.data.text, 200)}`);
+  // Daily: meditate (m), what comes to mind when it's clear (q), take a first step (t)
   const qs = answers.filter((a) => a.kind === "q").slice(0, 8);
-  for (const a of qs) lines.push(`Daily question (${a.dim}): ${clip(a.prompt, 120)} -> ${clip(a.data.text, 300)}`);
+  for (const a of qs) lines.push(`Daily reflection (${a.dim}): ${clip(a.prompt, 120)} -> ${clip(a.data.text, 300)}`);
+  const steps = answers.filter((a) => a.kind === "t" && a.data.text).slice(0, 8);
+  if (steps.length) lines.push(`First steps they took: ${steps.map((a) => clip(a.data.text, 80)).join("; ")}`);
   const picks = answers.filter((a) => a.kind === "t").slice(0, 10).flatMap((a) => (a.data.picks as { a: string; b: string; pick: string }[] | undefined) ?? []);
   if (picks.length) lines.push(`This-or-that picks: ${picks.slice(0, 40).map((x) => `${clip(x.pick, 30)} (over ${clip(x.pick === x.a ? x.b : x.a, 30)})`).join("; ")}`);
   const moves = answers.filter((a) => a.kind === "m");
-  if (moves.length) lines.push(`Moved on ${moves.length} of the last 30 days, about ${Math.round(moves.reduce((s, a) => s + Number(a.data.minutes ?? 0), 0) / moves.length)} min each time.`);
+  if (moves.length) lines.push(`Meditated on ${moves.length} of the last 30 days.`);
   return lines.join("\n");
 }
 

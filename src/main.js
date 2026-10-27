@@ -25,8 +25,8 @@ const ICON = {
   check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>',
   back: sv('<path d="M15 5l-7 7 7 7"></path>'),
   q: sv('<path d="M9.2 9a3 3 0 1 1 4.3 2.7c-.9.4-1.5 1.2-1.5 2.2V15"></path><circle cx="12" cy="18.5" r=".5"></circle><circle cx="12" cy="12" r="9.5"></circle>'),
-  t: sv('<path d="M7 4L3 8l4 4M3 8h13M17 12l4 4-4 4M21 16H8"></path>'),
-  m: sv('<circle cx="13.5" cy="4.5" r="1.8"></circle><path d="M8 21l3-6 3 2v5M6 11l3-3 4 1 2 3 3 1M11 15l-1-4"></path>'),
+  t: sv('<path d="M4 12h14M13 6l6 6-6 6"></path>'),
+  m: sv('<circle cx="12" cy="5.5" r="2"></circle><path d="M12 8.5v4.5M7.5 11.5l4.5 1.5 4.5-1.5M4 19.5c2.5-1.5 5-2.5 8-2.5s5.5 1 8 2.5"></path>'),
   bump: sv('<circle cx="8.5" cy="12" r="5"></circle><circle cx="16.5" cy="12" r="4"></circle>'),
   cam: sv('<path d="M4 8h3l2-3h6l2 3h3v11H4z"></path><circle cx="12" cy="13" r="3.5"></circle>'),
   x: sv('<path d="M6 6l12 12M18 6L6 18"></path>'),
@@ -41,19 +41,6 @@ const ICON = {
 const SIL = '<svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="36" r="17" fill="rgba(17,17,20,.16)"></circle><path d="M14 100C14 70 32 58 50 58s36 12 36 42z" fill="rgba(17,17,20,.16)"></path></svg>';
 
 // ---------------- Daily exercises (the same for everyone on a given day) ----------------
-const QUESTIONS = [
-  ['What made you laugh this week?', 'personality'], ['What would you never compromise on?', 'values'], ['What’s your most unpopular opinion?', 'personality'],
-  ['What does a good weekend look like to you?', 'lifestyle'], ['What’s a small thing that makes your day?', 'personality'], ['What are you most proud of this year?', 'values'],
-  ['Describe your energy on a Sunday morning.', 'routine'], ['What does home mean to you?', 'values'], ['What do friends always tease you about?', 'personality'],
-  ['What are you looking for right now?', 'goals'], ['Who do you admire most, and why?', 'values'], ['What’s your idea of a perfect first date?', 'goals'],
-  ['What did you learn recently that surprised you?', 'interests'], ['Which place feels most like you?', 'lifestyle'], ['What would your perfect day include?', 'lifestyle']
-];
-const PAIRS = [
-  ['Mountains', 'Sea', 'lifestyle'], ['Night out', 'Night in', 'lifestyle'], ['Books', 'Films', 'interests'], ['Cook', 'Order in', 'lifestyle'], ['Concert', 'Museum', 'interests'],
-  ['Plan it all', 'Go with the flow', 'personality'], ['Dogs', 'Cats', 'interests'], ['Early bird', 'Night owl', 'routine'], ['Big city', 'Small town', 'lifestyle'],
-  ['Podcast', 'Playlist', 'interests'], ['Talk it out', 'Sleep on it', 'personality'], ['Gym', 'Outdoors', 'routine'], ['Settle down', 'Explore', 'goals'], ['Text', 'Call', 'personality'],
-  ['Brunch', 'Dinner', 'lifestyle'], ['Spontaneous trip', 'Planned holiday', 'personality'], ['Kids someday', 'Not for me', 'goals'], ['Sunrise', 'Sunset', 'routine']
-];
 // Self-development, longevity, nature, business and art, plus a few elements and small joys for fun
 const INTERESTS = [
   'Longevity', 'Biohacking', 'Breathwork', 'Cold plunge', 'Fasting', 'Nutrition', 'Sleep', 'Meditation', 'Journaling',
@@ -67,7 +54,6 @@ const INTERESTS = [
 // ---------------- App state ----------------
 let uid = null, me = null, myAnswers = [], people = [], chatList = [], config = { paywall: false };
 const today = () => API.dayKey();
-const dayNum = () => Math.floor((Date.now() - new Date().getTimezoneOffset() * 60000) / 86400000);
 const ageOf = (b) => (b ? Math.floor((Date.now() - new Date(b).getTime()) / 31557600000) : null);
 const nameAge = (p) => (p.name || 'Someone') + (p.age ? ', ' + p.age : '');
 function rec(k = today()) {
@@ -347,13 +333,13 @@ function edgeSwipe(pg, under) {
 }
 
 // ---------------- Agenda ----------------
-function todayTasks(off = 0) {
-  const n = dayNum() + off, q = QUESTIONS[n % QUESTIONS.length];
-  const pairs = []; for (let i = 0; i < 5; i++) pairs.push(PAIRS[(n * 5 + i) % PAIRS.length]);
+// The same three things to do every day, in order
+const MIND_Q = 'What comes to your mind when it’s clear?';
+function todayTasks() {
   return [
-    { k: 'q', time: '08:00', title: 'Morning question', sub: q[0], dim: q[1], icon: ICON.q, data: q },
-    { k: 't', time: '13:00', title: 'This or that', sub: 'Five quick choices. Go with your gut.', dim: 'lifestyle', icon: ICON.t, data: pairs },
-    { k: 'm', time: '19:30', title: 'Move', sub: 'Walk, run, dance or stretch.', dim: 'routine', icon: ICON.m }
+    { k: 'm', title: 'Meditate', sub: '10 minutes of meditation practice.', dim: 'routine', icon: ICON.m },
+    { k: 'q', title: 'A clear mind', sub: MIND_Q, dim: 'values', icon: ICON.q },
+    { k: 't', title: 'Take an action', sub: 'Go do the first step.', dim: 'goals', icon: ICON.t }
   ];
 }
 const dimLabel = (k) => DIMS[dimIndex(k)]?.label || '';
@@ -375,20 +361,17 @@ function renderAgenda() {
       (n === 3 ? '<button class="primary" id="openCloud">Open the Cloud</button>' : '<p class="muted" style="margin:0;font-size:13px;line-height:1.45">Finish all three to unlock the Cloud and your chats. Miss a day and they lock again.</p>') +
     '</section>' +
     '<section class="section" aria-label="Today"><h2 class="h2">Today</h2><div style="display:flex;flex-direction:column;gap:4px">' +
-      tasks.map((t) => '<button class="task' + (r[t.k] ? ' done' : '') + '" data-task="' + t.k + '">' +
+      tasks.map((t, i) => '<button class="task' + (r[t.k] ? ' done' : '') + '" data-task="' + t.k + '">' +
         '<span class="ic">' + t.icon + '</span>' +
-        '<span class="tx"><em>' + t.time + ' · ' + dimLabel(t.dim) + '</em><b>' + t.title + '</b><span>' + esc(t.sub) + '</span></span>' +
+        '<span class="tx"><em>' + (i + 1) + ' · ' + dimLabel(t.dim) + '</em><b>' + t.title + '</b><span>' + esc(t.sub) + '</span></span>' +
         '<span class="st">' + (r[t.k] ? ICON.check : '') + '</span></button>').join('') +
-    '</div></section>' +
-    '<section class="section" aria-label="Your plan" id="planBody"></section>' +
-    '<p class="muted" style="margin:0;font-size:13px;line-height:1.45">Every answer tunes your aura, and who floats close to you in the Cloud.</p>';
+    '</div></section>';
   document.querySelectorAll('[data-task]').forEach((b) => b.onclick = () => {
     const t = tasks.find((x) => x.k === b.dataset.task);
     if (rec()[t.k]) { toast('Already done today'); return; }
     openSheet(t);
   });
   const oc = $('#openCloud'); if (oc) oc.onclick = () => goTab(1);
-  renderPlan();
 }
 
 // ---------------- Exercise sheet ----------------
@@ -400,46 +383,37 @@ function openSheet(t) {
   const body = document.createElement('div'); sh.appendChild(body);
   const head = (h) => '<p class="label">' + t.title + ' · ' + dimLabel(t.dim) + '</p><h2>' + esc(h) + '</h2>';
   if (t.k === 'q') {
-    body.innerHTML = head(t.sub) + '<label for="qAns" class="label" style="display:block;margin-bottom:6px">Your answer</label><textarea id="qAns" maxlength="300" placeholder="A few words or a short story"></textarea><p class="fine" style="margin:6px 0 10px">Your answer appears on your profile for your matches to read.</p><button class="primary" id="qSave" disabled>Save answer</button>';
+    body.innerHTML = head(t.sub) + '<label for="qAns" class="label" style="display:block;margin-bottom:6px">Your answer</label><textarea id="qAns" maxlength="300" placeholder="Whatever comes, in a few words"></textarea><p class="fine" style="margin:6px 0 10px">Your answer appears on your profile for your matches to read.</p><button class="primary" id="qSave" disabled>Save answer</button>';
     const ta = $('#qAns', body), bt = $('#qSave', body);
     ta.oninput = () => { bt.disabled = ta.value.trim().length < 3; };
     bt.onclick = () => complete(t, { text: ta.value.trim() }, 'Saved. It now appears on your profile.', bt);
   } else if (t.k === 't') {
-    let step = 0; const picks = [];
-    const draw = () => {
-      const p = t.data[step];
-      body.innerHTML = head('Pick one') + '<div class="choice"><button data-c="0">' + esc(p[0]) + '</button><button data-c="1">' + esc(p[1]) + '</button></div>' +
-        '<div class="dots">' + t.data.map((_, i) => '<span class="' + (i <= step ? 'on' : '') + '"></span>').join('') + '</div>';
-      body.querySelectorAll('[data-c]').forEach((b) => b.onclick = () => {
-        picks.push({ a: p[0], b: p[1], pick: p[+b.dataset.c], dim: p[2] }); step++;
-        if (step >= t.data.length) complete(t, { picks }, 'Done. Your aura is tuning.'); else draw();
-      });
-    };
-    draw();
+    body.innerHTML = head(t.sub) + '<label for="tAns" class="label" style="display:block;margin-bottom:6px">Your first step</label><textarea id="tAns" maxlength="200" placeholder="The one thing you’ll do now"></textarea><p class="fine" style="margin:6px 0 10px">Only you see this.</p><button class="primary" id="tSave">I took the first step</button>';
+    const bt = $('#tSave', body);
+    bt.onclick = () => complete(t, { text: $('#tAns', body).value.trim() }, 'Step taken. Keep going.', bt);
   } else {
-    let mins = 15, left = 0, running = false;
-    const fmt = (s) => String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
-    const C = 2 * Math.PI * 88;
+    const mins = 10, C = 2 * Math.PI * 88;
+    let left = 0, running = false;
+    const fmt = (x) => String(Math.floor(x / 60)).padStart(2, '0') + ':' + String(x % 60).padStart(2, '0');
     const draw = () => {
       const total = mins * 60, frac = left ? 1 - left / total : 0;
-      body.innerHTML = head('Move for ' + mins + ' minutes') +
-        '<div class="chips" role="group" aria-label="Minutes">' + [10, 15, 20, 30].map((m) => '<button class="chip' + (m === mins ? ' on' : '') + '" data-m="' + m + '"' + (running ? ' disabled' : '') + '>' + m + ' min</button>').join('') + '</div>' +
+      body.innerHTML = head('Meditate for ' + mins + ' minutes') +
+        '<p class="fine" style="margin:0">Sit comfortably, close your eyes and follow your breath.</p>' +
         '<div class="timer"><svg viewBox="0 0 190 190"><circle cx="95" cy="95" r="88" fill="none" stroke="rgba(17,17,20,.08)" stroke-width="1.5"></circle><circle cx="95" cy="95" r="88" fill="none" stroke="#111114" stroke-width="1.5" stroke-dasharray="' + C.toFixed(1) + '" stroke-dashoffset="' + (C * (1 - frac)).toFixed(1) + '"></circle></svg><b>' + fmt(left || total) + '</b></div>' +
-        '<div style="display:flex;flex-direction:column;gap:6px"><button class="primary" id="mGo">' + (running ? 'Pause' : (left ? 'Resume' : 'Start timer')) + '</button><button class="secondary" id="mLog">I already moved today, log it</button></div>';
-      body.querySelectorAll('[data-m]').forEach((b) => b.onclick = () => { mins = +b.dataset.m; left = 0; draw(); });
+        '<div style="display:flex;flex-direction:column;gap:6px"><button class="primary" id="mGo">' + (running ? 'Pause' : (left ? 'Resume' : 'Start timer')) + '</button><button class="secondary" id="mLog">I already meditated today, log it</button></div>';
       $('#mGo', body).onclick = () => {
         if (running) { running = false; clearInterval(timerT); draw(); return; }
         if (!left) left = mins * 60;
         running = true; draw(); clearInterval(timerT);
         timerT = setInterval(() => {
           left--;
-          if (left <= 0) { clearInterval(timerT); running = false; complete(t, { minutes: mins, timed: true }, 'Moved ' + mins + ' minutes. Routine tuned.'); return; }
+          if (left <= 0) { clearInterval(timerT); running = false; complete(t, { minutes: mins, timed: true }, 'Ten calm minutes. Well done.'); return; }
           const bb = body.querySelector('.timer b'), cc = body.querySelectorAll('.timer circle')[1];
           if (bb) bb.textContent = fmt(left);
           if (cc) cc.setAttribute('stroke-dashoffset', (C * (left / (mins * 60))).toFixed(1));
         }, 1000);
       };
-      $('#mLog', body).onclick = (e) => { clearInterval(timerT); complete(t, { minutes: mins, timed: false }, 'Logged. Routine tuned.', e.currentTarget); };
+      $('#mLog', body).onclick = (e) => { clearInterval(timerT); complete(t, { minutes: mins, timed: false }, 'Logged. Well done.', e.currentTarget); };
     };
     draw();
   }
@@ -466,49 +440,6 @@ async function complete(t, data, msg, btn) {
     }
   } else toast(msg);
 }
-
-// ---------------- Plan (inside Agenda): upcoming days and what you've done ----------------
-let taskSeg = 'up';
-function renderPlan() {
-  const box = $('#planBody'); if (!box) return;
-  const fmtDay = (d) => d.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' });
-  let html = '<h2 class="h2">Your plan</h2><div class="seg2" role="tablist" aria-label="Show"><span class="seglens" style="transform:translateX(' + (taskSeg === 'up' ? 0 : 100) + '%)"></span>' +
-    '<button role="tab" aria-selected="' + (taskSeg === 'up') + '" data-seg="up">Upcoming</button><button role="tab" aria-selected="' + (taskSeg === 'done') + '" data-seg="done">Done</button></div>';
-  if (taskSeg === 'up') {
-    for (let off = 1; off <= 6; off++) {
-      const d = new Date(); d.setDate(d.getDate() + off);
-      html += '<div class="section"><h3 class="h2" style="font-size:22px;margin-top:6px">' + (off === 1 ? 'Tomorrow' : fmtDay(d)) + '</h3><div style="display:flex;flex-direction:column;gap:4px">' +
-        todayTasks(off).map((t) => trow(t, 'later')).join('') + '</div></div>';
-    }
-  } else {
-    const keys = [...new Set(myAnswers.filter((a) => a.kind !== 'signup').map((a) => a.day))].sort().reverse();
-    if (!keys.length) html += '<div class="box label" style="font-size:14px;line-height:1.45">Finished exercises show up here, with your answers and choices.</div>';
-    keys.forEach((k) => {
-      const x = rec(k), d = new Date(k + 'T12:00'), full = isDone(k);
-      const rows = [];
-      if (x.q) rows.push({ title: 'Morning question', sub: x.q.prompt, detail: x.q.data.text, icon: ICON.q, at: x.q.created_at });
-      if (x.t) rows.push({ title: 'This or that', sub: (x.t.data.picks || []).map((p) => p.pick).join(' · ') || 'Five choices made', icon: ICON.t, at: x.t.created_at });
-      if (x.m) rows.push({ title: 'Move', sub: x.m.data.minutes ? x.m.data.minutes + ' minutes' : 'Logged', icon: ICON.m, at: x.m.created_at });
-      html += '<div class="section"><div class="head" style="margin-top:6px"><h3 class="h2" style="font-size:22px">' + (k === today() ? 'Today' : fmtDay(d)) + '</h3><span class="label">' + (full ? 'Streak day' : rows.length + ' of 3') + '</span></div><div style="display:flex;flex-direction:column;gap:4px">' +
-        rows.map((o) => '<div class="task done" style="cursor:default"><span class="ic">' + o.icon + '</span><span class="tx"><em>' + (o.at ? new Date(o.at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : '') + '</em><b>' + o.title + '</b><span>' + esc(o.sub) + '</span>' +
-          (o.detail ? '<span style="color:var(--ink);margin-top:2px">“' + esc(o.detail) + '”</span>' : '') + '</span><span class="st">' + ICON.check + '</span></div>').join('') + '</div></div>';
-    });
-  }
-  box.innerHTML = html;
-  box.querySelectorAll('[data-seg]').forEach((b) => b.onclick = () => {
-    if (taskSeg === b.dataset.seg) return;
-    taskSeg = b.dataset.seg;
-    const lens = box.querySelector('.seglens'); if (lens) lens.style.transform = 'translateX(' + (taskSeg === 'up' ? 0 : 100) + '%)';
-    setTimeout(renderPlan, reduced ? 0 : 260);
-  });
-}
-function trow(t, mode) {
-  const open = mode === 'open';
-  return '<' + (open ? 'button data-open="' + t.k + '"' : 'div') + ' class="task"' + (open ? '' : ' style="cursor:default;opacity:.62"') + '><span class="ic">' + t.icon + '</span>' +
-    '<span class="tx"><em>' + t.time + ' · ' + dimLabel(t.dim) + '</em><b>' + t.title + '</b><span>' + esc(t.sub) + '</span></span>' +
-    (open ? '<span class="st"></span></button>' : '<span class="ic" style="color:var(--ink3)">' + ICON.lock + '</span></div>');
-}
-
 
 // ---------------- Photo: pick, reframe, upload ----------------
 let photoDone = null;

@@ -217,10 +217,6 @@ textarea:focus,.field:focus{outline:none;border-color:var(--ink)}
 
 
 /* ---------- Tasks ---------- */
-.seg2{position:relative;display:grid;grid-template-columns:1fr 1fr;padding:3px;border-radius:12px;background:var(--fill)}
-.seg2 button{position:relative;z-index:1;height:38px;border:0;background:transparent;border-radius:10px;font-size:14.5px;cursor:pointer;color:var(--ink2);transition:color .3s}
-.seg2 button[aria-selected="true"]{color:var(--ink);font-weight:500}
-.seglens{position:absolute;left:3px;top:3px;bottom:3px;width:calc(50% - 3px);border-radius:10px;background:#fff;box-shadow:0 2px 8px rgba(17,17,20,.08),inset 0 0 0 .5px rgba(17,17,20,.06);transition:transform .45s var(--spring)}
 
 /* ---------- Photo reframe ---------- */
 .crop{position:relative;width:min(280px,100%);aspect-ratio:1;margin:4px auto 14px;overflow:hidden;border-radius:var(--r);background:#111114;touch-action:none;cursor:grab}
