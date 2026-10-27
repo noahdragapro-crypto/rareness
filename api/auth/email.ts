@@ -12,7 +12,7 @@ export const POST = handle(async (request) => {
   if (!EMAIL.test(email) || email.length > 200) throw new HttpError(400, "Enter a valid email address.");
 
   const allowed = (process.env.TESTER_EMAILS || "").split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
-  if (allowed.length && !allowed.includes(email)) throw new HttpError(403, "Rareness is invite-only for now. Ask for an invite.");
+  if (allowed.length && !allowed.includes(email)) throw new HttpError(403, "Ora is invite-only for now. Ask for an invite.");
 
   // New address -> new account (already confirmed, so no email is sent). Existing address -> keep going.
   const created = await db().auth.admin.createUser({ email, email_confirm: true });

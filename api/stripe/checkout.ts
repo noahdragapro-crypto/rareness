@@ -24,7 +24,7 @@ export const POST = handle(async (request) => {
         price_data: {
           currency: process.env.ACCESS_CURRENCY || "usd",
           unit_amount: Number(process.env.ACCESS_PRICE_CENTS || 500),
-          product_data: { name: "Rareness access", description: "One-time payment. Unlocks your Cloud, bumps and chats." },
+          product_data: { name: "Ora access", description: "One-time payment. Unlocks your Cloud, bumps and chats." },
         },
       };
   const session = await stripe().checkout.sessions.create({

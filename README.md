@@ -1,4 +1,4 @@
-# Rareness
+# Ora
 
 A dating web app built around daily rituals. New members register their profile, take a one-minute **aura quick test**, and pay a one-time **$5** to unlock the app. Then they do three things a day (meditate for 10 minutes, write what comes to mind when it's clear, take a first step), Claude reads their answers to shape an **aura**, and the **Cloud** shows other members as glass bubbles: the more two people share, the closer and bigger the bubble, and the coloured ring shows why. Nobody knows who bumped them until both people bump each other, which opens a chat.
 
@@ -44,7 +44,7 @@ You need free accounts on **Supabase**, **Vercel** and **GitHub**. You also need
 3. **Authentication → Sign in / Providers → Email**: keep Email enabled and turn **Confirm email** on.
 4. **Authentication → Email templates → Magic link**: include the code, so people who use the home-screen app can type it instead of opening the link in another browser. For example:
    ```html
-   <h2>Your Rareness code</h2>
+   <h2>Your Ora code</h2>
    <p>Enter this code in the app: <strong>{{ .Token }}</strong></p>
    <p>Or <a href="{{ .ConfirmationURL }}">tap here to sign in</a>.</p>
    ```

@@ -8,7 +8,7 @@ export const GET = handle(async (request) => {
   const user = await requireUser(request);
   const admins = (process.env.ADMIN_EMAILS || "").split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
   if (!admins.length) throw new HttpError(403, "No admins set yet. Add ADMIN_EMAILS in Vercel with your email, then redeploy.");
-  if (!admins.includes((user.email || "").toLowerCase())) throw new HttpError(403, "This page is only for the Rareness team.");
+  if (!admins.includes((user.email || "").toLowerCase())) throw new HttpError(403, "This page is only for the Ora team.");
 
   const { data: auth, error: e0 } = await db().auth.admin.listUsers({ page: 1, perPage: 1000 });
   if (e0) throw e0;

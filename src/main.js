@@ -1,4 +1,4 @@
-// Rareness app: one page, three tabs (Agenda, Cloud, Chats) and a profile page behind the corner button, plus the sign-in,
+// Ora app: one page, three tabs (Agenda, Cloud, Chats) and a profile page behind the corner button, plus the sign-in,
 // onboarding and payment screens in the gate layer above them.
 import * as API from './api.js';
 
@@ -352,7 +352,7 @@ function renderAgenda() {
     return '<div class="wd">' + 'SMTWTFS'[d.getDay()] + '<b class="' + (done ? 'done' : '') + (isToday && !done ? ' today' : '') + '">' + (done ? ICON.check : '') + '</b></div>';
   }).join('');
   $('#agendaBody').innerHTML =
-    '<header style="display:flex;flex-direction:column;gap:6px"><span class="brand">Rareness</span><h1 class="largetitle">Agenda</h1><span class="label">' + new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' }) + '</span></header>' +
+    '<header style="display:flex;flex-direction:column;gap:6px"><span class="brand">Ora</span><h1 class="largetitle">Agenda</h1><span class="label">' + new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' }) + '</span></header>' +
     '<section class="box" style="display:flex;flex-direction:column;gap:12px" aria-label="Streak">' +
       '<div class="head"><div><div class="big">' + st + '</div><div class="label" style="margin-top:4px">day streak</div></div><div class="label" style="text-align:right">best ' + Math.max(bestStreak(), st) + '<br>' + totalDone() + ' exercises</div></div>' +
       '<div class="week">' + week + '</div>' +
@@ -542,7 +542,7 @@ async function renderProfile() {
   const facts = [[ICON.work, me.job], [ICON.pin, me.city], [ICON.ruler, me.height_cm && me.height_cm + ' cm'], [ICON.lang, me.languages]].filter((f) => f[1]);
   const answers = myAnswers.filter((a) => a.kind === 'q' && a.data?.text).slice(0, 5);
   $('#profileBody').innerHTML =
-    '<header style="display:flex;flex-direction:column;gap:6px"><div class="head"><span class="brand">Rareness</span><span class="label">Profile ' + completeness() + '% complete</span></div><h1 class="largetitle">Profile</h1></header>' +
+    '<header style="display:flex;flex-direction:column;gap:6px"><div class="head"><span class="brand">Ora</span><span class="label">Profile ' + completeness() + '% complete</span></div><h1 class="largetitle">Profile</h1></header>' +
     '<div class="me"><div class="wrap" id="meBubble" style="position:relative;margin-top:24px">' + noteHTML(me.status || 'Write a status') + bubbleHTML(youObj(), 176) +
       '<button class="gbtn glass cam" id="camBtn" aria-label="' + (me.photo_path ? 'Change your photo' : 'Add your photo') + '">' + ICON.cam + '</button></div>' +
       '<h2 class="h2" id="meName" style="font-size:32px;margin-top:6px">' + esc(me.name || 'Your name') + '</h2><p class="label" id="meSub">' + esc(sub || 'Add your city') + '</p>' +
@@ -641,7 +641,9 @@ $('#meBtn').onclick = openProfile;
 
 // ---------------- Cloud ----------------
 const stage = $('#stage'), world = $('#world');
-const view = { s: .78, px: 0, py: 30, anim: null };
+// The home view, shown as 100%, is zoomed in close: the Cloud is meant to feel near
+const HOME_S = 1.3;
+const view = { s: HOME_S, px: 0, py: 30, anim: null };
 const YOU_R = 48;
 // How far a bubble floats from you. With only a few members the whole Cloud (rings included) draws in close.
 let spread = 560;
@@ -649,22 +651,28 @@ const distFor = (c) => 108 + (1 - c) * spread;
 let B = [], youEl, moved = false, touched = store.get('rareness.hint') === 'seen', pendingMatch = null;
 function buildCloud(list = []) {
   const keep = new Map(B.map((b) => [b.id, b]));
-  const few = list.length < 12;
+  // While the community is small the Cloud is a fixed set of spots: people take the spots nearest
+  // you (best match closest) and empty bubbles fill the rest. Larger communities place people by score.
+  const few = list.length < SLOTS.length;
   spread = few ? 260 : 560;
   world.innerHTML = '';
   [90, 75, 60, 45].forEach((p) => {
     const d = distFor(p / 100), el = document.createElement('div');
     el.className = 'ring'; el.style.cssText = 'width:' + d * 2 + 'px;height:' + d * 2 + 'px;left:' + -d + 'px;top:' + -d + 'px';
     // Rings sit close together when the Cloud is drawn in, so only every other one is labelled
-    el.innerHTML = spread < 400 && (p === 75 || p === 45) ? '' : '<span class="ringlab">' + p + '% in common</span>'; world.appendChild(el);
+    el.innerHTML = few ? '' : '<span class="ringlab">' + p + '% in common</span>'; world.appendChild(el);
   });
   youEl = document.createElement('div'); youEl.className = 'bub'; youEl.style.cssText = 'width:96px;height:96px;transform:translate(-48px,-48px);z-index:2';
   world.appendChild(youEl); refreshYou();
-  B = withGhosts(list).map((p, i) => {
-    // Size follows how much you share: with few members everyone is big (radius 38 to 82), the closest biggest
-    const r = p.size || (few ? 38 + p.compat * 44 : 24 + p.compat * p.compat * 48), dist = distFor(p.compat), ang = i * 2.39996 + .7, D = Math.round(r * 2);
-    const was = keep.get(p.id);
-    const b = Object.assign(p, { r, dist, hx: Math.cos(ang) * dist, hy: Math.sin(ang) * dist, vx: 0, vy: 0, press: 0, bumpUntil: was?.bumpUntil || 0,
+  const ranked = few ? [...list].sort((a, c) => c.score - a.score) : list;
+  B = (few ? withGhosts(ranked) : ranked).map((p, i) => {
+    // People: the more you share, the bigger (radius 38 to 82 with few members). Empty bubbles keep their spot's size.
+    const slot = few ? SLOTS[i] : null;
+    const r = p.ghost ? slot.r : few ? 38 + p.compat * 44 : 24 + p.compat * p.compat * 48;
+    const dist = slot ? slot.d : distFor(p.compat), ang = slot ? slot.a : i * 2.39996 + .7, D = Math.round(r * 2);
+    // Someone new takes over the empty bubble that was in their spot, right where it was floating
+    const was = keep.get(p.id) || (slot && !p.ghost ? keep.get('slot-' + i) : null);
+    const b = Object.assign(p, { slot: i, r, dist, hx: Math.cos(ang) * dist, hy: Math.sin(ang) * dist, vx: 0, vy: 0, press: 0, bumpUntil: was?.bumpUntil || 0,
       p1: Math.random() * 6.28, p2: Math.random() * 6.28, w1: .11 + Math.random() * .1, w2: .1 + Math.random() * .1, p3: Math.random() * 6.28, p4: Math.random() * 6.28, amp: 10 + Math.random() * 10, wob: Math.random() * 6.28 });
     const el = document.createElement('div'); el.className = 'bub'; el.style.width = el.style.height = D + 'px';
     el.innerHTML = '<div class="drop"></div><button class="ball" aria-label="' + esc(p.ghost ? 'An empty bubble' : nameAge(p) + ', ' + p.score + '% in common') + '">' +
@@ -682,18 +690,19 @@ function buildCloud(list = []) {
     }
     for (const b of B) { const d = Math.hypot(b.hx, b.hy) || .01, nd = d + (b.dist - d) * .12; b.hx *= nd / d; b.hy *= nd / d; }
   }
-  B.forEach((b) => { const was = keep.get(b.id); b.x = was ? was.x : b.hx; b.y = was ? was.y : b.hy; });
+  B.forEach((b) => { const was = keep.get(b.id) || (!b.ghost && few ? keep.get('slot-' + b.slot) : null); b.x = was ? was.x : b.hx; b.y = was ? was.y : b.hy; });
   refreshBadges(); applyLOD(true);
 }
-// Empty glass bubbles keep the Cloud full while it has few people: part of the look, not people.
-// Their sizes and rings are fixed per slot so they don't jump when the Cloud reloads.
-// Always smaller than any person, so size keeps meaning "how much you share".
-const GHOSTS = 18;
+// The Cloud's spots while it's small: fixed places, nearest first, each with its own bubble size
+// (small, medium and large mixed) so the empty ones look varied and never jump between reloads.
+const SLOT_R = [62, 30, 46, 24, 70, 38, 54, 28, 66, 42, 34, 58, 26, 50, 72, 32, 44, 60, 36, 52, 40, 64];
+const SLOTS = SLOT_R.map((r, i) => ({ r, d: 150 + i * 15 + ((i * 37) % 23), a: i * 2.39996 + .7 }));
+// Empty glass bubbles fill the spots nobody has taken yet: part of the look, not people
 function withGhosts(list) {
   const out = [...list];
-  for (let i = 0; out.length < GHOSTS; i++) {
+  for (let i = list.length; i < SLOTS.length; i++) {
     const h = (k) => { const x = Math.sin((i + 1) * 12.9898 + k * 78.233) * 43758.5453; return x - Math.floor(x); };
-    out.push({ id: 'ghost-' + i, ghost: true, status: '', bumped: false, compat: .25 + h(1) * .65, size: 14 + h(9) * 14, w: DIMS.map((_, k) => .2 + h(k + 2)) });
+    out.push({ id: 'slot-' + i, ghost: true, status: '', bumped: false, compat: .5, w: DIMS.map((_, k) => .2 + h(k + 2)) });
   }
   return out;
 }
@@ -716,9 +725,9 @@ function applyLOD(force) {
   });
   world.querySelectorAll('.ringlab').forEach((l) => l.style.transform = 'translate(-50%,-50%) ' + inv);
   const yn = youEl.querySelector('.note'); if (yn) yn.style.transform = 'translateX(-50%) ' + inv;
-  $('#zLabel').textContent = Math.round(view.s * 100) + '%';
+  $('#zLabel').textContent = Math.round(view.s / HOME_S * 100) + '%';
 }
-const clampS = (s) => Math.max(.3, Math.min(2.6, s));
+const clampS = (s) => Math.max(.3, Math.min(3.4, s));
 function zoomAt(x, y, s2) { const wx = (x - view.px) / view.s, wy = (y - view.py) / view.s; view.s = s2; view.px = x - wx * s2; view.py = y - wy * s2; }
 function animZoom(x, y, s) { touch(); view.anim = { ax: x, ay: y, s: clampS(s) }; }
 function touch() { if (!touched) { touched = true; store.set('rareness.hint', 'seen'); $('#hint').style.opacity = 0; setTimeout(() => $('#hint').hidden = true, 400); } }
@@ -771,7 +780,7 @@ stage.addEventListener('dblclick', (e) => { const p = local(e); animZoom(p.x, p.
 ['gesturestart', 'gesturechange'].forEach((n) => stage.addEventListener(n, (e) => e.preventDefault()));
 $('#zIn').onclick = () => animZoom(0, 0, view.s * 1.5);
 $('#zOut').onclick = () => animZoom(0, 0, view.s / 1.5);
-$('#zHome').onclick = () => { touch(); view.anim = { home: true, px: 0, py: 30, s: .78 }; };
+$('#zHome').onclick = () => { touch(); view.anim = { home: true, px: 0, py: 30, s: HOME_S }; };
 $('#legend').innerHTML = '<p class="label">The light on each bubble shows why you match</p>' + DIMS.map((d, i) => '<div class="lrow">' + swatch(i, 26) + '<div>' + d.label + '<small>' + d.d + '</small></div></div>').join('');
 function closeLegend() { $('#legend').classList.add('closed'); $('#legendBtn').setAttribute('aria-expanded', 'false'); }
 $('#legendBtn').onclick = () => { const closed = $('#legend').classList.toggle('closed'); $('#legendBtn').setAttribute('aria-expanded', String(!closed)); };
@@ -919,7 +928,7 @@ function wireBump(pg, b) {
     if (res.mutual) {
       b.chatId = res.chat_id;
       popPage();
-      setTimeout(() => { b.bumpUntil = t + 1.4; view.anim = { home: true, px: 0, py: 30, s: Math.max(.78, Math.min(1, view.s)) }; }, 380);
+      setTimeout(() => { b.bumpUntil = t + 1.4; view.anim = { home: true, px: 0, py: 30, s: Math.max(HOME_S * .8, Math.min(HOME_S, view.s)) }; }, 380);
     } else { bz.innerHTML = bumpZone(b); toast('Bump sent'); }
   };
 }
@@ -967,7 +976,7 @@ function renderChats() {
   const unread = chatList.filter((c) => c.unread).length, badge = $('#chatBadge');
   badge.hidden = !unread; badge.textContent = unread > 9 ? '9+' : unread;
   $('.tab[data-tab="2"]').setAttribute('aria-label', unread ? 'Chats, ' + unread + ' unread' : 'Chats');
-  $('#chatsBody').innerHTML = '<header style="display:flex;flex-direction:column;gap:6px"><span class="brand">Rareness</span><h1 class="largetitle">Chats</h1><p class="label" style="font-size:14px;line-height:1.45">A chat opens only when you both bump each other. Nobody sees who bumped them.</p></header>' +
+  $('#chatsBody').innerHTML = '<header style="display:flex;flex-direction:column;gap:6px"><span class="brand">Ora</span><h1 class="largetitle">Chats</h1><p class="label" style="font-size:14px;line-height:1.45">A chat opens only when you both bump each other. Nobody sees who bumped them.</p></header>' +
     (chatList.length ? '<section aria-label="Conversations" class="hair">' + chatList.map((c) => {
       const p = c.other, last = c.last;
       return '<button class="crow' + (c.unread ? ' unread' : '') + '" data-thread="' + c.id + '">' + bubbleHTML({ w: dimsToW(c.match?.dims), photo: API.photoUrl(p.photo_path) }, 58) +
@@ -1228,7 +1237,7 @@ const backBtn = '<button class="backlink" data-back>‹ Back</button>';
 function busy(btn, on, label) { btn.disabled = on; if (label) btn.textContent = label; }
 
 function gateUnconfigured() {
-  showGate('<span class="brand">Rareness</span><h1 class="largetitle">Almost ready</h1><p class="lead">This copy of Rareness isn’t connected to its database yet. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to the environment, then rebuild. The README explains each step.</p>');
+  showGate('<span class="brand">Ora</span><h1 class="largetitle">Almost ready</h1><p class="lead">This copy of Ora isn’t connected to its database yet. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to the environment, then rebuild. The README explains each step.</p>');
 }
 
 // Page 1: who you are. Signed out, it also asks for your email and signs you in (no verification for now).
@@ -1237,7 +1246,7 @@ const SHOW = [['women', 'Women'], ['men', 'Men'], ['everyone', 'Everyone']];
 function gateBasics(msg) {
   const signedIn = Boolean(uid), p = signedIn ? me : (G.basics || {});
   showGate(
-    '<span class="brand">Rareness</span>' +
+    '<span class="brand">Ora</span>' +
     (signedIn ? stepsBar(0) : '<div style="display:flex;justify-content:center;padding:10px 0 2px">' + bubbleHTML({ w: [1, 1, 1, 1, 1, 1], clear: true }, 120) + '</div>') +
     '<h1 class="largetitle">' + (signedIn ? 'Hello. Who are you?' : 'Bump into your perfect bubble.') + '</h1>' +
     '<form id="f" style="display:flex;flex-direction:column;gap:14px" novalidate>' +
@@ -1264,7 +1273,7 @@ function gateBasics(msg) {
         const say = (m) => { err.textContent = m; err.hidden = false; };
         const email = signedIn ? '' : $('#email').value.trim().toLowerCase();
         G.basics = { name, age: age || '', gender, show_me: show, city };
-        const missing = () => (!name ? 'Add your first name.' : !age ? 'Add your age.' : age < 18 ? 'Rareness is for people 18 and over.' : age > 99 ? 'Check your age.'
+        const missing = () => (!name ? 'Add your first name.' : !age ? 'Add your age.' : age < 18 ? 'Ora is for people 18 and over.' : age > 99 ? 'Check your age.'
           : !gender ? 'Choose how you identify.' : !city ? 'Choose your city.' : '');
         if (!signedIn) {
           G.email = email;
@@ -1301,7 +1310,7 @@ function birthFromAge(age) {
 // Log back in with just the email (no password or code for now)
 function gateLogin(msg) {
   showGate(
-    backBtn + '<span class="brand">Rareness</span>' +
+    backBtn + '<span class="brand">Ora</span>' +
     '<div style="display:flex;justify-content:center;padding:10px 0 2px">' + bubbleHTML({ w: [1, 1, 1, 1, 1, 1], clear: true }, 120) + '</div>' +
     '<h1 class="largetitle">Welcome back.</h1>' +
     '<form id="f" style="display:flex;flex-direction:column;gap:14px" novalidate>' +
@@ -1406,7 +1415,7 @@ async function finishOnboarding() {
     (me.aura_summary ? '<p class="reason-line" style="text-align:center">' + esc(me.aura_summary) + '</p>' : '<p class="lead" style="text-align:center">Your aura will sharpen as you answer the daily rituals.</p>') +
     '<div style="display:flex;flex-direction:column;gap:10px">' + DIMS.map((d, k) => '<div class="reason">' + swatch(k, 24) + '<div class="rt"><div>' + d.label + '<span>' + Math.round(aura[k] / tot * 100) + '%</span></div>' + glassBar(aura[k], k) + '</div></div>').join('') + '</div>' +
     '<p class="fine">The colours around your bubble come from this. On other people’s bubbles, they show why you match.</p>' +
-    '<div class="grow"></div><button class="primary" id="go">' + (needsMembership() ? 'Continue' : 'Enter Rareness') + '</button>',
+    '<div class="grow"></div><button class="primary" id="go">' + (needsMembership() ? 'Continue' : 'Enter Ora') + '</button>',
     () => { $('#go').onclick = () => afterOnboarding(); });
 }
 function afterOnboarding() {
@@ -1416,9 +1425,9 @@ const needsMembership = () => config.paywall && !me.paid_at;
 
 function gatePaywall(msg) {
   const price = config.price || '$5';
-  showGate('<span class="brand">Rareness</span>' +
+  showGate('<span class="brand">Ora</span>' +
     '<div style="display:flex;justify-content:center;padding:10px 0">' + bubbleHTML(youObj(), 150) + '</div>' +
-    '<h1 class="largetitle">Your aura is ready. Unlock Rareness.</h1>' +
+    '<h1 class="largetitle">Your aura is ready. Unlock Ora.</h1>' +
     '<p class="lead">One payment of ' + esc(price) + ' opens everything, for good.</p>' +
     '<div class="box" style="display:flex;flex-direction:column;gap:6px;font-size:15px"><span>Your Cloud of real matches in your country</span><span>AI matching that learns from every answer</span><span>Bumps and chats with the people you match</span></div>' +
     (msg ? '<p class="err" role="alert">' + esc(msg) + '</p>' : '') +
@@ -1435,7 +1444,7 @@ async function confirmMembership() {
   showGate('<div class="grow"></div><div style="display:flex;justify-content:center"><div class="spinner"></div></div><h1 class="largetitle" style="text-align:center">Confirming your payment…</h1><div class="grow"></div>');
   for (let k = 0; k < 15; k++) {
     me = await API.myProfile(uid);
-    if (!needsMembership()) { toast('Welcome to Rareness'); return startApp(); }
+    if (!needsMembership()) { toast('Welcome to Ora'); return startApp(); }
     await new Promise((r) => setTimeout(r, 1500));
   }
   gatePaywall('We haven’t received confirmation from Stripe yet. If you paid, reopen the app in a minute.');

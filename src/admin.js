@@ -1,4 +1,4 @@
-// Dashboard for the Rareness team: member numbers, sign-ups per day and the member list.
+// Dashboard for the Ora team: member numbers, sign-ups per day and the member list.
 // Uses the same sign-in as the app; the server only answers for emails in ADMIN_EMAILS.
 import * as API from './api.js';
 
@@ -8,12 +8,12 @@ const fmtDay = (d) => (d ? new Date(d.length === 10 ? d + 'T12:00' : d).toLocale
 const yes = (v) => (v ? '<span class="yes">Yes</span>' : '<span class="no">No</span>');
 let data = null, q = '', city = '', only = '';
 
-function message(html) { root.innerHTML = '<div class="msg"><span class="brand">Rareness</span>' + html + '</div>'; }
+function message(html) { root.innerHTML = '<div class="msg"><span class="brand">Ora</span>' + html + '</div>'; }
 
 async function load() {
   if (!API.configured) return message('<p>This copy isn’t connected to its database.</p>');
   const s = await API.session().catch(() => null);
-  if (!s) return message('<h2>Log in first</h2><p class="muted">Open the app, log in with your email, then come back to this page.</p><a href="/">Open Rareness</a>');
+  if (!s) return message('<h2>Log in first</h2><p class="muted">Open the app, log in with your email, then come back to this page.</p><a href="/">Open Ora</a>');
   try { data = await API.api('admin', 'GET'); } catch (e) { return message('<h2>No access</h2><p class="muted">' + esc(e.message) + '</p>'); }
   render();
 }
@@ -95,7 +95,7 @@ function csv() {
 function render() {
   const cities = [...new Set(data.users.map((u) => u.city).filter(Boolean))].sort();
   root.innerHTML =
-    '<header><div><span class="brand">Rareness</span><h1>Dashboard</h1><p class="muted" style="margin:6px 0 0">Updated ' + new Date().toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) + '</p></div>' +
+    '<header><div><span class="brand">Ora</span><h1>Dashboard</h1><p class="muted" style="margin:6px 0 0">Updated ' + new Date().toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) + '</p></div>' +
     '<div style="display:flex;gap:8px"><button class="btn" id="csv">Download CSV</button><button class="btn" id="refresh">Refresh</button></div></header>' +
     tiles(data.totals) + chartCard(data.signups) +
     '<section class="card" aria-label="Members"><h2>Members</h2><div class="filters">' +
