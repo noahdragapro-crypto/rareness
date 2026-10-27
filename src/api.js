@@ -44,9 +44,9 @@ const PRIVATE = ['birthdate'];
 export async function myProfile(uid) {
   const [pub, priv] = await Promise.all([
     sb.from('profiles').select('*').eq('id', uid).single().then(check),
-    sb.from('profile_private').select('birthdate,subscription_status,subscription_period_end').eq('id', uid).maybeSingle().then(check),
+    sb.from('profile_private').select('birthdate,paid_at').eq('id', uid).maybeSingle().then(check),
   ]);
-  return { ...pub, ...(priv || { subscription_status: 'none' }) };
+  return { ...pub, ...(priv || { paid_at: null }) };
 }
 export async function saveProfile(uid, patch) {
   const pub = {}, priv = {};

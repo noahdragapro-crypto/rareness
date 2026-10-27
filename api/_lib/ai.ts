@@ -28,11 +28,11 @@ export type Profile = {
 export type Answer = { day: string; kind: string; dim: string | null; prompt: string; data: Record<string, unknown>; created_at: string };
 
 export async function loadPeople(ids?: string[]) {
-  let q = db().from("profiles").select("id,name,gender,city,job,bio,interests,status,show_me,aura_updated_at").eq("onboarded", true);
+  let q = db().from("profiles").select("id,name,gender,city,country,job,bio,interests,status,show_me,aura_updated_at").eq("onboarded", true);
   if (ids) q = q.in("id", ids);
   const { data: rows, error } = await q;
   if (error) throw error;
-  const { data: priv, error: e1 } = await db().from("profile_private").select("id,birthdate,subscription_status").in("id", (rows ?? []).map((p) => p.id));
+  const { data: priv, error: e1 } = await db().from("profile_private").select("id,birthdate,paid_at").in("id", (rows ?? []).map((p) => p.id));
   if (e1) throw e1;
   const people = (rows ?? []).map((p) => ({ ...p, ...(priv ?? []).find((x) => x.id === p.id) }));
   const since = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
@@ -48,7 +48,7 @@ export async function loadPeople(ids?: string[]) {
     list.push(a as Answer);
     byUser.set(a.user_id, list);
   }
-  return (people ?? []).map((p) => ({ profile: p as Profile & { subscription_status: string; aura_updated_at: string | null }, answers: byUser.get(p.id) ?? [] }));
+  return (people ?? []).map((p) => ({ profile: p as Profile & { country: string | null; paid_at: string | null; aura_updated_at: string | null }, answers: byUser.get(p.id) ?? [] }));
 }
 
 const age = (b: string | null) => (b ? Math.floor((Date.now() - new Date(b).getTime()) / 31557600000) : null);

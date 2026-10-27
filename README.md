@@ -1,6 +1,6 @@
 # Rareness
 
-A dating web app built around daily rituals. Members answer three short exercises a day, Claude reads their answers to shape an **aura**, and the **Cloud** shows other members as glass bubbles: the more two people share, the closer and bigger the bubble, and the coloured ring shows why. Nobody knows who bumped them until both people bump each other, which opens a chat.
+A dating web app built around daily rituals. New members register their profile, take a one-minute **aura quick test**, and pay a one-time **$5** to unlock the app. Then they answer three short exercises a day, Claude reads their answers to shape an **aura**, and the **Cloud** shows other members as glass bubbles: the more two people share, the closer and bigger the bubble, and the coloured ring shows why. Nobody knows who bumped them until both people bump each other, which opens a chat.
 
 It runs as a website that members add to their phone's home screen, where it opens full screen like an app.
 
@@ -11,7 +11,7 @@ It runs as a website that members add to their phone's home screen, where it ope
 | App (browser) | Screens, gestures, sign-in, chats | `index.html`, `src/` (Vite, no framework) |
 | Database, sign-in, photos, live chat | Supabase (Postgres with row-level security, email codes, storage, realtime) | `supabase/migrations/0001_init.sql` |
 | AI aura and matching | Claude reads each member's answers and scores every pair across six dimensions | `api/_lib/ai.ts`, `api/_lib/matching.ts` |
-| Membership | Stripe Checkout and the Stripe billing portal; a webhook keeps the status in sync | `api/stripe/*` |
+| Access fee | A one-time $5 payment in Stripe Checkout; a webhook marks the member as paid | `api/stripe/*` |
 | Hosting | Vercel serves the app and runs `api/` as serverless functions, plus a daily matching job | `vercel.json` |
 
 ### The six dimensions
@@ -20,13 +20,14 @@ Values, Lifestyle, Interests, Personality, Goals and Routine. Each has a colour 
 
 - **Aura**: how strongly each dimension shows in one member, plus a one-line portrait. Recomputed when they have new answers.
 - **Match**: for each pair, an overall score from 0 to 100 and how much each dimension contributes. The contributions are the colours of the ring around a bubble, and the score sets its size and distance in the Cloud.
+- Members only see people from their own country (set at sign-up, changeable in the profile), so only same-country pairs are scored.
 - Pairs are rescored only when either person has answered something new, after a member finishes their three daily exercises and once a day by the cron job.
 - Without an Anthropic key (or if a call fails), a rule-based matcher compares sign-up answers, interests, this-or-that picks and routine instead.
 - Members' text is passed to Claude as data inside tags. It can't change how scores are computed.
 
 ### Privacy and safety built in
 
-- Row-level security on every table. Tested cases: members can't read each other's birth date or billing, can't see who bumped them, can't read or post in chats they're not part of, and can't edit their own aura or membership status.
+- Row-level security on every table. Tested cases: members can't read each other's birth date or billing, can't see who bumped them, can't read or post in chats they're not part of, and can't edit their own aura or mark themselves as paid.
 - Blocking hides both people from each other's Cloud and stops messages. Reports are stored for review in the `reports` table.
 - Members must be 18 or older at sign-up.
 - Members can delete their account and photos from their profile.
@@ -34,7 +35,7 @@ Values, Lifestyle, Interests, Personality, Goals and Routine. Each has a colour 
 
 ## Setting it up
 
-You need free accounts on **Supabase**, **Vercel** and **GitHub**. You also need **Anthropic** for AI matching (pay as you go; about 20 members costs very little) and **Stripe** for memberships.
+You need free accounts on **Supabase**, **Vercel** and **GitHub**. You also need **Anthropic** for AI matching (pay as you go; about 20 members costs very little) and **Stripe** for the $5 access fee.
 
 ### 1. Supabase
 
@@ -51,15 +52,15 @@ You need free accounts on **Supabase**, **Vercel** and **GitHub**. You also need
 6. For more than a few sign-ups an hour, set up your own email sender under **Authentication → SMTP settings** (Resend, Postmark and others work). Supabase's built-in sender is rate limited.
 7. Copy **Project URL**, **anon key** and **service_role key** from **Project settings → API**.
 
-### 2. Stripe (only when you want paid memberships)
+### 2. Stripe (the $5 access fee)
 
-1. Create a Product, for example "Rareness membership", with a recurring Price. Copy the price id (`price_…`).
+1. Copy your **secret key** from **Developers → API keys**. Start with the test-mode key (`sk_test_…`) and pay with the card number `4242 4242 4242 4242` to try it.
 2. **Developers → Webhooks → Add endpoint**:
    - URL: `https://YOUR-APP/api/stripe/webhook`
-   - Events: `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`
+   - Events: `checkout.session.completed`, `checkout.session.async_payment_succeeded`
    - Copy the signing secret (`whsec_…`).
-3. **Settings → Billing → Customer portal**: turn it on so members can cancel or change their card.
-4. Leave `PAYWALL=off` while your first testers try it for free. Set it to `on` when you're ready to charge.
+3. The fee is $5 by default (`ACCESS_PRICE_CENTS=500`, `ACCESS_CURRENCY=usd`). You don't need to create a product in Stripe for it.
+4. When you're ready for real payments, switch both keys to live mode.
 
 ### 3. Vercel
 
@@ -85,8 +86,16 @@ npm run typecheck            # type-check the server code
 npm run build
 ```
 
+## The flow for a new member
+
+1. Email → 6-digit code (or tap the link in the email).
+2. Profile: name, date of birth (18+), gender, who to see, country, photo (with reframing), city.
+3. Aura quick test: five questions, interests, a sentence about themselves. Claude reads it and shows their aura.
+4. Pay $5 once in Stripe Checkout.
+5. The app: Agenda (today's three exercises, plus upcoming days and what's done), Cloud and Chats. Their profile opens from the bubble in the top-right corner.
+
 ## Costs at about 20 members
 
 - **Supabase, Vercel**: free tiers.
 - **Anthropic**: 20 members make 190 pairs; each pair costs two short Claude calls when it's rescored, and an aura costs one. Pairs are rescored only after new answers.
-- **Stripe**: a percentage per payment, no monthly fee.
+- **Stripe**: a percentage of each $5 payment, no monthly fee.

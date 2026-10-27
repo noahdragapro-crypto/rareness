@@ -1,5 +1,5 @@
-// Rareness app: one page, five tabs (Agenda, Tasks, Cloud, Chats, Profile), plus the sign-in,
-// onboarding and subscription screens in the gate layer above them.
+// Rareness app: one page, three tabs (Agenda, Cloud, Chats) and a profile page behind the corner button, plus the sign-in,
+// onboarding and payment screens in the gate layer above them.
 import * as API from './api.js';
 
 const $ = (s, r = document) => r.querySelector(s);
@@ -127,7 +127,8 @@ const fail = (e) => { console.error(e); toast(e?.message && e.message.length < 1
 
 // ---------------- Tabs: screens slide, the glass lens slides between icons ----------------
 // Tab order: Agenda, Tasks, Cloud, Chats, Profile
-const views = ['#v0', '#v4', '#v2', '#v3', '#v1'].map((id) => $(id));
+// Tab order: Agenda, Cloud, Chats. Your profile opens from the button in the top-right corner.
+const views = ['#v0', '#v2', '#v3'].map((id) => $(id));
 let cur = 0;
 const pages = [];
 let lensX = 0;
@@ -158,7 +159,7 @@ function goTab(i, after) {
   cur = i;
   views.forEach((v, k) => { if (k !== i && k !== prev) v.hidden = true; });
   to.hidden = false; from.hidden = false;
-  setLens(i, true);
+  setLens(i, true); syncMeBtn();
   if (reduced || !to.animate) { from.hidden = true; if (after) after(); return; }
   const opt = { duration: 520, easing: 'cubic-bezier(.32,.72,0,1)' };
   const aIn = to.animate([{ transform: 'translate3d(' + dir * 100 + '%,0,0)' }, { transform: 'translate3d(0,0,0)' }], opt);
@@ -171,7 +172,7 @@ document.querySelectorAll('.tab').forEach((b) => b.addEventListener('click', () 
 
 function updateLocks() {
   const locked = !todayDone();
-  document.querySelectorAll('.tab[data-tab="2"],.tab[data-tab="3"]').forEach((b) => b.classList.toggle('locked', locked));
+  document.querySelectorAll('.tab[data-tab="1"],.tab[data-tab="2"]').forEach((b) => b.classList.toggle('locked', locked));
   [['#cloudLock', 'Cloud'], ['#chatsLock', 'chats']].forEach(([sel, what]) => {
     const el = $(sel); el.hidden = !locked;
     if (locked) {
@@ -185,8 +186,13 @@ function updateLocks() {
 }
 document.querySelectorAll('.scroll[data-nav]').forEach((sc) => {
   const nb = document.getElementById(sc.dataset.nav);
-  sc.addEventListener('scroll', () => nb.classList.toggle('on', sc.scrollTop > 60), { passive: true });
+  sc.addEventListener('scroll', () => { nb.classList.toggle('on', sc.scrollTop > 60); syncMeBtn(); }, { passive: true });
 });
+// The profile button tucks into the compact title bar once a page is scrolled
+function syncMeBtn() {
+  const nb = views[cur] && views[cur].querySelector('.navbar');
+  $('#meBtn').classList.toggle('compact', Boolean(nb && nb.classList.contains('on')));
+}
 
 
 // ---------------- Swipe between tabs (phones): drag a screen sideways, or slide a finger along the tab bar ----------------
@@ -234,7 +240,7 @@ function swipeable(view, edgeOnly) {
     const fromX = target !== -1 ? dx : dx / 3, cv = view, tv = target !== -1 ? views[target] : null, ti = target;
     cv.style.transform = ''; if (tv) tv.style.transform = '';
     if (commit) {
-      const prev = cur; cur = ti; setLens(cur, true);
+      const prev = cur; cur = ti; setLens(cur, true); syncMeBtn();
       const a1 = cv.animate([{ transform: 'translate3d(' + fromX + 'px,0,0)' }, { transform: 'translate3d(' + (-dir * w) + 'px,0,0)' }], opt);
       const a2 = tv.animate([{ transform: 'translate3d(' + (dir * w + fromX) + 'px,0,0)' }, { transform: 'translate3d(0,0,0)' }], opt);
       slides = [a1, a2];
@@ -248,7 +254,7 @@ function swipeable(view, edgeOnly) {
   };
   view.addEventListener('touchend', end, { capture: true }); view.addEventListener('touchcancel', end, { capture: true });
 }
-views.forEach((v, i) => swipeable(v, i === 2)); // the Cloud pans with one finger, so there you swipe from the screen edge
+views.forEach((v, i) => swipeable(v, i === 1)); // the Cloud pans with one finger, so there you swipe from the screen edge
 
 // Slide a finger along the tab bar: the glass lens follows and the tab under it opens on release
 (() => {
@@ -288,7 +294,7 @@ function pushPage(title, bodyHTML, opts = {}) {
   $('#app').appendChild(pg);
   const under = pages.length ? pages[pages.length - 1] : views[cur];
   pages.push(pg);
-  $('#tabbar').classList.add('away');
+  $('#tabbar').classList.add('away'); $('#meBtn').classList.add('away');
   void pg.offsetWidth;
   pg.classList.add('in');
   under.style.transition = 'transform .5s var(--ease)'; under.style.transform = 'translateX(-28%)';
@@ -304,7 +310,7 @@ function popPage(instant) {
   const under = pages.length ? pages[pages.length - 1] : views[cur];
   pg.style.transition = instant ? 'none' : ''; pg.classList.remove('in'); pg.style.transform = '';
   under.style.transition = instant ? 'none' : 'transform .5s var(--ease)'; under.style.transform = 'translateX(0)';
-  if (!pages.length) { $('#tabbar').classList.remove('away'); $('#shade').classList.remove('on'); }
+  if (!pages.length) { $('#tabbar').classList.remove('away'); $('#meBtn').classList.remove('away'); $('#shade').classList.remove('on'); }
   setTimeout(() => { pg.remove(); if (!pages.length) under.style.transform = ''; }, instant ? 0 : 520);
   if (pg._onPop) pg._onPop();
 }
@@ -352,7 +358,7 @@ function renderAgenda() {
     return '<div class="wd">' + 'SMTWTFS'[d.getDay()] + '<b class="' + (done ? 'done' : '') + (isToday && !done ? ' today' : '') + '">' + (done ? ICON.check : '') + '</b></div>';
   }).join('');
   $('#agendaBody').innerHTML =
-    '<header style="display:flex;flex-direction:column;gap:6px"><div class="head"><span class="brand">Rareness</span><span class="label">' + new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' }) + '</span></div><h1 class="largetitle">Agenda</h1></header>' +
+    '<header style="display:flex;flex-direction:column;gap:6px"><span class="brand">Rareness</span><h1 class="largetitle">Agenda</h1><span class="label">' + new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' }) + '</span></header>' +
     '<section class="box" style="display:flex;flex-direction:column;gap:12px" aria-label="Streak">' +
       '<div class="head"><div><div class="big">' + st + '</div><div class="label" style="margin-top:4px">day streak</div></div><div class="label" style="text-align:right">best ' + Math.max(bestStreak(), st) + '<br>' + totalDone() + ' exercises</div></div>' +
       '<div class="week">' + week + '</div>' +
@@ -366,13 +372,15 @@ function renderAgenda() {
         '<span class="tx"><em>' + t.time + ' · ' + dimLabel(t.dim) + '</em><b>' + t.title + '</b><span>' + esc(t.sub) + '</span></span>' +
         '<span class="st">' + (r[t.k] ? ICON.check : '') + '</span></button>').join('') +
     '</div></section>' +
+    '<section class="section" aria-label="Your plan" id="planBody"></section>' +
     '<p class="muted" style="margin:0;font-size:13px;line-height:1.45">Every answer tunes your aura, and who floats close to you in the Cloud.</p>';
   document.querySelectorAll('[data-task]').forEach((b) => b.onclick = () => {
     const t = tasks.find((x) => x.k === b.dataset.task);
     if (rec()[t.k]) { toast('Already done today'); return; }
     openSheet(t);
   });
-  const oc = $('#openCloud'); if (oc) oc.onclick = () => goTab(2);
+  const oc = $('#openCloud'); if (oc) oc.onclick = () => goTab(1);
+  renderPlan();
 }
 
 // ---------------- Exercise sheet ----------------
@@ -440,7 +448,7 @@ async function complete(t, data, msg, btn) {
     const row = await API.saveAnswer(uid, { day: today(), kind: t.k, dim: t.dim, prompt: t.k === 'q' ? t.sub : t.title, data });
     myAnswers = myAnswers.filter((a) => !(a.day === row.day && a.kind === row.kind)).concat(row);
   } catch (e) { if (btn) btn.disabled = false; fail(e); return; }
-  closeSheet(); renderAgenda(); renderTasks(); updateLocks();
+  closeSheet(); renderAgenda(); updateLocks();
   if (!was && todayDone()) {
     toast('All done. The Cloud is open.');
     // New answers: refresh the aura and matches in the background, then reload the Cloud
@@ -451,45 +459,40 @@ async function complete(t, data, msg, btn) {
   } else toast(msg);
 }
 
-// ---------------- Tasks: upcoming and done ----------------
+// ---------------- Plan (inside Agenda): upcoming days and what you've done ----------------
 let taskSeg = 'up';
-function renderTasks() {
-  const r = rec(), todays = todayTasks();
+function renderPlan() {
+  const box = $('#planBody'); if (!box) return;
   const fmtDay = (d) => d.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' });
-  let html = '<header style="display:flex;flex-direction:column;gap:6px"><span class="brand">Rareness</span><h1 class="largetitle">Tasks</h1></header>' +
-    '<div class="seg2" role="tablist" aria-label="Show"><span class="seglens" style="transform:translateX(' + (taskSeg === 'up' ? 0 : 100) + '%)"></span>' +
+  let html = '<h2 class="h2">Your plan</h2><div class="seg2" role="tablist" aria-label="Show"><span class="seglens" style="transform:translateX(' + (taskSeg === 'up' ? 0 : 100) + '%)"></span>' +
     '<button role="tab" aria-selected="' + (taskSeg === 'up') + '" data-seg="up">Upcoming</button><button role="tab" aria-selected="' + (taskSeg === 'done') + '" data-seg="done">Done</button></div>';
   if (taskSeg === 'up') {
-    const left = todays.filter((t) => !r[t.k]);
-    html += '<section class="section" aria-label="Today"><div class="head"><h2 class="h2">Today</h2><span class="label">' + (left.length ? left.length + ' left' : 'All done') + '</span></div>' +
-      (left.length ? left.map((t) => trow(t, 'open')).join('') : '<div class="box label" style="font-size:14px">Nothing left today. Your streak is safe.</div>') + '</section>';
     for (let off = 1; off <= 6; off++) {
       const d = new Date(); d.setDate(d.getDate() + off);
-      html += '<section class="section" aria-label="' + fmtDay(d) + '"><div class="head"><h2 class="h2" style="font-size:22px">' + (off === 1 ? 'Tomorrow' : fmtDay(d)) + '</h2></div>' +
-        todayTasks(off).map((t) => trow(t, 'later')).join('') + '</section>';
+      html += '<div class="section"><h3 class="h2" style="font-size:22px;margin-top:6px">' + (off === 1 ? 'Tomorrow' : fmtDay(d)) + '</h3><div style="display:flex;flex-direction:column;gap:4px">' +
+        todayTasks(off).map((t) => trow(t, 'later')).join('') + '</div></div>';
     }
   } else {
     const keys = [...new Set(myAnswers.filter((a) => a.kind !== 'signup').map((a) => a.day))].sort().reverse();
-    if (!keys.length) html += '<div class="empty"><h2 class="h2">Nothing done yet</h2><p class="label" style="font-size:14.5px;line-height:1.45;max-width:280px">Finished exercises show up here, with your answers and choices.</p></div>';
+    if (!keys.length) html += '<div class="box label" style="font-size:14px;line-height:1.45">Finished exercises show up here, with your answers and choices.</div>';
     keys.forEach((k) => {
       const x = rec(k), d = new Date(k + 'T12:00'), full = isDone(k);
       const rows = [];
       if (x.q) rows.push({ title: 'Morning question', sub: x.q.prompt, detail: x.q.data.text, icon: ICON.q, at: x.q.created_at });
       if (x.t) rows.push({ title: 'This or that', sub: (x.t.data.picks || []).map((p) => p.pick).join(' · ') || 'Five choices made', icon: ICON.t, at: x.t.created_at });
       if (x.m) rows.push({ title: 'Move', sub: x.m.data.minutes ? x.m.data.minutes + ' minutes' : 'Logged', icon: ICON.m, at: x.m.created_at });
-      html += '<section class="section" aria-label="' + fmtDay(d) + '"><div class="head"><h2 class="h2" style="font-size:22px">' + (k === today() ? 'Today' : fmtDay(d)) + '</h2><span class="label">' + (full ? 'Streak day' : rows.length + ' of 3') + '</span></div>' +
+      html += '<div class="section"><div class="head" style="margin-top:6px"><h3 class="h2" style="font-size:22px">' + (k === today() ? 'Today' : fmtDay(d)) + '</h3><span class="label">' + (full ? 'Streak day' : rows.length + ' of 3') + '</span></div><div style="display:flex;flex-direction:column;gap:4px">' +
         rows.map((o) => '<div class="task done" style="cursor:default"><span class="ic">' + o.icon + '</span><span class="tx"><em>' + (o.at ? new Date(o.at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : '') + '</em><b>' + o.title + '</b><span>' + esc(o.sub) + '</span>' +
-          (o.detail ? '<span style="color:var(--ink);margin-top:2px">“' + esc(o.detail) + '”</span>' : '') + '</span><span class="st">' + ICON.check + '</span></div>').join('') + '</section>';
+          (o.detail ? '<span style="color:var(--ink);margin-top:2px">“' + esc(o.detail) + '”</span>' : '') + '</span><span class="st">' + ICON.check + '</span></div>').join('') + '</div></div>';
     });
   }
-  $('#tasksBody').innerHTML = html;
-  document.querySelectorAll('[data-seg]').forEach((b) => b.onclick = () => {
+  box.innerHTML = html;
+  box.querySelectorAll('[data-seg]').forEach((b) => b.onclick = () => {
     if (taskSeg === b.dataset.seg) return;
     taskSeg = b.dataset.seg;
-    const lens = $('#tasksBody .seglens'); if (lens) lens.style.transform = 'translateX(' + (taskSeg === 'up' ? 0 : 100) + '%)';
-    setTimeout(renderTasks, reduced ? 0 : 260);
+    const lens = box.querySelector('.seglens'); if (lens) lens.style.transform = 'translateX(' + (taskSeg === 'up' ? 0 : 100) + '%)';
+    setTimeout(renderPlan, reduced ? 0 : 260);
   });
-  document.querySelectorAll('#tasksBody [data-open]').forEach((b) => b.onclick = () => { const t = todays.find((x) => x.k === b.dataset.open); if (t) openSheet(t); });
 }
 function trow(t, mode) {
   const open = mode === 'open';
@@ -585,20 +588,20 @@ function saveSoon(patch) {
     try { me = { ...me, ...(await API.saveProfile(uid, p)) }; } catch (e) { fail(e); }
   }, 600);
 }
-async function refreshMe() { me = await API.myProfile(uid); refreshYou(); if (cur === 4) renderProfile(); }
+async function refreshMe() { me = await API.myProfile(uid); refreshYou(); refreshMeBtn(); if ($('#profileBody')) renderProfile(); }
 function completeness() {
-  const checks = [me.photo_path, me.name, me.birthdate, me.city, me.job, me.bio && me.bio.length > 20, (me.interests || []).length >= 3, me.status];
+  const checks = [me.photo_path, me.name, me.birthdate, me.city, me.country, me.job, me.bio && me.bio.length > 20, (me.interests || []).length >= 3, me.status];
   return Math.round(checks.filter(Boolean).length / checks.length * 100);
 }
 function field(id, label, val, ph, max, ac, im) {
   return '<label class="lbl" for="' + id + '">' + label + '<input class="field" id="' + id + '" maxlength="' + max + '" value="' + esc(val ?? '') + '" placeholder="' + esc(ph) + '"' + (ac ? ' autocomplete="' + ac + '"' : '') + (im ? ' inputmode="' + im + '"' : '') + '></label>';
 }
 async function renderProfile() {
+  if (!$('#profileBody')) return;
   const aura = dimsToW(me.aura), tot = aura.reduce((a, b) => a + b, 0) || 1;
   const sub = [ageOf(me.birthdate), me.city].filter(Boolean).join(' · ');
   const facts = [[ICON.work, me.job], [ICON.pin, me.city], [ICON.ruler, me.height_cm && me.height_cm + ' cm'], [ICON.lang, me.languages]].filter((f) => f[1]);
   const answers = myAnswers.filter((a) => a.kind === 'q' && a.data?.text).slice(0, 5);
-  const subscribed = ['active', 'trialing'].includes(me.subscription_status);
   $('#profileBody').innerHTML =
     '<header style="display:flex;flex-direction:column;gap:6px"><div class="head"><span class="brand">Rareness</span><span class="label">Profile ' + completeness() + '% complete</span></div><h1 class="largetitle">Profile</h1></header>' +
     '<div class="me"><div class="wrap" id="meBubble" style="position:relative;margin-top:24px">' + noteHTML(me.status || 'Write a status') + bubbleHTML(youObj(), 176) +
@@ -623,7 +626,8 @@ async function renderProfile() {
       field('pName', 'Name', me.name, 'First name', 24, 'given-name') + field('pPron', 'Pronouns', me.pronouns, 'she/her', 16) +
       field('pJob', 'Work', me.job, 'What you do', 40) + field('pCity', 'City', me.city, 'Where you live', 40, 'address-level2') +
       field('pHeight', 'Height (cm)', me.height_cm, '172', 3, '', 'numeric') + field('pLang', 'Languages', me.languages, 'French, English', 60) +
-    '</div></section>' +
+    '</div><label class="lbl" for="pCountry">Country<select class="field" id="pCountry">' + countryOptions(me.country) + '</select></label>' +
+    '<p class="label">Your Cloud shows people from the same country.</p></section>' +
 
     '<section class="section" aria-label="Show me"><h2 class="h2">Show me</h2><div class="chips">' +
       [['women', 'Women'], ['men', 'Men'], ['everyone', 'Everyone']].map(([v, l]) => '<button class="chip' + (me.show_me === v ? ' on' : '') + '" data-show="' + v + '" aria-pressed="' + (me.show_me === v) + '">' + l + '</button>').join('') + '</div></section>' +
@@ -637,9 +641,7 @@ async function renderProfile() {
 
     '<section class="stats" aria-label="Stats"><div><b>' + streak() + '</b><span>Streak</span></div><div><b>' + Math.max(bestStreak(), streak()) + '</b><span>Best</span></div><div><b>' + totalDone() + '</b><span>Exercises</span></div></section>' +
 
-    (config.paywall ? '<section class="section" aria-label="Membership"><h2 class="h2">Membership</h2><div class="box" style="display:flex;flex-direction:column;gap:10px"><p style="margin:0;font-size:14.5px">' +
-      (subscribed ? 'Active' + (me.subscription_period_end ? ' · renews ' + new Date(me.subscription_period_end).toLocaleDateString(undefined, { day: 'numeric', month: 'long' }) : '') : 'No active membership') +
-      '</p><button class="secondary" id="billingBtn">' + (subscribed ? 'Manage membership' : 'Become a member') + '</button></div></section>' : '') +
+    (config.paywall && me.paid_at ? '<section class="section" aria-label="Access"><h2 class="h2">Access</h2><div class="box" style="font-size:14.5px">Unlocked on ' + new Date(me.paid_at).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' }) + '. One-time payment, nothing more to pay.</div></section>' : '') +
 
     '<section class="section" aria-label="Account"><h2 class="h2">Account</h2><div style="display:flex;flex-direction:column;gap:6px">' +
       '<button class="secondary" id="signOutBtn">Sign out</button>' +
@@ -652,6 +654,7 @@ async function renderProfile() {
   bind('pName', 'name', () => { head(); refreshYou(); }); bind('pCity', 'city', head);
   bind('pPron', 'pronouns'); bind('pHeight', 'height_cm', null, true); bind('pJob', 'job'); bind('pLang', 'languages');
   $('#pBio').oninput = (e) => { saveSoon({ bio: e.target.value }); cnt(); };
+  $('#pCountry').onchange = (e) => { if (!e.target.value) return; saveSoon({ country: e.target.value }); setTimeout(() => API.api('match').then(loadCloud).catch(console.error), 900); };
   $('#pStatus').oninput = (e) => {
     const v = clip(e.target.value, 20); if (v !== e.target.value) e.target.value = v;
     saveSoon({ status: v }); cnt(); refreshYou();
@@ -671,7 +674,6 @@ async function renderProfile() {
     b.classList.toggle('on', list.includes(v)); b.setAttribute('aria-pressed', list.includes(v)); $('#iCount').textContent = list.length + '/6';
   });
   $('#camBtn').onclick = () => pickPhoto(async (blob) => { await savePhoto(blob); renderProfile(); refreshYou(); toast('Photo updated'); });
-  const bb = $('#billingBtn'); if (bb) bb.onclick = () => openBilling(bb);
   $('#signOutBtn').onclick = async () => { await API.signOut(); location.reload(); };
   $('#deleteBtn').onclick = async (e) => {
     const b = e.currentTarget;
@@ -686,12 +688,18 @@ async function renderProfile() {
 }
 async function openBilling(btn) {
   btn.disabled = true;
-  try {
-    const subscribed = ['active', 'trialing', 'past_due'].includes(me.subscription_status);
-    const { url } = await API.api(subscribed ? 'stripe/portal' : 'stripe/checkout');
-    location.href = url;
-  } catch (e) { fail(e); btn.disabled = false; }
+  try { const { url } = await API.api('stripe/checkout'); location.href = url; } catch (e) { fail(e); btn.disabled = false; }
 }
+// Your profile lives behind the bubble button in the top-right corner of every page
+function openProfile() {
+  pushPage('Profile', '<div class="stack" id="profileBody"></div>');
+  renderProfile();
+}
+function refreshMeBtn() {
+  const b = $('#meBtn'); if (!b || !me) return;
+  b.innerHTML = bubbleHTML(youObj(), 44);
+}
+$('#meBtn').onclick = openProfile;
 
 
 // ---------------- Cloud ----------------
@@ -861,7 +869,7 @@ function paint() {
 }
 function loop(now) {
   const dt = Math.min(.05, (now - last) / 1000); last = now;
-  if (cur === 2 || B.some((b) => b.bumpUntil)) { step(dt); paint(); }
+  if (cur === 1 || B.some((b) => b.bumpUntil)) { step(dt); paint(); }
   if (pendingMatch) { const b = pendingMatch; pendingMatch = null; showMatch(b); }
   requestAnimationFrame(loop);
 }
@@ -934,7 +942,7 @@ function bumpZone(b) {
 }
 function wireBump(pg, b) {
   const bz = pg.querySelector('#bumpZone'), bt = bz.querySelector('[data-bump]'), ch = bz.querySelector('[data-chat]');
-  if (ch) ch.onclick = () => { popPage(true); goTab(3, () => openThread(b.chatId)); };
+  if (ch) ch.onclick = () => { popPage(true); goTab(2, () => openThread(b.chatId)); };
   if (!bt) return;
   bt.onclick = async () => {
     bt.disabled = true;
@@ -956,7 +964,7 @@ function showMatch(b) {
     '<div style="width:100%;max-width:320px;display:flex;flex-direction:column;gap:4px;margin-top:8px"><button class="primary" id="mChat">Say hi' + (b.name ? ' to ' + esc(b.name) : '') + '</button><button class="link" id="mKeep">Keep exploring</button></div>';
   void m.offsetWidth; m.classList.add('on');
   $('#mKeep').onclick = () => m.classList.remove('on');
-  $('#mChat').onclick = () => { m.classList.remove('on'); goTab(3, () => openThread(b.chatId)); };
+  $('#mChat').onclick = () => { m.classList.remove('on'); goTab(2, () => openThread(b.chatId)); };
 }
 async function blockPerson(b, btn) {
   if (!btn.dataset.arm) { btn.dataset.arm = '1'; btn.textContent = 'Tap again to block'; return; }
@@ -999,7 +1007,7 @@ function renderChats() {
     : '<div class="empty">' + bubbleHTML({ w: [1, 1, 1, 1, 1, 1], plain: true }, 110) + '<h2 class="h2">No chats yet</h2><p class="label" style="font-size:14.5px;line-height:1.45;max-width:280px">Bump people in the Cloud. If they bump you back, you’ll both land here.</p>' +
       '<button class="secondary" style="max-width:220px" id="toCloud">Go to the Cloud</button></div>');
   document.querySelectorAll('[data-thread]').forEach((b) => b.onclick = () => openThread(b.dataset.thread));
-  const tc = $('#toCloud'); if (tc) tc.onclick = () => goTab(2);
+  const tc = $('#toCloud'); if (tc) tc.onclick = () => goTab(1);
 }
 let openChat = null; // { id, draw(message) }
 async function openThread(chatId) {
@@ -1135,7 +1143,7 @@ function runSplash() {
   setTimeout(finish, 5800); // never longer than this
 }
 
-// ---------------- Gate: sign-in, onboarding, membership ----------------
+// ---------------- Gate: sign-in, onboarding, access fee ----------------
 const SIGNUP = [
   { dim: 'values', prompt: 'What matters most to you in a partner?', opts: ['Honesty', 'Kindness', 'Ambition', 'Humour', 'Loyalty', 'Curiosity'] },
   { dim: 'lifestyle', prompt: 'Your ideal Friday night?', opts: ['Dinner out with friends', 'A cosy night in', 'Dancing until late', 'Trying something new'] },
@@ -1143,18 +1151,29 @@ const SIGNUP = [
   { dim: 'goals', prompt: 'What are you looking for?', opts: ['A long-term relationship', 'Something that grows slowly', 'Not sure yet', 'New people to meet'] },
   { dim: 'routine', prompt: 'When are you at your best?', opts: ['Early morning', 'During the day', 'Late at night'] }
 ];
-const STEPS = 2 + SIGNUP.length + 2; // basics, photo+city, questions, interests, about
+const Q0 = 3; // first quick-test question
+const STEPS = Q0 + SIGNUP.length + 2; // basics, photo+city, quick-test intro, questions, interests, about
 const gate = $('#gate');
+const COUNTRIES = 'AD AE AF AG AL AM AO AR AT AU AZ BA BB BD BE BF BG BH BI BJ BN BO BR BS BT BW BY BZ CA CD CF CG CH CI CL CM CN CO CR CU CV CY CZ DE DJ DK DM DO DZ EC EE EG ER ES ET FI FJ FM FR GA GB GD GE GH GM GN GQ GR GT GW GY HK HN HR HT HU ID IE IL IN IQ IR IS IT JM JO JP KE KG KH KI KM KN KR KW KZ LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME MG MH MK ML MM MN MO MR MT MU MV MW MX MY MZ NA NE NG NI NL NO NP NR NZ OM PA PE PG PH PK PL PR PS PT PW PY QA RE RO RS RU RW SA SB SC SD SE SG SI SK SL SM SN SO SR SS ST SV SY SZ TD TG TH TJ TL TM TN TO TR TT TV TW TZ UA UG US UY UZ VA VC VE VN VU WS XK YE ZA ZM ZW'.split(' ');
+function countryOptions(sel) {
+  let names; try { names = new Intl.DisplayNames([navigator.language || 'en'], { type: 'region' }); } catch (e) { names = { of: (c) => c }; }
+  const list = COUNTRIES.map((c) => [c, names.of(c) || c]).sort((a, b) => a[1].localeCompare(b[1]));
+  return '<option value="">Choose…</option>' + list.map(([c, n]) => '<option value="' + c + '"' + (c === sel ? ' selected' : '') + '>' + esc(n) + '</option>').join('');
+}
+function guessCountry() {
+  const m = /-([A-Z]{2})\b/.exec(navigator.language || '');
+  return m && COUNTRIES.includes(m[1]) ? m[1] : '';
+}
 let G = { email: '', step: 0, answers: {}, interests: [] };
 
 function showGate(html, after) {
   gate.hidden = false;
   gate.innerHTML = '<div class="gate-in">' + html + '</div>';
   gate.scrollTop = 0;
-  $('#tabbar').classList.add('away');
+  $('#tabbar').classList.add('away'); $('#meBtn').classList.add('away');
   if (after) after();
 }
-function hideGate() { gate.hidden = true; gate.innerHTML = ''; $('#tabbar').classList.remove('away'); }
+function hideGate() { gate.hidden = true; gate.innerHTML = ''; $('#tabbar').classList.remove('away'); $('#meBtn').classList.remove('away'); }
 const stepsBar = (i) => '<div class="steps" aria-label="Step ' + (i + 1) + ' of ' + STEPS + '">' + Array.from({ length: STEPS }, (_, k) => '<span class="' + (k <= i ? 'on' : '') + '"></span>').join('') + '</div>';
 const backBtn = '<button class="backlink" data-back>‹ Back</button>';
 function busy(btn, on, label) { btn.disabled = on; if (label) btn.textContent = label; }
@@ -1220,6 +1239,7 @@ function gateOnboard() {
       field('obName', 'First name', me.name, 'Your first name', 24, 'given-name') +
       '<label class="lbl" for="obBirth">Date of birth<input class="field" id="obBirth" type="date" max="' + API.dayKey(max) + '" value="' + esc(me.birthdate || '') + '" autocomplete="bday"></label>' +
       '<div class="lbl">I am<div class="chips" style="margin-top:2px">' + [['woman', 'A woman'], ['man', 'A man'], ['nonbinary', 'Non-binary']].map(([v, l]) => '<button type="button" class="chip' + (me.gender === v ? ' on' : '') + '" data-g="' + v + '">' + l + '</button>').join('') + '</div></div>' +
+      '<label class="lbl" for="obCountry">Country<select class="field" id="obCountry">' + countryOptions(me.country || guessCountry()) + '</select></label>' +
       '<div class="lbl">Show me<div class="chips" style="margin-top:2px">' + [['women', 'Women'], ['men', 'Men'], ['everyone', 'Everyone']].map(([v, l]) => '<button type="button" class="chip' + ((me.show_me || 'everyone') === v ? ' on' : '') + '" data-s="' + v + '">' + l + '</button>').join('') + '</div></div>' +
       '<p class="err" id="err" role="alert" hidden></p><div class="grow"></div><button class="primary">Continue</button></form>',
       () => {
@@ -1228,13 +1248,14 @@ function gateOnboard() {
         gate.querySelectorAll('[data-s]').forEach((b) => b.onclick = () => { show = b.dataset.s; gate.querySelectorAll('[data-s]').forEach((x) => x.classList.toggle('on', x === b)); });
         $('#f').onsubmit = async (e) => {
           e.preventDefault();
-          const name = $('#obName').value.trim(), birth = $('#obBirth').value, err = $('#err');
+          const name = $('#obName').value.trim(), birth = $('#obBirth').value, country = $('#obCountry').value, err = $('#err');
           const say = (m) => { err.textContent = m; err.hidden = false; };
           if (!name) return say('Add your first name.');
           if (!birth) return say('Add your date of birth.');
           if (ageOf(birth) < 18) return say('Rareness is for people 18 and over.');
           if (!gender) return say('Choose how you identify.');
-          try { me = await API.saveProfile(uid, { name, birthdate: birth, gender, show_me: show }); G.step++; gateOnboard(); } catch (x) { fail(x); }
+          if (!country) return say('Choose your country. Your Cloud shows people from the same country.');
+          try { me = await API.saveProfile(uid, { name, birthdate: birth, gender, show_me: show, country }); G.step++; gateOnboard(); } catch (x) { fail(x); }
         };
       });
   } else if (i === 1) {
@@ -1252,9 +1273,18 @@ function gateOnboard() {
           try { me = await API.saveProfile(uid, { city }); G.step++; gateOnboard(); } catch (x) { fail(x); }
         };
       });
-  } else if (i < 2 + SIGNUP.length) {
-    const q = SIGNUP[i - 2];
-    showGate(stepsBar(i) + backBtn + '<p class="label">' + dimLabel(q.dim) + '</p><h1 class="largetitle">' + esc(q.prompt) + '</h1>' +
+  } else if (i === 2) {
+    showGate(stepsBar(i) + backBtn + '<p class="label">Aura quick test</p><h1 class="largetitle">Let’s read your aura</h1>' +
+      '<div style="display:flex;justify-content:center;padding:6px 0">' + bubbleHTML({ w: [1, 1, 1, 1, 1, 1], clear: true }, 150) + '</div>' +
+      '<p class="lead">Seven quick steps, about a minute. Go with your first instinct. Your answers shape the six colours of your aura, and who floats closest to you.</p>' +
+      '<div class="grow"></div><button class="primary" id="go">Start the quick test</button>',
+      () => {
+        gate.querySelector('[data-back]').onclick = () => { G.step--; gateOnboard(); };
+        $('#go').onclick = () => { G.step++; gateOnboard(); };
+      });
+  } else if (i < Q0 + SIGNUP.length) {
+    const q = SIGNUP[i - Q0];
+    showGate(stepsBar(i) + backBtn + '<p class="label">Aura quick test · ' + (i - Q0 + 1) + ' of ' + (SIGNUP.length + 2) + '</p><h1 class="largetitle">' + esc(q.prompt) + '</h1>' +
       '<div class="opts" role="radiogroup">' + q.opts.map((o) => '<button class="opt' + (G.answers[q.dim] === o ? ' on' : '') + '" role="radio" aria-checked="' + (G.answers[q.dim] === o) + '" data-o="' + esc(o) + '">' + esc(o) + '</button>').join('') + '</div>',
       () => {
         gate.querySelector('[data-back]').onclick = () => { G.step--; gateOnboard(); };
@@ -1264,8 +1294,8 @@ function gateOnboard() {
           setTimeout(() => { G.step++; gateOnboard(); }, 260);
         });
       });
-  } else if (i === 2 + SIGNUP.length) {
-    showGate(stepsBar(i) + backBtn + '<p class="label">Interests</p><h1 class="largetitle">What do you love?</h1><p class="lead">Pick 3 to 6.</p>' +
+  } else if (i === Q0 + SIGNUP.length) {
+    showGate(stepsBar(i) + backBtn + '<p class="label">Aura quick test · ' + (SIGNUP.length + 1) + ' of ' + (SIGNUP.length + 2) + '</p><h1 class="largetitle">What do you love?</h1><p class="lead">Pick 3 to 6.</p>' +
       '<div class="chips">' + INTERESTS.map((l) => '<button class="chip' + (G.interests.includes(l) ? ' on' : '') + '" data-int="' + esc(l) + '">' + esc(l) + '</button>').join('') + '</div>' +
       '<div class="grow"></div><button class="primary" id="go"' + (G.interests.length < 3 ? ' disabled' : '') + '>Continue</button>',
       () => {
@@ -1277,8 +1307,8 @@ function gateOnboard() {
         });
         $('#go').onclick = () => { G.step++; gateOnboard(); };
       });
-  } else if (i === 3 + SIGNUP.length) {
-    showGate(stepsBar(i) + backBtn + '<p class="label">About you</p><h1 class="largetitle">Describe yourself in a sentence or two</h1>' +
+  } else if (i === Q0 + SIGNUP.length + 1) {
+    showGate(stepsBar(i) + backBtn + '<p class="label">Aura quick test · ' + (SIGNUP.length + 2) + ' of ' + (SIGNUP.length + 2) + '</p><h1 class="largetitle">Describe yourself in a sentence or two</h1>' +
       '<label class="hide" for="obBio">About you</label><textarea id="obBio" maxlength="160" placeholder="What would your best friend say about you?">' + esc(me.bio || '') + '</textarea>' +
       '<p class="fine">Shown on your profile. The AI reads it to shape your aura.</p><div class="grow"></div><button class="primary" id="go" disabled>Finish</button>',
       () => {
@@ -1300,7 +1330,7 @@ async function finishOnboarding(bio) {
       { dim: 'interests', prompt: 'What do you love?', data: { choices: G.interests } }
     ]);
     me = await API.saveProfile(uid, { bio, interests: G.interests, onboarded: true });
-  } catch (e) { fail(e); G.step = 3 + SIGNUP.length; gateOnboard(); return; }
+  } catch (e) { fail(e); G.step = Q0 + SIGNUP.length + 1; gateOnboard(); return; }
   try { await API.api('match'); } catch (e) { console.error(e); }
   me = await API.myProfile(uid);
   const aura = dimsToW(me.aura), tot = aura.reduce((a, b) => a + b, 0) || 1;
@@ -1309,25 +1339,25 @@ async function finishOnboarding(bio) {
     (me.aura_summary ? '<p class="reason-line" style="text-align:center">' + esc(me.aura_summary) + '</p>' : '<p class="lead" style="text-align:center">Your aura will sharpen as you answer the daily rituals.</p>') +
     '<div style="display:flex;flex-direction:column;gap:10px">' + DIMS.map((d, k) => '<div class="reason">' + swatch(k, 24) + '<div class="rt"><div>' + d.label + '<span>' + Math.round(aura[k] / tot * 100) + '%</span></div>' + glassBar(aura[k], k) + '</div></div>').join('') + '</div>' +
     '<p class="fine">The colours around your bubble come from this. On other people’s bubbles, they show why you match.</p>' +
-    '<div class="grow"></div><button class="primary" id="go">Enter Rareness</button>',
+    '<div class="grow"></div><button class="primary" id="go">' + (needsMembership() ? 'Continue' : 'Enter Rareness') + '</button>',
     () => { $('#go').onclick = () => afterOnboarding(); });
 }
 function afterOnboarding() {
   if (needsMembership()) gatePaywall(); else startApp();
 }
-const needsMembership = () => config.paywall && !['active', 'trialing'].includes(me.subscription_status);
+const needsMembership = () => config.paywall && !me.paid_at;
 
 function gatePaywall(msg) {
-  const trial = config.trialDays > 0 ? config.trialDays + ' days free, then ' : '';
+  const price = config.price || '$5';
   showGate('<span class="brand">Rareness</span>' +
     '<div style="display:flex;justify-content:center;padding:10px 0">' + bubbleHTML(youObj(), 150) + '</div>' +
-    '<h1 class="largetitle">Become a member</h1>' +
-    '<p class="lead">Membership opens your Cloud, AI matching that learns from every answer, and chats with the people you bump into.</p>' +
-    '<div class="box" style="display:flex;flex-direction:column;gap:6px;font-size:15px"><span>Your Cloud of real matches</span><span>An aura that sharpens every day</span><span>Unlimited bumps and chats</span></div>' +
+    '<h1 class="largetitle">Your aura is ready. Unlock Rareness.</h1>' +
+    '<p class="lead">One payment of ' + esc(price) + ' opens everything, for good.</p>' +
+    '<div class="box" style="display:flex;flex-direction:column;gap:6px;font-size:15px"><span>Your Cloud of real matches in your country</span><span>AI matching that learns from every answer</span><span>Bumps and chats with the people you match</span></div>' +
     (msg ? '<p class="err" role="alert">' + esc(msg) + '</p>' : '') +
     '<div class="grow"></div>' +
-    '<button class="primary" id="sub">' + (config.price ? esc(trial + config.price) : 'Continue to payment') + '</button>' +
-    '<p class="fine">Payments are handled by Stripe. Cancel any time from your profile.</p>' +
+    '<button class="primary" id="sub">Unlock for ' + esc(price) + '</button>' +
+    '<p class="fine">One-time payment through Stripe. No subscription.</p>' +
     '<button class="link" id="out" style="align-self:center;color:var(--ink2)">Sign out</button>',
     () => {
       $('#sub').onclick = (e) => openBilling(e.currentTarget);
@@ -1335,25 +1365,23 @@ function gatePaywall(msg) {
     });
 }
 async function confirmMembership() {
-  showGate('<div class="grow"></div><div style="display:flex;justify-content:center"><div class="spinner"></div></div><h1 class="largetitle" style="text-align:center">Confirming your membership…</h1><div class="grow"></div>');
+  showGate('<div class="grow"></div><div style="display:flex;justify-content:center"><div class="spinner"></div></div><h1 class="largetitle" style="text-align:center">Confirming your payment…</h1><div class="grow"></div>');
   for (let k = 0; k < 15; k++) {
     me = await API.myProfile(uid);
     if (!needsMembership()) { toast('Welcome to Rareness'); return startApp(); }
     await new Promise((r) => setTimeout(r, 1500));
   }
-  gatePaywall('We haven’t received confirmation from Stripe yet. If you were charged, reopen the app in a minute.');
+  gatePaywall('We haven’t received confirmation from Stripe yet. If you paid, reopen the app in a minute.');
 }
 
 // ---------------- Boot ----------------
 let appStarted = false, unsubscribeMessages = null;
 function onEnter(i) {
   if (i === 0) renderAgenda();
-  if (i === 1) renderTasks();
-  if (i === 4) renderProfile();
-  if (i === 3) { renderChats(); loadChats(); }
-  if (i === 2) { last = performance.now(); refreshBadges(); if (!cloudLoaded) loadCloud(); }
+  if (i === 2) { renderChats(); loadChats(); }
+  if (i === 1) { last = performance.now(); refreshBadges(); if (!cloudLoaded) loadCloud(); }
 }
-function renderAll() { renderAgenda(); renderTasks(); renderProfile(); renderChats(); refreshYou(); refreshBadges(); updateLocks(); }
+function renderAll() { renderAgenda(); renderChats(); refreshYou(); refreshMeBtn(); refreshBadges(); updateLocks(); }
 
 async function enter(user) {
   uid = user.id;

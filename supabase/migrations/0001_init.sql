@@ -15,6 +15,7 @@ create table public.profiles (
   show_me text not null default 'everyone' check (show_me in ('women', 'men', 'everyone')),
   pronouns text not null default '' check (char_length(pronouns) <= 16),
   city text not null default '' check (char_length(city) <= 40),
+  country text check (country ~ '^[A-Z]{2}$'),  -- ISO code; the Cloud shows people from the same country
   job text not null default '' check (char_length(job) <= 40),
   height_cm int check (height_cm between 100 and 250),
   languages text not null default '' check (char_length(languages) <= 60),
@@ -75,8 +76,9 @@ create table public.profile_private (
   id uuid primary key references public.profiles (id) on delete cascade,
   birthdate date,
   stripe_customer_id text unique,
-  subscription_status text not null default 'none',
-  subscription_period_end timestamptz
+  -- One-time access fee, set only by the Stripe webhook
+  paid_at timestamptz,
+  stripe_session_id text
 );
 alter table public.profile_private enable row level security;
 create policy "private: read own" on public.profile_private for select to authenticated using (id = auth.uid());
@@ -88,8 +90,8 @@ language plpgsql as $$
 begin
   if public.from_browser() then
     new.stripe_customer_id := old.stripe_customer_id;
-    new.subscription_status := old.subscription_status;
-    new.subscription_period_end := old.subscription_period_end;
+    new.paid_at := old.paid_at;
+    new.stripe_session_id := old.stripe_session_id;
   end if;
   return new;
 end $$;
@@ -319,6 +321,7 @@ language sql stable security definer set search_path = public as $$
   join matches m on m.user_id = auth.uid() and m.other_id = p.id
   cross join me
   where p.onboarded and p.id <> auth.uid()
+    and p.country is not distinct from me.country
     and not public.is_blocked(auth.uid(), p.id)
     and (me.show_me = 'everyone' or (me.show_me = 'women' and p.gender = 'woman') or (me.show_me = 'men' and p.gender = 'man'))
     and (p.show_me = 'everyone' or (p.show_me = 'women' and me.gender = 'woman') or (p.show_me = 'men' and me.gender = 'man'))

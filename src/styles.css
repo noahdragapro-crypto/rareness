@@ -342,3 +342,16 @@ input[type=range]{width:100%;accent-color:#111114}
 @keyframes spin{to{transform:rotate(360deg)}}
 .menu-row{display:flex;gap:6px;flex-wrap:wrap}
 .danger{color:#a3192f!important}
+
+/* ---------- Profile button (top-right corner of every page) ---------- */
+.mebtn{position:absolute;z-index:42;top:calc(env(safe-area-inset-top,0px) + 42px);right:max(16px,env(safe-area-inset-right,0px));width:48px;height:48px;padding:2px;border:0;border-radius:50%;background:transparent;cursor:pointer;
+  transition:transform .45s var(--spring),opacity .3s}
+.mebtn .bubble{transition:transform .45s var(--spring)}
+.mebtn:hover .bubble{transform:scale(1.08)}
+.mebtn:active .bubble{transform:scale(.94)}
+.mebtn.away{opacity:0;pointer-events:none;transform:scale(.6)}
+/* The Cloud's colour-key button moves left to make room for it */
+.cloudhead{padding-right:calc(max(18px,env(safe-area-inset-right,0px)) + 58px)}
+.legend{right:calc(max(14px,env(safe-area-inset-right,0px)) + 58px)}
+.mebtn{transform-origin:100% 0}
+.mebtn.compact{top:calc(env(safe-area-inset-top,0px) + 4px);transform:scale(.78)}

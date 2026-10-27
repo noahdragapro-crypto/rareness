@@ -5,7 +5,9 @@ import { aiEnabled, basicPair, computeAura, loadPeople, personCard, scorePair } 
 
 type Person = Awaited<ReturnType<typeof loadPeople>>[number];
 
-const eligible = (p: Person) => !paywallOn() || ["active", "trialing"].includes(p.profile.subscription_status);
+const eligible = (p: Person) => !paywallOn() || Boolean(p.profile.paid_at);
+// Members only ever see people from their own country, so only those pairs are scored
+const sameCountry = (a: Person, b: Person) => a.profile.country === b.profile.country;
 const lastActivity = (p: Person) => p.answers.reduce((m, a) => (a.created_at > m ? a.created_at : m), "");
 
 async function pool<T>(items: T[], limit: number, deadline: number, fn: (item: T) => Promise<void>) {
@@ -80,7 +82,7 @@ export async function refreshFor(userId: string, deadline: number) {
   if (!me.profile.aura_updated_at || lastActivity(me) > me.profile.aura_updated_at) await refreshAura(me);
   if (!eligible(me)) return { scored: 0 };
   const seen = await scoredAt();
-  const todo = people.filter((p) => p.profile.id !== userId && eligible(p) && stale(me, p, seen));
+  const todo = people.filter((p) => p.profile.id !== userId && eligible(p) && sameCountry(me, p) && stale(me, p, seen));
   let scored = 0;
   await pool(todo, 4, deadline, async (p) => { await scoreAndSave(me, p); scored++; });
   return { scored, remaining: todo.length - scored };
@@ -94,7 +96,7 @@ export async function refreshAll(deadline: number) {
   const seen = await scoredAt();
   const pairs: [Person, Person][] = [];
   const pool2 = people.filter(eligible);
-  for (let i = 0; i < pool2.length; i++) for (let j = i + 1; j < pool2.length; j++) if (stale(pool2[i], pool2[j], seen)) pairs.push([pool2[i], pool2[j]]);
+  for (let i = 0; i < pool2.length; i++) for (let j = i + 1; j < pool2.length; j++) if (sameCountry(pool2[i], pool2[j]) && stale(pool2[i], pool2[j], seen)) pairs.push([pool2[i], pool2[j]]);
   let scored = 0;
   await pool(pairs, 4, deadline, async ([a, b]) => { await scoreAndSave(a, b); scored++; });
   return { auras: auras.length, scored, remaining: pairs.length - scored };

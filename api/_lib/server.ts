@@ -7,7 +7,8 @@ export function env(name: string): string {
   return v;
 }
 
-export const paywallOn = () => process.env.PAYWALL === "on";
+/** The one-time access fee is required unless PAYWALL=off (useful while testing). */
+export const paywallOn = () => process.env.PAYWALL !== "off";
 
 let admin: SupabaseClient | null = null;
 /** Service-role client: bypasses row-level security. Server only, never sent to the browser. */
