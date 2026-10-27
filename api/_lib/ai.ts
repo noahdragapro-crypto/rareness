@@ -58,7 +58,7 @@ export function personCard(p: Profile, answers: Answer[]): string {
   const lines: string[] = [];
   lines.push(`Age: ${age(p.birthdate) ?? "unknown"}. Gender: ${p.gender ?? "unspecified"}.`);
   if (p.job) lines.push(`Work: ${clip(p.job, 40)}`);
-  if (p.interests?.length) lines.push(`Interests: ${p.interests.slice(0, 12).map((i) => clip(i, 30)).join(", ")}`);
+  if (p.interests?.length) lines.push(`Interests: ${p.interests.slice(0, 30).map((i) => clip(i, 30)).join(", ")}`);
   if (p.bio) lines.push(`About: ${clip(p.bio, 160)}`);
   if (p.status) lines.push(`Status: ${clip(p.status, 20)}`);
   const signup = answers.filter((a) => a.kind === "signup");

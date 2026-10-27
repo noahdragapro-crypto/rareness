@@ -632,7 +632,7 @@ async function renderProfile() {
     '<section class="section" aria-label="Show me"><h2 class="h2">Show me</h2><div class="chips">' +
       [['women', 'Women'], ['men', 'Men'], ['everyone', 'Everyone']].map(([v, l]) => '<button class="chip' + (me.show_me === v ? ' on' : '') + '" data-show="' + v + '" aria-pressed="' + (me.show_me === v) + '">' + l + '</button>').join('') + '</div></section>' +
 
-    '<section class="section" aria-label="Interests"><div class="head"><h2 class="h2">Interests</h2><span class="counter" id="iCount">' + (me.interests || []).length + '/6</span></div><div class="chips">' +
+    '<section class="section" aria-label="Interests"><div class="head"><h2 class="h2">Interests</h2><span class="counter" id="iCount">' + (me.interests || []).length + '</span></div><div class="chips">' +
       INTERESTS.map((l) => '<button class="chip' + ((me.interests || []).includes(l) ? ' on' : '') + '" data-int="' + esc(l) + '" aria-pressed="' + (me.interests || []).includes(l) + '">' + esc(l) + '</button>').join('') + '</div></section>' +
 
     '<section class="section" aria-label="Your answers"><h2 class="h2">Your answers</h2>' +
@@ -668,10 +668,9 @@ async function renderProfile() {
   document.querySelectorAll('[data-int]').forEach((b) => b.onclick = () => {
     const v = b.dataset.int, list = [...(me.interests || [])], i = list.indexOf(v);
     if (i >= 0) list.splice(i, 1);
-    else if (list.length >= 6) { toast('Pick up to 6 interests'); return; }
     else list.push(v);
     saveSoon({ interests: list });
-    b.classList.toggle('on', list.includes(v)); b.setAttribute('aria-pressed', list.includes(v)); $('#iCount').textContent = list.length + '/6';
+    b.classList.toggle('on', list.includes(v)); b.setAttribute('aria-pressed', list.includes(v)); $('#iCount').textContent = list.length;
   });
   $('#camBtn').onclick = () => pickPhoto(async (blob) => { await savePhoto(blob); renderProfile(); refreshYou(); toast('Photo updated'); });
   $('#signOutBtn').onclick = async () => { await API.signOut(); location.reload(); };
@@ -1148,13 +1147,13 @@ const SIGNUP = [
   { dim: 'values', multi: 3, prompt: 'What matters most to you in a partner?', opts: ['Honesty', 'Kindness', 'Ambition', 'Humour', 'Loyalty', 'Curiosity'] },
   { dim: 'lifestyle', multi: 2, prompt: 'Your ideal Friday night?', opts: ['Dinner out with friends', 'A cosy night in', 'Dancing until late', 'Trying something new'] },
   { dim: 'personality', multi: 3, prompt: 'Friends would describe you as…', opts: ['Calm', 'Curious', 'Playful', 'Driven', 'Warm', 'Bold'] },
-  { dim: 'goals', prompt: 'What are you looking for?', opts: ['A long-term relationship', 'Something that grows slowly', 'To find a community', 'New people to meet', 'Not sure yet'] },
+  { dim: 'goals', multi: 2, prompt: 'What are you looking for?', opts: ['A long-term relationship', 'Something that grows slowly', 'To find a community', 'New people to meet', 'Not sure yet'] },
   { dim: 'routine', prompt: 'When are you at your best?', opts: ['Early morning', 'During the day', 'Late at night'] }
 ];
 // Aura quick test, right after the photo: the first three are required, the rest can be skipped for now
-// Order: what matters in a partner, interests, how friends describe you (required), then the rest
-const TEST = [SIGNUP[0], { dim: 'interests' }, SIGNUP[2], SIGNUP[1], SIGNUP[3], SIGNUP[4], { dim: 'bio' }];
-const REQUIRED = 3;
+// Order: what matters in a partner, interests, how friends describe you, what you're looking for (required), then the rest
+const TEST = [SIGNUP[0], { dim: 'interests' }, SIGNUP[2], SIGNUP[3], SIGNUP[1], SIGNUP[4], { dim: 'bio' }];
+const REQUIRED = 4;
 const Q0 = 2; // first quick-test step, after basics and photo
 const STEPS = Q0 + TEST.length;
 const gate = $('#gate');
@@ -1274,14 +1273,14 @@ function gateOnboard() {
       if (skip) $('#skip').onclick = () => finishOnboarding();
     };
     if (q.dim === 'interests') {
-      showGate(head + '<h1 class="largetitle">What are your interests?</h1><p class="lead">Pick 3 to 6.</p>' +
+      showGate(head + '<h1 class="largetitle">What are your interests?</h1><p class="lead">Pick at least 3.</p>' +
         '<div class="chips">' + INTERESTS.map((l) => '<button class="chip' + (G.interests.includes(l) ? ' on' : '') + '" data-int="' + esc(l) + '">' + esc(l) + '</button>').join('') + '</div>' +
         '<div class="grow"></div><button class="primary" id="go"' + (G.interests.length < 3 ? ' disabled' : '') + '>Continue</button>' + skip,
         () => {
           wire();
           gate.querySelectorAll('[data-int]').forEach((b) => b.onclick = () => {
             const v = b.dataset.int, j = G.interests.indexOf(v);
-            if (j >= 0) G.interests.splice(j, 1); else if (G.interests.length < 6) G.interests.push(v); else { toast('Pick up to 6'); return; }
+            if (j >= 0) G.interests.splice(j, 1); else G.interests.push(v);
             b.classList.toggle('on', G.interests.includes(v)); $('#go').disabled = G.interests.length < 3;
           });
           $('#go').onclick = next;
