@@ -1216,7 +1216,7 @@ function gateSignIn(msg) {
 function gateCode(msg) {
   showGate(
     backBtn + '<span class="brand">Rareness</span><h1 class="largetitle">Check your inbox</h1>' +
-    '<p class="lead">We sent a code to ' + esc(G.email) + '. Enter it below, or tap the link in the email.</p>' +
+    '<p class="lead">We sent an email to ' + esc(G.email) + '. Tap the link inside to come back here signed in. If the email shows a 6-digit code, you can enter it below instead.</p><p class="fine">It can take a minute. Check your spam folder too.</p>' +
     '<form id="codeForm" style="display:flex;flex-direction:column;gap:8px">' +
       '<label class="lbl" for="code">6-digit code<input class="field code" id="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••••"></label>' +
       (msg ? '<p class="err" role="alert">' + esc(msg) + '</p>' : '') +
