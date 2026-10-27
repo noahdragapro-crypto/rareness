@@ -22,6 +22,14 @@ export async function sendCode(email) {
   check(await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: location.origin, shouldCreateUser: true } }));
 }
 export async function verifyCode(email, token) { return check(await sb.auth.verifyOtp({ email, token, type: 'email' })); }
+// For now: sign in with just an email address, no email sent (see api/auth/email.ts)
+export async function signInWithEmail(email) {
+  const res = await fetch('/api/auth/email', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email }) });
+  const out = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(out.error || 'We couldn’t sign you in. Try again.');
+  const { user } = check(await sb.auth.verifyOtp({ token_hash: out.token_hash, type: 'email' }));
+  return { user, country: out.country };
+}
 export async function signOut() { await sb.auth.signOut(); }
 
 // ---------- Server API (/api/*) ----------

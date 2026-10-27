@@ -54,7 +54,7 @@ const PAIRS = [
   ['Podcast', 'Playlist', 'interests'], ['Talk it out', 'Sleep on it', 'personality'], ['Gym', 'Outdoors', 'routine'], ['Settle down', 'Explore', 'goals'], ['Text', 'Call', 'personality'],
   ['Brunch', 'Dinner', 'lifestyle'], ['Spontaneous trip', 'Planned holiday', 'personality'], ['Kids someday', 'Not for me', 'goals'], ['Sunrise', 'Sunset', 'routine']
 ];
-const INTERESTS = ['Art', 'Books', 'Chess', 'Cinema', 'Coffee', 'Cooking', 'Dancing', 'Design', 'Fashion', 'Gaming', 'Hiking', 'Jazz', 'Live music', 'Photography', 'Plants', 'Running', 'Swimming', 'Travel', 'Wine', 'Yoga'];
+const INTERESTS = ['Art', 'Books', 'Chess', 'Cinema', 'Coffee', 'Cooking', 'Dancing', 'Design', 'Fashion', 'Gaming', 'Hiking', 'Jazz', 'Live music', 'Longevity', 'Photography', 'Plants', 'Running', 'Swimming', 'Travel', 'Wine', 'Yoga'];
 
 // ---------------- App state ----------------
 let uid = null, me = null, myAnswers = [], people = [], chatList = [], config = { paywall: false };
@@ -1151,8 +1151,11 @@ const SIGNUP = [
   { dim: 'goals', prompt: 'What are you looking for?', opts: ['A long-term relationship', 'Something that grows slowly', 'Not sure yet', 'New people to meet'] },
   { dim: 'routine', prompt: 'When are you at your best?', opts: ['Early morning', 'During the day', 'Late at night'] }
 ];
-const Q0 = 3; // first quick-test question
-const STEPS = Q0 + SIGNUP.length + 2; // basics, photo+city, quick-test intro, questions, interests, about
+// Aura quick test, right after the photo: the first three are required, the rest can be skipped for now
+const TEST = [SIGNUP[0], { dim: 'interests' }, SIGNUP[1], SIGNUP[2], SIGNUP[3], SIGNUP[4], { dim: 'bio' }];
+const REQUIRED = 3;
+const Q0 = 2; // first quick-test step, after basics and photo
+const STEPS = Q0 + TEST.length;
 const gate = $('#gate');
 const COUNTRIES = 'AD AE AF AG AL AM AO AR AT AU AZ BA BB BD BE BF BG BH BI BJ BN BO BR BS BT BW BY BZ CA CD CF CG CH CI CL CM CN CO CR CU CV CY CZ DE DJ DK DM DO DZ EC EE EG ER ES ET FI FJ FM FR GA GB GD GE GH GM GN GQ GR GT GW GY HK HN HR HT HU ID IE IL IN IQ IR IS IT JM JO JP KE KG KH KI KM KN KR KW KZ LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME MG MH MK ML MM MN MO MR MT MU MV MW MX MY MZ NA NE NG NI NL NO NP NR NZ OM PA PE PG PH PK PL PR PS PT PW PY QA RE RO RS RU RW SA SB SC SD SE SG SI SK SL SM SN SO SR SS ST SV SY SZ TD TG TH TJ TL TM TN TO TR TT TV TW TZ UA UG US UY UZ VA VC VE VN VU WS XK YE ZA ZM ZW'.split(' ');
 function countryOptions(sel) {
@@ -1182,161 +1185,136 @@ function gateUnconfigured() {
   showGate('<span class="brand">Rareness</span><h1 class="largetitle">Almost ready</h1><p class="lead">This copy of Rareness isn’t connected to its database yet. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to the environment, then rebuild. The README explains each step.</p>');
 }
 
-function gateSignIn(msg) {
+// Page 1: who you are. Signed out, it also asks for your email and signs you in (no verification for now).
+const GENDERS = [['woman', 'A woman'], ['man', 'A man'], ['nonbinary', 'Non-binary']];
+const SHOW = [['women', 'Women'], ['men', 'Men'], ['everyone', 'Everyone']];
+function gateBasics(msg) {
+  const signedIn = Boolean(uid), p = signedIn ? me : (G.basics || {});
   showGate(
     '<span class="brand">Rareness</span>' +
-    '<div style="display:flex;justify-content:center;padding:18px 0 6px">' + bubbleHTML({ w: [1, 1, 1, 1, 1, 1], clear: true }, 150) + '</div>' +
-    '<h1 class="largetitle">The people who share the most with you, closest.</h1>' +
-    '<p class="lead">A few minutes of daily rituals. An aura read from your answers. And a Cloud where real matches float nearest.</p>' +
-    '<div class="grow"></div>' +
-    '<form id="emailForm" style="display:flex;flex-direction:column;gap:8px" novalidate>' +
-      '<label class="lbl" for="email">Email<input class="field" id="email" type="email" autocomplete="email" inputmode="email" required value="' + esc(G.email) + '" placeholder="you@example.com"></label>' +
-      (msg ? '<p class="err" role="alert">' + esc(msg) + '</p>' : '') +
-      '<button class="primary" id="emailGo">Continue with email</button>' +
+    (signedIn ? stepsBar(0) : '<div style="display:flex;justify-content:center;padding:10px 0 2px">' + bubbleHTML({ w: [1, 1, 1, 1, 1, 1], clear: true }, 120) + '</div>') +
+    '<h1 class="largetitle">' + (signedIn ? 'Hello. Who are you?' : 'The people who share the most with you, closest.') + '</h1>' +
+    '<form id="f" style="display:flex;flex-direction:column;gap:14px" novalidate>' +
+      field('obName', 'First name', p.name, 'Your first name', 24, 'given-name') +
+      (signedIn ? '' : '<label class="lbl" for="email">Email<input class="field" id="email" type="email" autocomplete="email" inputmode="email" value="' + esc(G.email) + '" placeholder="you@example.com"></label>') +
+      '<div class="lbl">I am<div class="chips" style="margin-top:2px">' + GENDERS.map(([v, l]) => '<button type="button" class="chip' + (p.gender === v ? ' on' : '') + '" data-g="' + v + '">' + l + '</button>').join('') + '</div></div>' +
+      '<div class="lbl">Looking for<div class="chips" style="margin-top:2px">' + SHOW.map(([v, l]) => '<button type="button" class="chip' + ((p.show_me || 'everyone') === v ? ' on' : '') + '" data-s="' + v + '">' + l + '</button>').join('') + '</div></div>' +
+      field('obCity', 'City', p.city, 'Where you live', 40, 'address-level2') +
+      '<p class="err" id="err" role="alert"' + (msg ? '' : ' hidden') + '>' + esc(msg || '') + '</p>' +
+      '<div class="grow"></div><button class="primary" id="go">Continue</button>' +
     '</form>' +
-    '<p class="fine">We email you a 6-digit code, no password needed. By continuing you confirm you are 18 or older and agree to the Terms and Privacy Policy.</p>',
+    (signedIn ? '' : '<p class="fine">By continuing you confirm you are 18 or older and agree to the Terms and Privacy Policy. Already joined? Just enter your email.</p>'),
     () => {
-      $('#emailForm').onsubmit = async (e) => {
+      let gender = p.gender, show = p.show_me || 'everyone';
+      gate.querySelectorAll('[data-g]').forEach((b) => b.onclick = () => { gender = b.dataset.g; gate.querySelectorAll('[data-g]').forEach((x) => x.classList.toggle('on', x === b)); });
+      gate.querySelectorAll('[data-s]').forEach((b) => b.onclick = () => { show = b.dataset.s; gate.querySelectorAll('[data-s]').forEach((x) => x.classList.toggle('on', x === b)); });
+      $('#f').onsubmit = async (e) => {
         e.preventDefault();
-        const email = $('#email').value.trim().toLowerCase();
-        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { gateSignIn('Enter a valid email address.'); return; }
-        G.email = email;
-        const b = $('#emailGo'); busy(b, true, 'Sending…');
-        try { await API.sendCode(email); gateCode(); } catch (err) {
-          console.error(err);
-          const m = String(err?.message || '');
-          gateSignIn(/rate|too many|seconds/i.test(m) ? 'Too many tries. Wait a few minutes, then try again.'
-            : /sending|smtp|email/i.test(m) ? 'Our email service couldn’t send your code right now. Try again in a few minutes. (' + m + ')'
-            : 'We couldn’t send the email. Check the address and try again.' + (m ? ' (' + m + ')' : ''));
-        }
+        const name = $('#obName').value.trim(), city = $('#obCity').value.trim(), err = $('#err');
+        const say = (m) => { err.textContent = m; err.hidden = false; };
+        const email = signedIn ? '' : $('#email').value.trim().toLowerCase();
+        G.basics = { name, gender, show_me: show, city };
+        const missing = () => (!name ? 'Add your first name.' : !gender ? 'Choose how you identify.' : !city ? 'Add your city.' : '');
+        if (!signedIn) {
+          G.email = email;
+          if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return say('Enter a valid email address.');
+        } else if (missing()) return say(missing());
+        const go = $('#go'); busy(go, true, signedIn ? 'Saving…' : 'One moment…');
+        try {
+          let country = me?.country;
+          if (!signedIn) {
+            // Sign in first: a returning member only needs their email
+            const out = await API.signInWithEmail(email);
+            const fresh = await API.myProfile(out.user.id).catch(() => null);
+            if (fresh?.onboarded) { await enter(out.user); return; }
+            if (missing()) { await API.signOut(); busy(go, false, 'Continue'); return say(missing()); }
+            uid = out.user.id;
+            me = fresh;
+            if (!me) { await enter(out.user); if (!me) return; }
+            country = me.country || out.country;
+          }
+          // Your Cloud shows people from your country; it can be changed later in your profile
+          me = await API.saveProfile(uid, { name, gender, show_me: show, city, country: country || guessCountry() || null });
+          G.step = 1; gateOnboard();
+        } catch (x) { console.error(x); busy(go, false, 'Continue'); say(x?.message || 'That didn’t work. Try again.'); }
       };
-    });
-}
-
-function gateCode(msg) {
-  showGate(
-    backBtn + '<span class="brand">Rareness</span><h1 class="largetitle">Check your inbox</h1>' +
-    '<p class="lead">We sent an email to ' + esc(G.email) + '. Tap the link inside to come back here signed in. If the email shows a 6-digit code, you can enter it below instead.</p><p class="fine">It can take a minute. Check your spam folder too.</p>' +
-    '<form id="codeForm" style="display:flex;flex-direction:column;gap:8px">' +
-      '<label class="lbl" for="code">6-digit code<input class="field code" id="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••••"></label>' +
-      (msg ? '<p class="err" role="alert">' + esc(msg) + '</p>' : '') +
-      '<button class="primary" id="codeGo">Sign in</button>' +
-    '</form>' +
-    '<button class="link" id="resend" style="align-self:flex-start;padding-left:0">Send a new code</button>',
-    () => {
-      gate.querySelector('[data-back]').onclick = () => gateSignIn();
-      $('#code').oninput = (e) => { e.target.value = e.target.value.replace(/\D/g, '').slice(0, 6); if (e.target.value.length === 6) $('#codeForm').requestSubmit(); };
-      $('#code').focus();
-      $('#codeForm').onsubmit = async (e) => {
-        e.preventDefault();
-        const b = $('#codeGo'); busy(b, true, 'Checking…');
-        try { const { user } = await API.verifyCode(G.email, $('#code').value); await enter(user); } catch (err) { console.error(err); gateCode('That code didn’t work. Check it, or send a new one.'); }
-      };
-      $('#resend').onclick = async () => { try { await API.sendCode(G.email); toast('New code sent'); } catch (err) { fail(err); } };
     });
 }
 
 function gateOnboard() {
   const i = G.step;
   if (i === 0) {
-    const max = new Date(); max.setFullYear(max.getFullYear() - 18);
-    showGate(stepsBar(i) + '<h1 class="largetitle">Hello. Who are you?</h1>' +
-      '<form id="f" style="display:flex;flex-direction:column;gap:14px" novalidate>' +
-      field('obName', 'First name', me.name, 'Your first name', 24, 'given-name') +
-      '<label class="lbl" for="obBirth">Date of birth<input class="field" id="obBirth" type="date" max="' + API.dayKey(max) + '" value="' + esc(me.birthdate || '') + '" autocomplete="bday"></label>' +
-      '<div class="lbl">I am<div class="chips" style="margin-top:2px">' + [['woman', 'A woman'], ['man', 'A man'], ['nonbinary', 'Non-binary']].map(([v, l]) => '<button type="button" class="chip' + (me.gender === v ? ' on' : '') + '" data-g="' + v + '">' + l + '</button>').join('') + '</div></div>' +
-      '<label class="lbl" for="obCountry">Country<select class="field" id="obCountry">' + countryOptions(me.country || guessCountry()) + '</select></label>' +
-      '<div class="lbl">Show me<div class="chips" style="margin-top:2px">' + [['women', 'Women'], ['men', 'Men'], ['everyone', 'Everyone']].map(([v, l]) => '<button type="button" class="chip' + ((me.show_me || 'everyone') === v ? ' on' : '') + '" data-s="' + v + '">' + l + '</button>').join('') + '</div></div>' +
-      '<p class="err" id="err" role="alert" hidden></p><div class="grow"></div><button class="primary">Continue</button></form>',
-      () => {
-        let gender = me.gender, show = me.show_me || 'everyone';
-        gate.querySelectorAll('[data-g]').forEach((b) => b.onclick = () => { gender = b.dataset.g; gate.querySelectorAll('[data-g]').forEach((x) => x.classList.toggle('on', x === b)); });
-        gate.querySelectorAll('[data-s]').forEach((b) => b.onclick = () => { show = b.dataset.s; gate.querySelectorAll('[data-s]').forEach((x) => x.classList.toggle('on', x === b)); });
-        $('#f').onsubmit = async (e) => {
-          e.preventDefault();
-          const name = $('#obName').value.trim(), birth = $('#obBirth').value, country = $('#obCountry').value, err = $('#err');
-          const say = (m) => { err.textContent = m; err.hidden = false; };
-          if (!name) return say('Add your first name.');
-          if (!birth) return say('Add your date of birth.');
-          if (ageOf(birth) < 18) return say('Rareness is for people 18 and over.');
-          if (!gender) return say('Choose how you identify.');
-          if (!country) return say('Choose your country. Your Cloud shows people from the same country.');
-          try { me = await API.saveProfile(uid, { name, birthdate: birth, gender, show_me: show, country }); G.step++; gateOnboard(); } catch (x) { fail(x); }
-        };
-      });
+    gateBasics();
   } else if (i === 1) {
     showGate(stepsBar(i) + backBtn + '<h1 class="largetitle">Your bubble</h1><p class="lead">Add a clear photo of you. It sits inside your bubble in everyone’s Cloud.</p>' +
       '<div style="display:flex;justify-content:center;padding:6px 0"><button id="obPhoto" style="border:0;background:none;padding:0;cursor:pointer;position:relative" aria-label="' + (me.photo_path ? 'Change photo' : 'Add a photo') + '">' + bubbleHTML(youObj(), 176) + '<span class="gbtn glass cam" style="position:absolute;right:2px;bottom:2px">' + ICON.cam + '</span></button></div>' +
-      field('obCity', 'City', me.city, 'Where you live', 40, 'address-level2') +
-      '<p class="err" id="err" role="alert" hidden></p><div class="grow"></div><button class="primary" id="go">Continue</button>',
+      '<p class="err" id="err" role="alert" hidden></p><div class="grow"></div><button class="primary" id="go">' + (me.photo_path ? 'Continue' : 'Add a photo') + '</button>',
       () => {
         gate.querySelector('[data-back]').onclick = () => { G.step--; gateOnboard(); };
-        $('#obPhoto').onclick = () => pickPhoto(async (blob) => { await savePhoto(blob); gateOnboard(); });
-        $('#go').onclick = async () => {
-          const city = $('#obCity').value.trim(), err = $('#err');
-          if (!me.photo_path) { err.textContent = 'Add a photo to continue.'; err.hidden = false; return; }
-          if (!city) { err.textContent = 'Add your city.'; err.hidden = false; return; }
-          try { me = await API.saveProfile(uid, { city }); G.step++; gateOnboard(); } catch (x) { fail(x); }
-        };
+        const pick = () => pickPhoto(async (blob) => { await savePhoto(blob); gateOnboard(); });
+        $('#obPhoto').onclick = pick;
+        $('#go').onclick = () => { if (!me.photo_path) return pick(); G.step++; gateOnboard(); };
       });
-  } else if (i === 2) {
-    showGate(stepsBar(i) + backBtn + '<p class="label">Aura quick test</p><h1 class="largetitle">Let’s read your aura</h1>' +
-      '<div style="display:flex;justify-content:center;padding:6px 0">' + bubbleHTML({ w: [1, 1, 1, 1, 1, 1], clear: true }, 150) + '</div>' +
-      '<p class="lead">Seven quick steps, about a minute. Go with your first instinct. Your answers shape the six colours of your aura, and who floats closest to you.</p>' +
-      '<div class="grow"></div><button class="primary" id="go">Start the quick test</button>',
-      () => {
-        gate.querySelector('[data-back]').onclick = () => { G.step--; gateOnboard(); };
-        $('#go').onclick = () => { G.step++; gateOnboard(); };
-      });
-  } else if (i < Q0 + SIGNUP.length) {
-    const q = SIGNUP[i - Q0];
-    showGate(stepsBar(i) + backBtn + '<p class="label">Aura quick test · ' + (i - Q0 + 1) + ' of ' + (SIGNUP.length + 2) + '</p><h1 class="largetitle">' + esc(q.prompt) + '</h1>' +
-      '<div class="opts" role="radiogroup">' + q.opts.map((o) => '<button class="opt' + (G.answers[q.dim] === o ? ' on' : '') + '" role="radio" aria-checked="' + (G.answers[q.dim] === o) + '" data-o="' + esc(o) + '">' + esc(o) + '</button>').join('') + '</div>',
-      () => {
-        gate.querySelector('[data-back]').onclick = () => { G.step--; gateOnboard(); };
-        gate.querySelectorAll('[data-o]').forEach((b) => b.onclick = () => {
-          G.answers[q.dim] = b.dataset.o;
-          gate.querySelectorAll('[data-o]').forEach((x) => { x.classList.toggle('on', x === b); x.setAttribute('aria-checked', x === b); });
-          setTimeout(() => { G.step++; gateOnboard(); }, 260);
+  } else {
+    const k = i - Q0, q = TEST[k];
+    const head = stepsBar(i) + backBtn + '<p class="label">Aura quick test · ' + (k + 1) + ' of ' + TEST.length + '</p>';
+    const skip = k >= REQUIRED ? '<button class="link" id="skip" style="align-self:center;color:var(--ink2)">Skip the rest for now</button>' : '';
+    const next = () => { if (k === TEST.length - 1) finishOnboarding(); else { G.step++; gateOnboard(); } };
+    const wire = () => {
+      gate.querySelector('[data-back]').onclick = () => { G.step--; gateOnboard(); };
+      if (skip) $('#skip').onclick = () => finishOnboarding();
+    };
+    if (q.dim === 'interests') {
+      showGate(head + '<h1 class="largetitle">What are your interests?</h1><p class="lead">Pick 3 to 6.</p>' +
+        '<div class="chips">' + INTERESTS.map((l) => '<button class="chip' + (G.interests.includes(l) ? ' on' : '') + '" data-int="' + esc(l) + '">' + esc(l) + '</button>').join('') + '</div>' +
+        '<div class="grow"></div><button class="primary" id="go"' + (G.interests.length < 3 ? ' disabled' : '') + '>Continue</button>' + skip,
+        () => {
+          wire();
+          gate.querySelectorAll('[data-int]').forEach((b) => b.onclick = () => {
+            const v = b.dataset.int, j = G.interests.indexOf(v);
+            if (j >= 0) G.interests.splice(j, 1); else if (G.interests.length < 6) G.interests.push(v); else { toast('Pick up to 6'); return; }
+            b.classList.toggle('on', G.interests.includes(v)); $('#go').disabled = G.interests.length < 3;
+          });
+          $('#go').onclick = next;
         });
-      });
-  } else if (i === Q0 + SIGNUP.length) {
-    showGate(stepsBar(i) + backBtn + '<p class="label">Aura quick test · ' + (SIGNUP.length + 1) + ' of ' + (SIGNUP.length + 2) + '</p><h1 class="largetitle">What do you love?</h1><p class="lead">Pick 3 to 6.</p>' +
-      '<div class="chips">' + INTERESTS.map((l) => '<button class="chip' + (G.interests.includes(l) ? ' on' : '') + '" data-int="' + esc(l) + '">' + esc(l) + '</button>').join('') + '</div>' +
-      '<div class="grow"></div><button class="primary" id="go"' + (G.interests.length < 3 ? ' disabled' : '') + '>Continue</button>',
-      () => {
-        gate.querySelector('[data-back]').onclick = () => { G.step--; gateOnboard(); };
-        gate.querySelectorAll('[data-int]').forEach((b) => b.onclick = () => {
-          const v = b.dataset.int, k = G.interests.indexOf(v);
-          if (k >= 0) G.interests.splice(k, 1); else if (G.interests.length < 6) G.interests.push(v); else { toast('Pick up to 6'); return; }
-          b.classList.toggle('on', G.interests.includes(v)); $('#go').disabled = G.interests.length < 3;
+    } else if (q.dim === 'bio') {
+      showGate(head + '<h1 class="largetitle">Describe yourself in a sentence or two</h1>' +
+        '<label class="hide" for="obBio">About you</label><textarea id="obBio" maxlength="160" placeholder="What would your best friend say about you?">' + esc(G.bio ?? me.bio ?? '') + '</textarea>' +
+        '<p class="fine">Shown on your profile. The AI reads it to shape your aura.</p><div class="grow"></div><button class="primary" id="go" disabled>Finish</button>' + skip,
+        () => {
+          wire();
+          const ta = $('#obBio'), go = $('#go');
+          const ok = () => { G.bio = ta.value; go.disabled = ta.value.trim().length < 10; };
+          ta.oninput = ok; ok();
+          go.onclick = next;
         });
-        $('#go').onclick = () => { G.step++; gateOnboard(); };
-      });
-  } else if (i === Q0 + SIGNUP.length + 1) {
-    showGate(stepsBar(i) + backBtn + '<p class="label">Aura quick test · ' + (SIGNUP.length + 2) + ' of ' + (SIGNUP.length + 2) + '</p><h1 class="largetitle">Describe yourself in a sentence or two</h1>' +
-      '<label class="hide" for="obBio">About you</label><textarea id="obBio" maxlength="160" placeholder="What would your best friend say about you?">' + esc(me.bio || '') + '</textarea>' +
-      '<p class="fine">Shown on your profile. The AI reads it to shape your aura.</p><div class="grow"></div><button class="primary" id="go" disabled>Finish</button>',
-      () => {
-        gate.querySelector('[data-back]').onclick = () => { G.step--; gateOnboard(); };
-        const ta = $('#obBio'), go = $('#go');
-        const ok = () => { go.disabled = ta.value.trim().length < 10; };
-        ta.oninput = ok; ok();
-        go.onclick = () => finishOnboarding(ta.value.trim());
-      });
+    } else {
+      showGate(head + '<h1 class="largetitle">' + esc(q.prompt) + '</h1>' +
+        '<div class="opts" role="radiogroup">' + q.opts.map((o) => '<button class="opt' + (G.answers[q.dim] === o ? ' on' : '') + '" role="radio" aria-checked="' + (G.answers[q.dim] === o) + '" data-o="' + esc(o) + '">' + esc(o) + '</button>').join('') + '</div>' +
+        '<div class="grow"></div>' + skip,
+        () => {
+          wire();
+          gate.querySelectorAll('[data-o]').forEach((b) => b.onclick = () => {
+            G.answers[q.dim] = b.dataset.o;
+            gate.querySelectorAll('[data-o]').forEach((x) => { x.classList.toggle('on', x === b); x.setAttribute('aria-checked', x === b); });
+            setTimeout(next, 260);
+          });
+        });
+    }
   }
 }
 
-async function finishOnboarding(bio) {
+async function finishOnboarding() {
+  const bio = (G.bio || '').trim();
   showGate('<div class="grow"></div><div style="display:flex;justify-content:center">' + bubbleHTML(youObj(), 190) + '</div>' +
     '<h1 class="largetitle" style="text-align:center">Reading your aura…</h1><p class="lead" style="text-align:center;margin:0 auto">This takes a few seconds.</p><div style="display:flex;justify-content:center"><div class="spinner"></div></div><div class="grow"></div>');
   try {
     await API.signupAnswers(uid, [
-      ...SIGNUP.map((q) => ({ dim: q.dim, prompt: q.prompt, data: { choice: G.answers[q.dim] } })),
-      { dim: 'interests', prompt: 'What do you love?', data: { choices: G.interests } }
+      ...SIGNUP.filter((q) => G.answers[q.dim]).map((q) => ({ dim: q.dim, prompt: q.prompt, data: { choice: G.answers[q.dim] } })),
+      { dim: 'interests', prompt: 'What are your interests?', data: { choices: G.interests } }
     ]);
-    me = await API.saveProfile(uid, { bio, interests: G.interests, onboarded: true });
-  } catch (e) { fail(e); G.step = Q0 + SIGNUP.length + 1; gateOnboard(); return; }
+    me = await API.saveProfile(uid, { ...(bio.length >= 10 ? { bio } : {}), interests: G.interests, onboarded: true });
+  } catch (e) { fail(e); gateOnboard(); return; }
   try { await API.api('match'); } catch (e) { console.error(e); }
   me = await API.myProfile(uid);
   const aura = dimsToW(me.aura), tot = aura.reduce((a, b) => a + b, 0) || 1;
@@ -1398,7 +1376,7 @@ async function enter(user) {
   }
   const billing = new URLSearchParams(location.search).get('billing');
   if (billing) history.replaceState(null, '', location.pathname);
-  if (!me.onboarded) { G = { email: G.email, step: 0, answers: {}, interests: [...(me.interests || [])] }; gateOnboard(); return; }
+  if (!me.onboarded) { G = { email: G.email, step: me.name && me.gender && me.city ? 1 : 0, answers: {}, interests: [...(me.interests || [])] }; gateOnboard(); return; }
   if (needsMembership()) { if (billing === 'success') confirmMembership(); else gatePaywall(billing === 'cancelled' ? 'Checkout was cancelled. You can try again whenever you like.' : ''); return; }
   startApp();
 }
@@ -1425,9 +1403,7 @@ async function boot() {
   let s = null;
   try { s = await API.session(); } catch (e) { console.error(e); }
   if (!s) {
-    gateSignIn();
-    // A magic link opened in this tab signs in through the URL
-    API.onAuth((sess) => { if (sess && !uid) enter(sess.user); });
+    gateBasics();
     return;
   }
   enter(s.user);

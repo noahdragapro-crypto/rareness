@@ -88,9 +88,9 @@ npm run build
 
 ## The flow for a new member
 
-1. Email → 6-digit code (or tap the link in the email).
-2. Profile: name, date of birth (18+), gender, who to see, country, photo (with reframing), city.
-3. Aura quick test: five questions, interests, a sentence about themselves. Claude reads it and shows their aura.
+1. Page 1: first name, email, gender, who they're looking for, city. For now there is no email check: entering an email signs you straight in (`api/auth/email.ts`), and a returning member only needs their email. Their country is taken from Vercel's location header and can be changed in the profile. To limit who can get in, set `TESTER_EMAILS` to a comma-separated list. Bring back email verification before a public launch, since anyone who knows a member's email can sign in as them.
+2. Page 2: photo (with reframing).
+3. Aura quick test: what matters in a partner, interests and Friday night are required; the rest (three questions and a sentence about themselves) can be skipped for now. Claude reads it and shows their aura.
 4. Pay $5 once in Stripe Checkout.
 5. The app: Agenda (today's three exercises, plus upcoming days and what's done), Cloud and Chats. Their profile opens from the bubble in the top-right corner.
 
