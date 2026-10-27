@@ -987,17 +987,59 @@ async function openThread(chatId) {
 
 // ---------------- Opening splash (~5 s): the main bubble breathes in and pops, a handful of bubbles drift out
 // with real momentum, float up and sway like soap bubbles, then pop one by one ----------------
+// ---------------- Bubble sounds (made in the browser, no files) ----------------
+// Browsers only allow sound after the first touch, so the very first fill may be silent.
+let actx = null;
+function audio() {
+  try { actx ||= new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return null; }
+  if (actx.state === 'suspended') actx.resume().catch(() => {});
+  return actx;
+}
+// A real pop: a tiny burst of air (filtered noise) plus a quick falling "plip". Smaller bubbles sound higher.
+function popSound(size = 60, vol = 1) {
+  const c = audio(); if (!c) return;
+  const t = c.currentTime + .005, hi = Math.max(.5, Math.min(2.2, 70 / size));
+  const n = c.createBuffer(1, Math.floor(c.sampleRate * .05), c.sampleRate), d = n.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 4);
+  const src = c.createBufferSource(); src.buffer = n;
+  const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1800 * hi; bp.Q.value = 1.4;
+  const g1 = c.createGain(); g1.gain.value = .5 * vol;
+  src.connect(bp).connect(g1).connect(c.destination); src.start(t);
+  const o = c.createOscillator(), g2 = c.createGain();
+  o.type = 'sine'; o.frequency.setValueAtTime(900 * hi, t); o.frequency.exponentialRampToValueAtTime(180 * hi, t + .045);
+  g2.gain.setValueAtTime(.0001, t); g2.gain.exponentialRampToValueAtTime(.32 * vol, t + .004); g2.gain.exponentialRampToValueAtTime(.0001, t + .07);
+  o.connect(g2).connect(c.destination); o.start(t); o.stop(t + .08);
+}
+// The main bubble filling up: a soft rising tone with a watery wobble
+function fillSound(dur = 1.6) {
+  const c = audio(); if (!c || c.state !== 'running') return;
+  const t = c.currentTime + .01;
+  const o = c.createOscillator(), g = c.createGain(), lfo = c.createOscillator(), lg = c.createGain();
+  o.type = 'sine'; o.frequency.setValueAtTime(160, t); o.frequency.exponentialRampToValueAtTime(520, t + dur);
+  lfo.frequency.value = 11; lg.gain.value = 18; lfo.connect(lg).connect(o.frequency);
+  g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.05, t + .25); g.gain.setValueAtTime(.05, t + dur - .2); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+  o.connect(g).connect(c.destination); o.start(t); lfo.start(t); o.stop(t + dur + .05); lfo.stop(t + dur + .05);
+  // a few little bubbles rising inside it
+  for (let k = 0; k < 6; k++) {
+    const tt = t + .15 + k * dur / 7 + Math.random() * .08, b = c.createOscillator(), bg = c.createGain(), f = 500 + Math.random() * 500;
+    b.type = 'sine'; b.frequency.setValueAtTime(f, tt); b.frequency.exponentialRampToValueAtTime(f * 1.9, tt + .06);
+    bg.gain.setValueAtTime(.0001, tt); bg.gain.exponentialRampToValueAtTime(.035, tt + .01); bg.gain.exponentialRampToValueAtTime(.0001, tt + .08);
+    b.connect(bg).connect(c.destination); b.start(tt); b.stop(tt + .1);
+  }
+}
+
 function runSplash() {
   const sp = $('#splash'), core = $('#splashCore'), word = $('#splashWord'), flash = $('#splashFlash');
   if (!sp || !sp.animate) { if (sp) sp.remove(); return; }
   core.innerHTML = bubbleHTML({ w: [1, 1, 1, 1, 1, 1], clear: true }, 150);
-  let done = false, raf = 0;
+  let done = false, raf = 0, burst = false, B = [], autoT = 0, hardT = 0, autoPopping = false;
   const finish = () => {
     if (done) return; done = true;
+    clearTimeout(autoT); clearTimeout(hardT);
     sp.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 380, easing: 'ease-out', fill: 'forwards' }).onfinish = () => { cancelAnimationFrame(raf); sp.remove(); };
   };
-  sp.addEventListener('click', finish);
-  if (reduced) { word.style.opacity = 1; core.style.transform = 'scale(1)'; setTimeout(finish, 900); return; }
+  const hard = (ms) => { clearTimeout(hardT); hardT = setTimeout(finish, ms); };
+  if (reduced) { word.style.opacity = 1; core.style.transform = 'scale(1)'; sp.addEventListener('click', () => { popSound(150, 1); finish(); }); return; }
 
   const W = sp.clientWidth, H = sp.clientHeight;
   const ring = (x, y, size, delay) => {
@@ -1005,11 +1047,43 @@ function runSplash() {
     r.style.cssText = 'width:' + size + 'px;height:' + size + 'px;left:' + (x - size / 2) + 'px;top:' + (y - size / 2) + 'px';
     sp.appendChild(r);
     r.animate([{ transform: 'scale(.9)', opacity: 0 }, { transform: 'scale(1)', opacity: .7, offset: .15 }, { transform: 'scale(1.5)', opacity: 0 }],
-      { duration: 460, delay, easing: 'cubic-bezier(.2,.7,.3,1)', fill: 'forwards' });
+      { duration: 460, delay, easing: 'cubic-bezier(.2,.7,.3,1)', fill: 'forwards' }).onfinish = () => r.remove();
+  };
+  // Like a real soap bubble: the film vanishes in a blink and its rim breaks into droplets that fly out and fall
+  const droplets = (x, y, rad) => {
+    const n = Math.round(6 + rad / 6);
+    for (let k = 0; k < n; k++) {
+      const a = Math.random() * Math.PI * 2, s = 1.5 + Math.random() * 2.5, d = document.createElement('span');
+      d.className = 'pdrop'; d.style.cssText = 'width:' + s + 'px;height:' + s + 'px;left:' + (x + Math.cos(a) * rad - s / 2) + 'px;top:' + (y + Math.sin(a) * rad - s / 2) + 'px';
+      sp.appendChild(d);
+      const out = rad * (.25 + Math.random() * .55) + 10, dx = Math.cos(a) * out, dy = Math.sin(a) * out;
+      d.animate([
+        { transform: 'translate(0,0)', opacity: 1 },
+        { transform: 'translate(' + (dx * .7).toFixed(1) + 'px,' + (dy * .7).toFixed(1) + 'px)', opacity: .9, offset: .4 },
+        { transform: 'translate(' + dx.toFixed(1) + 'px,' + (dy + 26 + Math.random() * 20).toFixed(1) + 'px)', opacity: 0 }
+      ], { duration: 420 + Math.random() * 260, easing: 'cubic-bezier(.15,.7,.4,1)', fill: 'forwards' }).onfinish = () => d.remove();
+    }
+  };
+  const pop = (b) => {
+    if (!b.alive) return;
+    b.alive = false;
+    const x = W / 2 + b.x, y = H / 2 + b.y;
+    b.f.animate([{ transform: 'scale(1)', opacity: 1 }, { transform: 'scale(1.05)', opacity: .85, offset: .35 }, { transform: 'scale(1.1)', opacity: 0 }], { duration: 95, easing: 'ease-in', fill: 'forwards' });
+    ring(x, y, b.r * 2, 0); droplets(x, y, b.r); popSound(b.r * 2, .8);
+    if (B.every((o) => !o.alive)) setTimeout(finish, 450);
+  };
+  // After floating for a while the rest pop by themselves, smallest first
+  const autoPop = () => {
+    if (done) return;
+    autoPopping = true;
+    const order = B.filter((b) => b.alive).sort((a, c) => a.r - c.r);
+    order.forEach((b, k) => setTimeout(() => { if (!done) pop(b); }, k * 42 + Math.random() * 20));
+    setTimeout(finish, order.length * 42 + 300);
   };
 
-  // 1. The main bubble breathes in (0 – 1.6 s)
+  // 1. The main bubble fills up (0 – 1.6 s)
   word.animate([{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'none' }], { duration: 900, delay: 250, easing: 'cubic-bezier(.2,.7,.2,1)', fill: 'forwards' });
+  fillSound();
   const fill = core.animate([
     { transform: 'scale(.18)' },
     { transform: 'scale(.62,.58)', offset: .45 },
@@ -1018,16 +1092,25 @@ function runSplash() {
     { transform: 'scale(1)' }
   ], { duration: 1600, easing: 'cubic-bezier(.33,.0,.2,1)', fill: 'forwards' });
 
-  fill.onfinish = () => setTimeout(() => {
-    if (done) return;
-    // 2. It pops softly (≈1.75 s)
+  // The first bubble waits for a touch: it breathes gently with a hint underneath
+  let idle = null;
+  const hint = document.createElement('span');
+  hint.textContent = 'Touch the bubble';
+  hint.style.cssText = 'position:absolute;left:0;right:0;top:calc(50% + 100px);text-align:center;font-size:14px;color:var(--ink2);opacity:0;pointer-events:none';
+  sp.appendChild(hint);
+  const explode = () => {
+    if (done || burst) return;
+    burst = true; fill.pause(); if (idle) idle.cancel();
+    hint.animate([{ opacity: getComputedStyle(hint).opacity }, { opacity: 0 }], { duration: 160, fill: 'forwards' });
+    // 2. It pops
     word.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 260, fill: 'forwards' });
-    core.animate([{ transform: 'scale(1)', opacity: 1 }, { transform: 'scale(1.07,1.03)', opacity: 1, offset: .5 }, { transform: 'scale(1.22)', opacity: 0 }], { duration: 200, easing: 'ease-in', fill: 'forwards' });
+    core.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 110, easing: 'ease-in', fill: 'forwards' });
     flash.animate([{ transform: 'scale(1)', opacity: .7 }, { transform: 'scale(2.2)', opacity: 0 }], { duration: 650, easing: 'cubic-bezier(.2,.7,.3,1)', fill: 'forwards' });
+    droplets(W / 2, H / 2, 70); popSound(150, 1);
 
-    // 3. A few bubbles drift out of it: 3 large, 6 medium, 9 small
+    // 3. Bubbles drift out of it: 3 large, 6 medium, 9 small
     const sizes = [128, 112, 96, 84, 76, 68, 60, 54, 48, 42, 38, 34, 30, 28, 26, 24, 22, 20];
-    const B = sizes.map((size, i) => {
+    B = sizes.map((size, i) => {
       const el = document.createElement('div'); el.className = 'pb';
       el.style.width = el.style.height = size + 'px'; el.style.margin = (-size / 2) + 'px 0 0 ' + (-size / 2) + 'px';
       el.innerHTML = '<div class="pbf">' + bubbleHTML({ w: oneHot(i % 6), clear: true }, size) + '</div>';
@@ -1073,24 +1156,33 @@ function runSplash() {
       if (!done) raf = requestAnimationFrame(step);
     };
     raf = requestAnimationFrame(step);
+    autoT = setTimeout(autoPop, 2150);
+    hard(4300);
+  };
+  fill.onfinish = () => {
+    if (burst) return;
+    idle = core.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.035,.975)' }, { transform: 'scale(.985,1.02)' }, { transform: 'scale(1)' }],
+      { duration: 2200, iterations: Infinity, easing: 'ease-in-out' });
+    hint.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 600, delay: 300, fill: 'forwards' });
+  };
 
-    // 4. After floating for a while they pop one by one, smallest first (≈3.9 – 4.7 s)
-    setTimeout(() => {
-      if (done) return;
-      const order = B.slice().sort((a, c) => a.r - c.r);
-      order.forEach((b, k) => {
-        const delay = k * 42 + Math.random() * 20;
-        setTimeout(() => {
-          if (done) return;
-          b.alive = false;
-          b.f.animate([{ transform: 'scale(1)', opacity: 1 }, { transform: 'scale(1.1,1.04)', opacity: 1, offset: .55 }, { transform: 'scale(1.28)', opacity: 0 }], { duration: 190, easing: 'ease-in', fill: 'forwards' });
-          ring(W / 2 + b.x, H / 2 + b.y, b.r * 2, 90);
-        }, delay);
-      });
-      setTimeout(finish, order.length * 42 + 260);
-    }, 2150);
-  }, 150);
-  setTimeout(finish, 5800); // never longer than this
+  // The first touch pops the big bubble. After that, touch a bubble to pop it; while someone is
+  // playing, the rest wait a little longer. A tap on empty space skips ahead.
+  sp.addEventListener('pointerdown', (e) => {
+    if (done) return;
+    audio(); // the first touch unlocks sound
+    const r = sp.getBoundingClientRect(), x = e.clientX - r.left - W / 2, y = e.clientY - r.top - H / 2;
+    if (!burst) { explode(); return; }
+    let hit = null, best = Infinity;
+    for (const b of B) {
+      if (!b.alive || b.grow === 0) continue;
+      const d = Math.hypot(b.x - x, b.y - y) - b.r * b.grow;
+      if (d < 16 && d < best) { best = d; hit = b; }
+    }
+    if (!hit) { if (!autoPopping) finish(); return; }
+    pop(hit);
+    if (!autoPopping) { clearTimeout(autoT); autoT = setTimeout(autoPop, 1800); hard(4000); }
+  });
 }
 
 // ---------------- Gate: sign-in, onboarding, access fee ----------------

@@ -308,7 +308,7 @@ input[type=range]{width:100%;accent-color:#111114}
 .toast.on{transform:translate(-50%,0);opacity:1;visibility:visible;transition:transform .5s var(--spring),opacity .2s}
 
 /* ---------- Opening splash ---------- */
-.splash{position:absolute;inset:0;z-index:200;background:#fff;overflow:hidden;display:grid;place-items:center;cursor:pointer}
+.splash{position:absolute;inset:0;z-index:200;background:#fff;overflow:hidden;display:grid;place-items:center;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;user-select:none;-webkit-user-select:none}
 .splash .core{position:relative;width:150px;height:150px;transform:scale(.12)}
 .splash .core .bubble{width:150px;height:150px}
 .splash .word{position:absolute;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + 18%);text-align:center;font-family:var(--serif);font-style:italic;font-size:30px;letter-spacing:-.01em;opacity:0}
