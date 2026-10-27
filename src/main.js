@@ -1202,7 +1202,13 @@ function gateSignIn(msg) {
         if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { gateSignIn('Enter a valid email address.'); return; }
         G.email = email;
         const b = $('#emailGo'); busy(b, true, 'Sending…');
-        try { await API.sendCode(email); gateCode(); } catch (err) { console.error(err); gateSignIn(err.message?.includes('rate') ? 'Too many tries. Wait a minute, then try again.' : 'We couldn’t send the email. Check the address and try again.'); }
+        try { await API.sendCode(email); gateCode(); } catch (err) {
+          console.error(err);
+          const m = String(err?.message || '');
+          gateSignIn(/rate|too many|seconds/i.test(m) ? 'Too many tries. Wait a few minutes, then try again.'
+            : /sending|smtp|email/i.test(m) ? 'Our email service couldn’t send your code right now. Try again in a few minutes. (' + m + ')'
+            : 'We couldn’t send the email. Check the address and try again.' + (m ? ' (' + m + ')' : ''));
+        }
       };
     });
 }
