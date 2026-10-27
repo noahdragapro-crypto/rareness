@@ -89,6 +89,10 @@ export async function morningAnswers(uid, limit = 5) {
 }
 
 // ---------- Cloud, bumps, safety ----------
+// What a member wrote about themselves, for their profile page (members can read finished profiles)
+export async function profileDetails(id) {
+  return check(await sb.from('profiles').select('bio,job,city,interests,status').eq('id', id).maybeSingle());
+}
 export async function cloud() { return check(await sb.rpc('cloud')) || []; }
 export async function bump(id) { return check(await sb.rpc('bump', { target: id })); }
 export async function block(uid, id) { check(await sb.from('blocks').insert({ blocker_id: uid, blocked_id: id })); }
@@ -102,7 +106,7 @@ export async function chats(uid) {
   const [people, reads, matches] = await Promise.all([
     sb.from('profiles').select('id,name,photo_path,status').in('id', others).then(check),
     sb.from('chat_reads').select('chat_id,read_at').eq('user_id', uid).then(check),
-    sb.from('matches').select('other_id,score,dims').eq('user_id', uid).in('other_id', others).then(check),
+    sb.from('matches').select('other_id,score,dims,reason').eq('user_id', uid).in('other_id', others).then(check),
   ]);
   const lasts = await Promise.all(list.map((c) => sb.from('messages').select('sender_id,body,created_at').eq('chat_id', c.id).order('created_at', { ascending: false }).limit(1).then(check)));
   return list.map((c, i) => {

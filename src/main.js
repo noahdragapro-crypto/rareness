@@ -558,8 +558,8 @@ async function renderProfile() {
       '<label class="hide" for="pStatus">Status</label><input class="field" id="pStatus" maxlength="20" value="' + esc(me.status) + '" placeholder="What’s on your mind">' +
       '<p class="label">Shown above your bubble in other people’s Cloud. Text only, 20 characters.</p></section>' +
 
-    '<section class="section" aria-label="About"><div class="head"><h2 class="h2">About</h2><span class="counter" id="bCount"></span></div>' +
-      '<label class="hide" for="pBio">About you</label><textarea id="pBio" maxlength="160" placeholder="A few lines about you, in your own words">' + esc(me.bio) + '</textarea></section>' +
+    '<section class="section" aria-label="Bio"><div class="head"><h2 class="h2">Bio</h2><span class="counter" id="bCount"></span></div>' +
+      '<p class="label" style="margin:0">Shown on your profile page to everyone in the Cloud and in your chats.</p><label class="hide" for="pBio">Your bio</label><textarea id="pBio" maxlength="160" placeholder="Who you are, what you love, what you’re looking for">' + esc(me.bio) + '</textarea></section>' +
 
     '<section class="section" aria-label="Basics"><h2 class="h2">Basics</h2><div class="grid2">' +
       field('pName', 'Name', me.name, 'First name', 24, 'given-name') + field('pPron', 'Pronouns', me.pronouns, 'she/her', 16) +
@@ -873,7 +873,8 @@ function renderCloudEmpty() {
 }
 
 // ---------------- Person page + bumping ----------------
-async function openPerson(b) {
+// opts.fromChat: opened from a chat, so "Open chat" just goes back to it
+async function openPerson(b, opts = {}) {
   const tot = b.w.reduce((a, c) => a + c, 0) || 1;
   const reasons = b.w.map((x, i) => ({ x, i })).filter((r) => r.x > 0).sort((a, c) => c.x - a.x);
   const body =
@@ -881,21 +882,28 @@ async function openPerson(b) {
     '<h1 class="largetitle" style="margin-top:12px">' + esc(nameAge(b)) + '</h1>' +
     '<p class="label" style="font-size:14px">' + esc([b.job, b.city].filter(Boolean).join(' · ')) + '</p></div>' +
     '<div class="stack" style="margin-top:22px">' +
-      '<section class="box" style="display:flex;flex-direction:column;gap:12px" aria-label="Why you match">' +
+      '<section class="section" aria-label="Bio" id="theirBio"' + (b.bio ? '' : ' hidden') + '><h2 class="h2">Bio</h2><p class="bio">' + esc(b.bio || '') + '</p></section>' +
+      (b.score == null ? '' : '<section class="box" style="display:flex;flex-direction:column;gap:12px" aria-label="Why you match">' +
         '<div class="head"><h2 class="h2">Why you match</h2><span style="font-family:var(--serif);font-size:36px;line-height:1">' + b.score + '%</span></div>' +
         (b.reason ? '<p class="reason-line">' + esc(b.reason) + '</p>' : '') +
         reasons.map((r) => '<div class="reason">' + swatch(r.i, 24) + '<div class="rt"><div>' + DIMS[r.i].label + '<span>' + Math.round(r.x / tot * 100) + '%</span></div>' + glassBar(r.x / tot * 100, r.i) + '</div></div>').join('') +
         '<p class="label" style="font-size:13px;line-height:1.4">These are the colours around ' + esc(b.name || 'their') + '’s bubble.</p>' +
-      '</section>' +
-      (b.interests.length ? '<section class="section" aria-label="Interests"><h2 class="h2">Interests</h2><div class="facts">' + b.interests.map((x) => '<span class="fact">' + esc(x) + '</span>').join('') + '</div></section>' : '') +
+      '</section>') +
+      '<section class="section" aria-label="Interests" id="theirInterests"' + ((b.interests || []).length ? '' : ' hidden') + '><h2 class="h2">Interests</h2><div class="facts">' + (b.interests || []).map((x) => '<span class="fact">' + esc(x) + '</span>').join('') + '</div></section>' +
       '<section class="section" aria-label="Their answers" id="theirAnswers"></section>' +
       '<div id="bumpZone" style="display:flex;flex-direction:column;gap:8px">' + bumpZone(b) + '</div>' +
       '<div class="menu-row" style="justify-content:center"><button class="link" data-report style="color:var(--ink2)">Report</button><button class="link" data-block style="color:var(--ink2)">Block</button></div>' +
     '</div>';
   const pg = pushPage(b.name || 'Profile', body);
-  wireBump(pg, b);
+  wireBump(pg, b, opts);
   pg.querySelector('[data-block]').onclick = (e) => blockPerson(b, e.currentTarget);
   pg.querySelector('[data-report]').onclick = () => openReport(b);
+  API.profileDetails(b.id).then((d) => {
+    if (!d) return;
+    const bio = pg.querySelector('#theirBio'), ints = pg.querySelector('#theirInterests');
+    if (d.bio) { bio.querySelector('.bio').textContent = d.bio; bio.hidden = false; }
+    if (d.interests?.length && !(b.interests || []).length) { ints.querySelector('.facts').innerHTML = d.interests.map((x) => '<span class="fact">' + esc(x) + '</span>').join(''); ints.hidden = false; }
+  }).catch(console.error);
   try {
     const ans = await API.morningAnswers(b.id, 4);
     const box = pg.querySelector('#theirAnswers');
@@ -907,9 +915,9 @@ function bumpZone(b) {
   if (b.bumped) return '<div class="box" style="text-align:center;font-size:14.5px">Bumped. If ' + esc(b.name || 'they') + ' bump' + (b.name ? 's' : '') + ' you back, a chat opens.</div>';
   return '<button class="primary" data-bump>' + ICON.bump + 'Bump</button><p class="label" style="text-align:center">' + esc(b.name || 'They') + ' won’t know unless they bump you too.</p>';
 }
-function wireBump(pg, b) {
+function wireBump(pg, b, opts = {}) {
   const bz = pg.querySelector('#bumpZone'), bt = bz.querySelector('[data-bump]'), ch = bz.querySelector('[data-chat]');
-  if (ch) ch.onclick = () => { popPage(true); goTab(2, () => openThread(b.chatId)); };
+  if (ch) ch.onclick = () => { if (opts.fromChat) { popPage(); return; } popPage(true); goTab(2, () => openThread(b.chatId)); };
   if (!bt) return;
   bt.onclick = async () => {
     bt.disabled = true;
@@ -985,10 +993,18 @@ async function openThread(chatId) {
   if (!c) { await loadChats(); c = chatList.find((x) => x.id === chatId); }
   if (!c) return;
   const p = c.other;
-  const head = '<div style="display:flex;flex-direction:column;align-items:center;gap:4px;margin-bottom:16px">' + bubbleHTML({ w: dimsToW(c.match?.dims), photo: API.photoUrl(p.photo_path) }, 84) + '<b style="font-family:var(--serif);font-size:24px;font-weight:400">' + esc(p.name || 'Someone') + '</b>' + (c.match ? '<span class="label">' + c.match.score + '% in common</span>' : '') + '</div>';
+  const head = '<button class="threadhead" id="threadHead" aria-label="See ' + esc(p.name || 'their') + '’s profile">' + bubbleHTML({ w: dimsToW(c.match?.dims), photo: API.photoUrl(p.photo_path) }, 84) + '<b style="font-family:var(--serif);font-size:24px;font-weight:400">' + esc(p.name || 'Someone') + '</b>' + '<span class="label">' + (c.match ? c.match.score + '% in common · ' : '') + 'See profile</span></button>';
   const pg = pushPage(p.name || 'Chat', head + '<div class="thread" id="thread"><div class="spinner" style="align-self:center"></div></div><div style="height:80px"></div>',
     { footer: '<form class="composer glass" id="composer"><label for="msgIn" class="hide">Message</label><input id="msgIn" autocomplete="off" placeholder="Message ' + esc(p.name || '') + '" maxlength="1000"><button class="send" id="sendBtn" aria-label="Send" disabled>' + ICON.send + '</button></form>' });
   const th = pg.querySelector('#thread'), sc = pg.querySelector('.scroll'), inp = pg.querySelector('#msgIn'), sb = pg.querySelector('#sendBtn');
+  pg.querySelector('#threadHead').onclick = () => {
+    // Their Cloud bubble if they're in it, otherwise what the chat knows about them
+    const inCloud = people.find((x) => x.id === p.id);
+    openPerson(inCloud ? { ...inCloud, chatId: c.id } : {
+      id: p.id, name: p.name, photo: API.photoUrl(p.photo_path), status: p.status, interests: [],
+      w: c.match ? dimsToW(c.match.dims) : DIMS.map(() => 1), score: c.match?.score ?? null, reason: c.match?.reason || null, bumped: true, chatId: c.id
+    }, { fromChat: true });
+  };
   let msgs = [];
   const draw = () => { th.innerHTML = msgs.map((m) => '<div class="msg ' + (m.sender_id === uid ? 'me' : m.sender_id ? 'them' : 'sys') + '">' + esc(m.body) + '</div>').join(''); sc.scrollTop = sc.scrollHeight; };
   try { msgs = await API.messages(chatId); draw(); } catch (e) { fail(e); }
