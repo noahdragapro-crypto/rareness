@@ -1092,16 +1092,11 @@ function runSplash() {
     { transform: 'scale(1)' }
   ], { duration: 1600, easing: 'cubic-bezier(.33,.0,.2,1)', fill: 'forwards' });
 
-  // The first bubble waits for a touch: it breathes gently with a hint underneath
+  // The first bubble waits for a touch, breathing gently
   let idle = null;
-  const hint = document.createElement('span');
-  hint.textContent = 'Touch the bubble';
-  hint.style.cssText = 'position:absolute;left:0;right:0;top:calc(50% + 100px);text-align:center;font-size:14px;color:var(--ink2);opacity:0;pointer-events:none';
-  sp.appendChild(hint);
   const explode = () => {
     if (done || burst) return;
     burst = true; fill.pause(); if (idle) idle.cancel();
-    hint.animate([{ opacity: getComputedStyle(hint).opacity }, { opacity: 0 }], { duration: 160, fill: 'forwards' });
     // 2. It pops
     word.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 260, fill: 'forwards' });
     core.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 110, easing: 'ease-in', fill: 'forwards' });
@@ -1163,7 +1158,6 @@ function runSplash() {
     if (burst) return;
     idle = core.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.035,.975)' }, { transform: 'scale(.985,1.02)' }, { transform: 'scale(1)' }],
       { duration: 2200, iterations: Infinity, easing: 'ease-in-out' });
-    hint.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 600, delay: 300, fill: 'forwards' });
   };
 
   // The first touch pops the big bubble. After that, touch a bubble to pop it; while someone is
