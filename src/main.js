@@ -874,7 +874,7 @@ function openTemple(opts = {}) {
   $('#app').appendChild(el);
   requestAnimationFrame(() => el.classList.add('in'));
   const t0 = Date.now();
-  let counted = daily ? Boolean(rec().m) : false, finished = false, pendingDone = false, lock = null, cueT = null;
+  let counted = daily ? Boolean(rec().m) : false, finished = false, lock = null, cueT = null;
   try { navigator.wakeLock?.request('screen').then((l) => { lock = l; }).catch(() => {}); } catch (e) {}
   const hum = startHum();
   const music = startMusic(soundOn);
@@ -891,29 +891,41 @@ function openTemple(opts = {}) {
   // The guidance: each cue for its own number of seconds, round and round
   const note = el.querySelector('.temple-note');
   const say = (txt) => { note.style.opacity = 0; setTimeout(() => { note.textContent = txt; note.style.opacity = 1; }, 400); };
-  let ci = 0;
-  const nextCue = () => { if (finished) return; const [txt, sec] = cues[ci++ % cues.length]; say(txt); cueT = setTimeout(nextCue, sec * 1000); };
+  let ci = 0, asking = false;
+  const nextCue = () => { if (asking) return; const [txt, sec] = cues[ci++ % cues.length]; say(txt); cueT = setTimeout(nextCue, sec * 1000); };
   cueT = setTimeout(nextCue, 3500);
   const tick = setInterval(() => {
     const sec = Math.floor((Date.now() - t0) / 1000);
-    el.querySelector('.temple-time').textContent = String(Math.floor(sec / 60)).padStart(2, '0') + ':' + String(sec % 60).padStart(2, '0') + ' · ' + mins + ' min';
-    if (!finished && sec >= mins * 60) {
-      finished = true; clearTimeout(cueT);
-      say('Your ' + mins + ' minutes are done. Stay as long as you like.');
-      if (daily) {
-        if (!counted) complete(med, { minutes: mins, timed: true, temple: true }, mins + ' calm minutes. Well done.');
-        API.savePractice(uid, { exercise: 'temple', level: levelOf('temple'), minutes: mins }).then((row) => { myPractices.unshift(row); renderMeditation(); }).catch(() => {});
-      } else pendingDone = true;
-    }
+    el.querySelector('.temple-time').textContent = String(Math.floor(sec / 60)).padStart(2, '0') + ':' + String(sec % 60).padStart(2, '0') + ' · ' + (finished ? 'keep going' : mins + ' min');
+    // Time's up: ask whether to keep going or conclude, quietly, without stopping the music
+    if (!finished && sec >= mins * 60) { finished = true; ask(); }
   }, 1000);
+  const ask = () => {
+    asking = true; clearTimeout(cueT); say('Your ' + mins + ' minutes are done.');
+    const box = document.createElement('div');
+    box.className = 'temple-ask'; box.setAttribute('role', 'dialog'); box.setAttribute('aria-label', 'Your session is done');
+    box.innerHTML = '<p class="h">' + mins + ' minutes</p><p>Keep going, or conclude this session?</p>' +
+      '<div><button data-keep>Keep going</button><button data-end class="on">Conclude</button></div>';
+    el.appendChild(box); requestAnimationFrame(() => box.classList.add('in'));
+    box.querySelector('[data-end]').onclick = leave;
+    box.querySelector('[data-keep]').onclick = () => {
+      box.classList.remove('in'); setTimeout(() => box.remove(), 400);
+      asking = false; say('Stay as long as you like.'); cueT = setTimeout(nextCue, 4000);
+    };
+  };
   const leave = () => {
     clearInterval(tick); clearTimeout(cueT); hum.stop(); music.stop();
     try { lock?.release(); } catch (e) {}
     document.removeEventListener('visibilitychange', onVis);
     el.classList.remove('in'); setTimeout(() => el.remove(), 600);
-    // A practice is saved when you leave after its time is up, so the check-in appears on the app, not in the dark
-    if (pendingDone) { popPage(true); recordPractice(opts.practice, { level: levelOf(opts.practice.id), minutes: mins }); }
-    else if (!daily && !finished) toast('Come back to it anytime');
+    if (!finished) { if (!daily) toast('Come back to it anytime'); return; }
+    // Saved when you leave, with the time you actually sat (at least the planned minutes),
+    // so the check-in appears on the app, not in the dark
+    const sat = Math.max(mins, Math.floor((Date.now() - t0) / 60000));
+    if (daily) {
+      if (!counted) complete(med, { minutes: sat, timed: true, temple: true }, sat + ' calm minutes. Well done.');
+      API.savePractice(uid, { exercise: 'temple', level: levelOf('temple'), minutes: sat }).then((row) => { myPractices.unshift(row); renderMeditation(); }).catch(() => {});
+    } else { popPage(true); recordPractice(opts.practice, { level: levelOf(opts.practice.id), minutes: sat }); }
   };
   const onVis = () => { if (document.hidden) { hum.stop(); music.pause(); } else { hum.start(); music.resume(); } };
   document.addEventListener('visibilitychange', onVis);

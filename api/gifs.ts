@@ -11,7 +11,11 @@ export const GET = handle(async (request) => {
   const q = (new URL(request.url).searchParams.get("q") || "").trim().slice(0, 60);
   const params = new URLSearchParams({ api_key: key, limit: "24", rating: "pg-13", ...(q ? { q } : {}) });
   const res = await fetch(`https://api.giphy.com/v1/gifs/${q ? "search" : "trending"}?${params}`);
-  if (!res.ok) throw new HttpError(502, "Couldn’t load GIFs right now.");
+  if (!res.ok) {
+    console.error("GIPHY", res.status, (await res.text()).slice(0, 200));
+    throw new HttpError(502, res.status === 401 || res.status === 403 ? "GIPHY didn’t accept the key. Check GIPHY_API_KEY in Vercel."
+      : res.status === 429 ? "Too many GIF searches this hour. Try again a bit later." : "Couldn’t load GIFs right now.");
+  }
   const body = (await res.json()) as { data: Gif[] };
   return json({
     gifs: body.data.map((g) => ({
