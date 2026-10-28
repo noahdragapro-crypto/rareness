@@ -601,52 +601,54 @@ function openHowItWorks() {
 function openFAQ() {
   const price = config.price || '$5';
   const QA = [
-    ['Getting started', [
-      ['What do I need to create an account?', 'Just your first name and your email. Everything else, like your age, city and photo, can be added later from your profile.'],
+    ['Getting started', 'Your account and the basics', [
+      ['Is Ora a dating app?', 'No. Ora is a community for making friends who share your way of living: presence, practice and kindness.'],
+      ['What do I need to create an account?', 'Just your first name and your email. Everything else, like your birthday, city and photo, can be added later from your profile.'],
       ['How do I log back in?', 'Enter the same email on the “Log in” screen. There’s no password for now.'],
-      ['Why can’t I open the Cloud or Chats?', 'They need a finished profile (a photo and your two answers), and one task in each part of the day: one in the morning, a second from noon, a third from 6 pm. Doing more earlier counts for later.'],
-      ['Is Ora a dating app?', 'No. Ora is a community for making friends who share your way of living: presence, practice and kindness.']
+      ['Does Ora cost anything?', config.paywall ? 'One payment of ' + price + ' opens everything, for good. No subscription.' : 'Ora is free while the community is growing.']
     ]],
-    ['Your day and your practice', [
+    ['Your day', 'Three practices, morning to evening', [
       ['What counts toward my three a day?', 'Anything: the temple, today’s task, Ora Master’s pick, or any practice from the Meditation library. Each different practice counts once a day.'],
-      ['What happens if I miss a day?', 'Your streak starts again when a day ends with fewer than three. Your levels and aura stay.'],
-      ['Why did the Cloud lock again this afternoon?', 'From noon it asks for a second task of the day, and from 6 pm a third. One more opens it again.'],
+      ['Why can’t I open the Cloud or Chats?', 'They need a finished profile (a photo and your two answers), and one practice in each part of the day: one in the morning, a second from noon, a third from 6 pm. Doing more earlier counts for later.'],
+      ['Why did the Cloud lock again this afternoon?', 'From noon it asks for a second practice, and from 6 pm a third. One more opens it again.'],
+      ['What happens if I miss a day?', 'Your streak starts again when a day ends with fewer than three. Your levels and aura stay.']
+    ]],
+    ['Practice', 'The library, the temple and focus bubbles', [
       ['How do levels work?', 'Every practice has four levels: ' + LIB.levels.map((l) => l.name + (l.from ? ' (after ' + l.from + ' sessions)' : '')).join(', ') + '. Each level goes a little deeper.'],
       ['How long is today’s meditation?', 'Between 7 and 15 minutes, depending on the day. The Meditation tab shows today’s length.'],
       ['Can I leave a practice before it ends?', 'Yes, anytime. It only counts once its time is up, or once you’ve written enough for its level.'],
-      ['What are focus bubbles?', 'A bubble that floats over the app soon after you open it, then every ten minutes or so. Pop it: it’s a reminder to come back to the present.']
+      ['There’s no sound in the temple.', 'Check your volume, and tap “Sound on” at the top right. If it says “Tap for sound”, one tap starts it.'],
+      ['Why doesn’t my phone vibrate in the temple?', 'iPhones don’t let websites vibrate, so the temple plays soft music instead. Android phones vibrate gently.'],
+      ['What are focus bubbles?', 'A bubble that floats over the app soon after you open it, then every ten minutes or so. Pop it: it’s a reminder to come back to the present.'],
+      ['What is Ora Master?', 'Your guide in the app. It suggests one practice a day and answers questions about meditation, your practice and your aura. It’s at the top of your Chats.']
     ]],
-    ['The temple', [
-      ['Why doesn’t my phone vibrate in the temple?', 'iPhones don’t let websites use vibration, so the temple uses soft music instead. Android phones vibrate gently.'],
-      ['There’s no sound in the temple.', 'Check your volume, and tap the “Sound on” button at the top right. If it says “Tap for sound”, one tap starts it.']
-    ]],
-    ['Your aura', [
+    ['Your aura', 'How it’s made and why it moves', [
       ['How is my aura made?', 'Our AI reads your two answers from sign-up, your daily answers, the practices you do and your check-ins, and shows how strongly each of the six colours runs through you.'],
       ['Why did my aura change?', 'It updates as you practise and answer. The more you practise, the more it reflects who you are today.'],
-      ['Who sees my answers?', 'Nobody. Only our AI reads them, to shape your aura and suggestions.']
+      ['Why is someone big and close in my Cloud?', 'You have a lot in common: your words, your practice and what you’re each hoping to find.']
     ]],
-    ['People, bumps and chats', [
+    ['Friends', 'Bumps and chats', [
       ['How does bumping work?', 'Tap Bump on someone’s profile. They won’t know, unless they bump you too. Then a chat opens for both of you.'],
-      ['Why is someone big and close in my Cloud?', 'You have a lot in common: your words, your practice and what you’re each hoping to find.'],
-      ['What can people see about me?', 'Your photo, name, age if you gave it, status, about and interests. After you bump into each other, also which practices you do most. Never your answers.'],
-      ['How do I share a practice with a friend?', 'In a chat, tap the smiley button, then Practices, and pick one. They get a card to start it.'],
+      ['How do I share a practice with a friend?', 'In a chat, tap the smiley button, then Practices, and pick one. They get a card to start it.']
+    ]],
+    ['Privacy and safety', 'What others see, and what they never do', [
+      ['What can people see about me?', 'Your photo, name, age, status, about, interests and the information on your profile. After you bump into each other, also your latest practices. Never your answers or writing.'],
+      ['Who reads my answers?', 'Nobody. Only our AI reads them, to shape your aura and suggestions.'],
+      ['Are my conversations with Ora Master private?', 'They’re saved on your phone, and your messages are sent to our AI to answer you. Nobody else reads them.'],
       ['Someone is bothering me.', 'Open their profile and tap Block or Report. Blocking hides you from each other and stops messages.']
     ]],
-    ['Ora Master', [
-      ['What is Ora Master?', 'Your guide in the app. It suggests one practice a day and answers questions about meditation, your practice and your aura.'],
-      ['Are my conversations with Ora Master private?', 'They’re saved on your phone, and your messages are sent to our AI to answer you. Nobody else reads them.']
-    ]],
-    ['Account', [
-      ['Does Ora cost anything?', config.paywall ? 'One payment of ' + price + ' opens everything, for good. No subscription.' : 'Ora is free while the community is growing.'],
-      ['How do I change my photo or details?', 'From your profile: tap your bubble on the Cloud, or the bubble at the top right of the other pages.'],
+    ['Your profile', 'Changing or leaving', [
+      ['How do I change my photo or details?', 'Open your profile and tap Edit profile. Tap the note above your bubble to change your status.'],
       ['How do I delete my account?', 'At the bottom of your profile, tap “Delete my account”. Your profile, photos and answers are removed.']
     ]]
   ];
-  const html = '<div class="stack"><header style="display:flex;flex-direction:column;gap:6px"><span class="label">Help</span><h1 class="largetitle">Questions and answers</h1></header>' +
-    QA.map(([group, items]) => '<section class="section" aria-label="' + esc(group) + '"><h2 class="h2">' + esc(group) + '</h2><div class="faq">' +
-      items.map(([q, a]) => '<details><summary>' + esc(q) + '</summary><p>' + esc(a) + '</p></details>').join('') + '</div></section>').join('') +
-    '<p class="label" style="text-align:center">Something else? Ask Ora Master in your Chats.</p></div>';
-  pushPage('Questions and answers', html);
+  const html = '<div class="stack faqpage"><header style="display:flex;flex-direction:column;gap:6px"><span class="label">Help</span><h1 class="largetitle">Questions and answers</h1></header>' +
+    QA.map(([group, sub, items]) => '<section class="faqgroup" aria-label="' + esc(group) + '"><div class="faqhead"><h2 class="h2">' + esc(group) + '</h2><span class="label">' + esc(sub) + '</span></div><div class="faq">' +
+      items.map(([q, a]) => '<details name="faq"><summary>' + esc(q) + '</summary><p>' + esc(a) + '</p></details>').join('') + '</div></section>').join('') +
+    '<p class="label" style="text-align:center;margin-top:8px">Something else? Ask Ora Master in your Chats.</p></div>';
+  const pg = pushPage('Questions and answers', html);
+  // One answer open at a time (also for browsers without <details name>)
+  pg.querySelectorAll('.faq details').forEach((d) => d.addEventListener('toggle', () => { if (d.open) pg.querySelectorAll('.faq details[open]').forEach((o) => { if (o !== d) o.open = false; }); }));
 }
 
 // ---------------- One practice: its page, then the guided room, the writing page or the action ----------------
@@ -1169,6 +1171,14 @@ const DETAILS = [
   { key: 'sign', label: 'Star sign', opts: ['Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo', 'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces'] }
 ];
 const detailText = (d, v) => (Array.isArray(v) ? v.join(', ') : v || '');
+const GENDER_LABEL = { woman: 'Woman', man: 'Man', nonbinary: 'Non-binary' };
+// Shared by your profile and other people's: cards, information rows, the small line under the name
+const pcard = (title, body, right = '') => '<section class="pcard"><div class="head"><h2 class="h2">' + title + '</h2>' + right + '</div>' + body + '</section>';
+const infoRow = (k, v) => (v ? '<div class="irow"><span>' + k + '</span><b>' + esc(v) + '</b></div>' : '');
+const infoLine = (city, langs, age) => [city, langs[0] && LANG[langs[0]], age].filter(Boolean).join(' · ').toLowerCase();
+const infoRows = (d, more = '') => infoRow('I am', GENDER_LABEL[d.gender]) + infoRow('City', d.city) + infoRow('Languages', langCodes(d.languages).map((c) => LANG[c]).join(', ')) + infoRow('Pronouns', d.pronouns) + more +
+  DETAILS.map((x) => infoRow(x.label, detailText(x, (d.details || {})[x.key]))).join('');
+const topRow = (id, n, extra = '') => { const x = PRACTICE[id], l = levelFor(n); return '<button data-practice="' + id + '"><span><b>' + esc(x.name) + '</b><span class="plevel">' + levelDots(l) + levelName(l) + '</span></span><span class="label">' + (extra || n + ' session' + (n === 1 ? '' : 's')) + '</span></button>'; };
 let detailsSaveT = null;
 function saveDetails(details) {
   me.details = details;
@@ -1185,12 +1195,10 @@ async function renderProfile() {
   const langs = langCodes(me.languages);
   const meetLabel = { women: 'Women', men: 'Men', everyone: 'Everyone' }[me.show_me || 'everyone'];
   // The small line under your name: city · main language · age
-  const line = [me.city, langs[0] && LANG[langs[0]], age].filter(Boolean).join(' · ').toLowerCase();
-  const card = (title, body, right = '') => '<section class="pcard"><div class="head"><h2 class="h2">' + title + '</h2>' + right + '</div>' + body + '</section>';
-  const infoRow = (k, v) => (v ? '<div class="irow"><span>' + k + '</span><b>' + esc(v) + '</b></div>' : '');
-  // Practices you return to most, with levels, and this week's sessions
-  const counts = {}; myPractices.forEach((p) => { counts[p.exercise] = (counts[p.exercise] || 0) + 1; });
-  const top = Object.entries(counts).filter(([id]) => PRACTICE[id]).sort((a, b) => b[1] - a[1]).slice(0, 3);
+  const line = infoLine(me.city, langs, age), card = pcard;
+  // Your latest two practices, with levels, and this week's sessions
+  const counts = {}, latest = [];
+  myPractices.forEach((p) => { counts[p.exercise] = (counts[p.exercise] || 0) + 1; if (PRACTICE[p.exercise] && !latest.includes(p.exercise) && latest.length < 2) latest.push(p.exercise); });
   const weekAgo = API.dayKey(new Date(Date.now() - 6 * 864e5)), thisWeek = myPractices.filter((p) => p.day >= weekAgo).length;
   const chipsOf = (attr, opts, on, labels) => '<div class="chips">' + opts.map((o, i) => '<button type="button" class="chip' + (on(o) ? ' on' : '') + '" ' + attr + '="' + esc(o) + '" aria-pressed="' + on(o) + '">' + esc(labels ? labels[i] : o) + '</button>').join('') + '</div>';
 
@@ -1206,7 +1214,8 @@ async function renderProfile() {
       ? '<section class="section psec"><h2 class="h2">You</h2><div class="grid2">' +
           field('pName', 'Name', me.name, 'First name', 24, 'given-name') +
           '<label class="lbl" for="pBirth">Date of birth<input class="field" id="pBirth" type="date" max="' + adultMax() + '" value="' + esc(me.birthdate || '') + '"></label>' +
-        '</div><label class="lbl" for="pCity">City<select class="field" id="pCity">' + cityOptions(me.city) + '</select></label></section>' +
+        '</div><label class="lbl" for="pCity">City<select class="field" id="pCity">' + cityOptions(me.city) + '</select></label>' +
+        '<div class="lbl">I am' + chipsOf('data-gen', GENDERS.map((g) => g[0]), (v) => me.gender === v, GENDERS.map((g) => g[1])) + '</div></section>' +
         '<section class="section psec"><div class="head"><h2 class="h2">About you</h2><span class="counter" id="bCount"></span></div><label class="hide" for="pBio">About you</label><textarea id="pBio" maxlength="160" placeholder="Who you are, what you love">' + esc(me.bio) + '</textarea></section>' +
         '<section class="section psec"><h2 class="h2">Languages</h2><p class="label" style="margin:0">The first one you pick is your main language.</p>' + chipsOf('data-lang', LANGS.map((l) => l[0]), (c) => langs.includes(c), LANGS.map((l) => l[1])) + '</section>' +
         '<section class="section psec"><h2 class="h2">Pronouns</h2>' + chipsOf('data-pron', PRONOUNS, (o) => me.pronouns === o) + '</section>' +
@@ -1222,11 +1231,10 @@ async function renderProfile() {
           '<div style="display:flex;flex-direction:column;gap:10px">' + auraLines(aura, false) + '</div>', howButton()) +
         card('Your information', '<div class="info-list">' +
           infoRow('Birthday', me.birthdate ? new Date(me.birthdate + 'T12:00').toLocaleDateString(undefined, { day: 'numeric', month: 'long' }) + (age ? ' · ' + age : '') : '') +
-          infoRow('City', me.city) + infoRow('Languages', langs.map((c) => LANG[c]).join(', ')) + infoRow('Pronouns', me.pronouns) + infoRow('I’d like to meet', meetLabel) +
-          DETAILS.map((d) => infoRow(d.label, detailText(d, det[d.key]))).join('') + '</div>') +
+          infoRows(me, infoRow('I’d like to meet', meetLabel)) + '</div>') +
         card('Your streaks', '<div class="stats" style="margin:0"><div><b>' + streak() + '</b><span>Day streak</span></div><div><b>' + Math.max(bestStreak(), streak()) + '</b><span>Best</span></div><div><b>' + totalDone() + '</b><span>Practices</span></div></div>') +
-        card('Your practices', top.length
-          ? '<div class="ptop">' + top.map(([id, n]) => { const x = PRACTICE[id], l = levelFor(n); return '<button data-practice="' + id + '"><span><b>' + esc(x.name) + '</b><span class="plevel">' + levelDots(l) + levelName(l) + '</span></span><span class="label">' + n + ' session' + (n === 1 ? '' : 's') + '</span></button>'; }).join('') + '</div>'
+        card('Your practices', latest.length
+          ? '<div class="ptop">' + latest.map((id) => topRow(id, counts[id])).join('') + '</div>'
           : '<p class="label" style="margin:0">Nothing yet. Your favourite practices will show here.</p>',
           '<span class="label">' + thisWeek + ' this week</span>') +
         (config.paywall && me.paid_at ? '<p class="label" style="margin:0;text-align:center">Unlocked on ' + new Date(me.paid_at).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' }) + '. One-time payment.</p>' : '') +
@@ -1272,6 +1280,7 @@ async function renderProfile() {
       const v = me.pronouns === b.dataset.pron ? '' : b.dataset.pron;
       saveSoon({ pronouns: v }); toggleOn('[data-pron]', b, (x) => x.dataset.pron === v);
     });
+    root.querySelectorAll('[data-gen]').forEach((b) => b.onclick = () => { me.gender = b.dataset.gen; saveSoon({ gender: b.dataset.gen }); toggleOn('[data-gen]', b, (x) => x === b); });
     root.querySelectorAll('[data-show]').forEach((b) => b.onclick = () => { saveSoon({ show_me: b.dataset.show }); toggleOn('[data-show]', b, (x) => x === b); });
     root.querySelectorAll('[data-det]').forEach((b) => b.onclick = () => {
       const d = DETAILS.find((x) => x.key === b.dataset.det), v = b.dataset.opt, det2 = { ...(me.details || {}) };
@@ -1557,44 +1566,48 @@ function renderCloudEmpty() {
 async function openPerson(b, opts = {}) {
   const tot = b.w.reduce((a, c) => a + c, 0) || 1;
   const reasons = b.w.map((x, i) => ({ x, i })).filter((r) => r.x > 0).sort((a, c) => c.x - a.x);
-  const body =
-    '<div class="dhero"><div style="position:relative">' + (b.status ? noteHTML(b.status) : '') + bubbleHTML({ w: b.w, photo: b.photo }, 210) + '</div>' +
-    '<h1 class="largetitle" style="margin-top:12px">' + esc(nameAge(b)) + '</h1>' +
-    '<p class="label" style="font-size:14px">' + esc([b.job, b.city].filter(Boolean).join(' · ')) + '</p></div>' +
-    '<div class="stack" style="margin-top:22px">' +
-      '<section class="section" aria-label="About" id="theirBio"' + (b.bio ? '' : ' hidden') + '><h2 class="h2">About</h2><p class="bio">' + esc(b.bio || '') + '</p></section>' +
-      (b.score == null ? '' : '<section class="box" style="display:flex;flex-direction:column;gap:12px" aria-label="Why you match">' +
-        '<div class="head"><h2 class="h2">Why you match</h2><span style="font-family:var(--serif);font-size:36px;line-height:1">' + b.score + '%</span></div>' +
-        (b.reason ? '<p class="reason-line">' + esc(b.reason) + '</p>' : '') +
-        reasons.map((r) => '<div class="reason">' + swatch(r.i, 24) + '<div class="rt"><div>' + DIMS[r.i].label + '<span>' + Math.round(r.x / tot * 100) + '%</span></div>' + glassBar(r.x / tot * 100, r.i) + '</div></div>').join('') +
-        '<p class="label" style="font-size:13px;line-height:1.4">These are the colours around ' + esc(b.name || 'their') + '’s bubble.</p>' +
-      '</section>') +
-      '<section class="section" aria-label="Interests" id="theirInterests"' + ((b.interests || []).length ? '' : ' hidden') + '><h2 class="h2">Interests</h2><div class="facts">' + (b.interests || []).map((x) => '<span class="fact">' + esc(x) + '</span>').join('') + '</div></section>' +
-      '<section class="section" aria-label="Their practice" id="theirPractice" hidden></section>' +
-      '<div id="bumpZone" style="display:flex;flex-direction:column;gap:8px">' + bumpZone(b) + '</div>' +
-      '<div class="menu-row" style="justify-content:center"><button class="link" data-report style="color:var(--ink2)">Report</button><button class="link" data-block style="color:var(--ink2)">Block</button></div>' +
-    '</div>';
-  const pg = pushPage(b.name || 'Profile', body);
+  const name = b.name || 'they', line = infoLine(b.city, [], b.age);
+  // The same layout as your own profile, with why you match first
+  const body = '<div class="stack">' +
+    '<header style="display:flex;flex-direction:column;gap:6px"><span class="brand">Ora</span><h1 class="largetitle">Profile</h1></header>' +
+    '<div class="me phero"><div class="wrap" style="position:relative">' + (b.status ? noteHTML(b.status) : '') + bubbleHTML({ w: b.w, photo: b.photo }, 168) + '</div>' +
+      '<p class="pname">' + esc(b.name ? low(b.name) : 'someone') + '</p><p class="label" style="margin:0" id="theirLine"' + (line ? '' : ' hidden') + '>' + esc(line) + '</p></div>' +
+    (b.score == null ? '' : pcard('Why you match',
+      (b.reason ? '<p class="reason-line">' + esc(b.reason) + '</p>' : '') +
+      '<div style="display:flex;flex-direction:column;gap:10px">' + reasons.map((r) => '<div class="reason">' + swatch(r.i, 24) + '<div class="rt"><div>' + DIMS[r.i].label + '<span>' + Math.round(r.x / tot * 100) + '%</span></div>' + glassBar(r.x / tot * 100, r.i) + '</div></div>').join('') + '</div>' +
+      '<p class="label" style="margin:0;font-size:13px;line-height:1.4">These are the colours around ' + esc(name) + '’s bubble.</p>',
+      '<span class="pscore">' + b.score + '%</span>')) +
+    '<div id="theirAbout"' + (b.bio || (b.interests || []).length ? '' : ' hidden') + '>' + aboutCard(b, b.bio, b.interests) + '</div>' +
+    '<div id="theirInfo" hidden></div>' +
+    '<div id="theirPractice" hidden></div>' +
+    '<div id="bumpZone" style="display:flex;flex-direction:column;gap:8px">' + bumpZone(b) + '</div>' +
+    '<div class="menu-row" style="justify-content:center"><button class="link" data-report style="color:var(--ink2)">Report</button><button class="link" data-block style="color:var(--ink2)">Block</button></div>' +
+  '</div>';
+  const pg = pushPage(b.name ? low(b.name) : 'Profile', body);
   wireBump(pg, b, opts);
   pg.querySelector('[data-block]').onclick = (e) => blockPerson(b, e.currentTarget);
   pg.querySelector('[data-report]').onclick = () => openReport(b);
-  // Once you've bumped into each other, you can see what they practise most and join them
+  // Once you've bumped into each other, you can see their latest practices and join them
   if (b.chatId) API.practiceSummary(b.id).then((rows) => {
-    const box = pg.querySelector('#theirPractice'), list = rows.filter((r) => PRACTICE[r.exercise]);
+    const box = pg.querySelector('#theirPractice'), list = rows.filter((r) => PRACTICE[r.exercise]).slice(0, 2);
     if (!box || !list.length) return;
-    box.innerHTML = '<h2 class="h2">What ' + esc(b.name || 'they') + ' practises</h2><div style="display:flex;flex-direction:column;gap:4px">' +
-      list.map((r) => { const x = PRACTICE[r.exercise], l = levelFor(r.sessions); return '<button class="task prow" data-practice="' + x.id + '"><span class="tx"><em>' + esc(x.cat) + ' · ' + r.sessions + ' session' + (r.sessions === 1 ? '' : 's') + '</em><b>' + esc(x.name) + '</b><span class="plevel">' + levelDots(l) + levelName(l) + '</span></span><span class="joinlbl">Join</span></button>'; }).join('') + '</div>';
+    box.innerHTML = pcard('Their practices', '<div class="ptop">' + list.map((r) => topRow(r.exercise, r.sessions, 'Join')).join('') + '</div>');
     box.hidden = false; wirePracticeLinks(box);
   }).catch(console.error);
   API.profileDetails(b.id).then((d) => {
     if (!d) return;
-    const bio = pg.querySelector('#theirBio'), ints = pg.querySelector('#theirInterests');
-    if (d.bio) { bio.querySelector('.bio').textContent = d.bio; bio.hidden = false; }
-    // What they chose to share: languages and the details from their profile
-    const det = d.details || {}, facts = [langCodes(d.languages).map((c) => LANG[c]).join(', '), d.pronouns, ...DETAILS.map((x) => { const v = detailText(x, det[x.key]); return v ? x.label + ': ' + v : ''; })].filter(Boolean);
-    if (facts.length) { bio.insertAdjacentHTML('beforeend', '<div class="facts">' + facts.map((f) => '<span class="fact">' + esc(f) + '</span>').join('') + '</div>'); bio.hidden = false; }
-    if (d.interests?.length && !(b.interests || []).length) { ints.querySelector('.facts').innerHTML = d.interests.map((x) => '<span class="fact">' + esc(x) + '</span>').join(''); ints.hidden = false; }
+    const about = pg.querySelector('#theirAbout'), info = pg.querySelector('#theirInfo'), ln = pg.querySelector('#theirLine');
+    const l2 = infoLine(d.city || b.city, langCodes(d.languages), b.age);
+    if (l2) { ln.textContent = l2; ln.hidden = false; }
+    const ints = (b.interests || []).length ? b.interests : d.interests || [];
+    if (d.bio || ints.length) { about.innerHTML = aboutCard(b, d.bio, ints); about.hidden = false; }
+    const rows = infoRows({ ...d, city: d.city || b.city });
+    if (rows) { info.innerHTML = pcard('Their information', '<div class="info-list">' + rows + '</div>'); info.hidden = false; }
   }).catch(console.error);
+}
+function aboutCard(b, bio, ints = []) {
+  return pcard('About ' + esc(b.name ? low(b.name) : 'them'), (bio ? '<p class="bio">' + esc(bio) + '</p>' : '') +
+    ((ints || []).length ? '<div class="facts">' + ints.map((x) => '<span class="fact">' + esc(x) + '</span>').join('') + '</div>' : ''));
 }
 function bumpZone(b) {
   if (b.chatId) return '<button class="primary" data-chat>Open chat</button>';

@@ -595,3 +595,17 @@ select.field{font:inherit;font-size:16px;color:var(--ink);-webkit-appearance:non
 .ptop button>span:first-child{display:flex;flex-direction:column;gap:3px}
 .ptop b{font-family:var(--serif);font-weight:400;font-size:19px}
 .plinks{display:flex;flex-direction:column;gap:6px}
+/* Same height for text and date fields (date inputs grow on their own otherwise) */
+input.field{height:46px;line-height:22px}
+input.field[type=date]{-webkit-appearance:none;appearance:none;display:block;min-width:0;text-align:left}
+input.field[type=date]::-webkit-date-and-time-value{text-align:left}
+.pscore{font-family:var(--serif);font-size:36px;line-height:1}
+/* Questions and answers: one card per topic, room around every answer */
+.faqpage{gap:30px}
+.faqgroup{display:flex;flex-direction:column;gap:6px;padding:20px 20px 6px;border-radius:var(--r);background:var(--fill)}
+.faqhead{display:flex;flex-direction:column;gap:2px;margin-bottom:8px}
+.faqgroup .faq{border-top:0}
+.faqgroup .faq details{border-bottom:.5px solid rgba(17,17,20,.1)}
+.faqgroup .faq details:last-child{border-bottom:0}
+.faqgroup .faq summary{padding:16px 32px 16px 0;line-height:1.35}
+.faqgroup .faq details p{margin:0 0 18px;line-height:1.6}

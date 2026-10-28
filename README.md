@@ -90,7 +90,7 @@ The temple's soft vibration uses the Vibration API (Android); iPhones don't allo
 
 Daily answers are private (`supabase/migrations/0006_private_answers.sql`); only the AI reads them on the server.
 
-The **profile** shows the name with a small line (city · main language · age, from the date of birth), then About you, the aura, all the person's information, streaks and practices. Edit profile adds several languages (the first is the main one), pronouns and a few fun options (here for, meditation, temple, rhythm, food, reading, star sign), stored in `profiles.details` (`supabase/migrations/0008_profile_details.sql`).
+The **profile** shows the name with a small line (city · main language · age, from the date of birth), then About you, the aura, all the person's information, streaks and the latest two practices. Other people's profiles use the same layout, opening with why you match. Edit profile adds gender, several languages (the first is the main one), pronouns and a few fun options (here for, meditation, temple, rhythm, food, reading, star sign), stored in `profiles.details` (`supabase/migrations/0008_profile_details.sql`).
 
 ## Chats
 
