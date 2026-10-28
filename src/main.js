@@ -502,6 +502,15 @@ function journalItem(it) {
   return '<article class="jitem"><p class="jmeta">' + clock(it.at) + ' · ' + esc(it.label) + '</p>' +
     (it.prompt ? '<p class="jprompt">' + esc(it.prompt) + '</p>' : '') + '<div class="jtext">' + paras(it.body) + '</div></article>';
 }
+// One page of the journal. Today's page also has the writing box.
+function journalPage(day, items, no, compose = '') {
+  const d = new Date(day + 'T12:00'), isToday = day === today();
+  return '<section class="jpage' + (isToday ? ' today' : '') + '" aria-label="' + esc(d.toDateString()) + '">' + (isToday ? '<span class="jribbon" aria-hidden="true"></span>' : '') +
+    '<div class="jdate"><span>' + (isToday ? 'Today' : d.toLocaleDateString(undefined, { weekday: 'long' })) + '</span><h2>' + d.toLocaleDateString(undefined, { day: 'numeric', month: 'long' }) +
+    (d.getFullYear() !== new Date().getFullYear() ? ' ' + d.getFullYear() : '') + '</h2></div>' +
+    items.map(journalItem).join('') + compose + '<span class="jno">' + no + '</span></section>';
+}
+const JOURNAL_OPEN = 3; // pages shown before the archive
 async function openJournal() {
   const pg = pushPage('Journal', '<div class="journal" id="jBody"><div class="spinner" style="margin:60px auto"></div></div>');
   const body = pg.querySelector('#jBody');
@@ -511,25 +520,20 @@ async function openJournal() {
       API.journal(uid).catch((e) => { if (/journal/.test(String(e?.message))) { ready = false; return []; } throw e; })]);
   } catch (e) { fail(e); }
   const draw = () => {
-    const days = journalDays(answers, entries), first = days[days.length - 1][0];
-    const pageNo = (day) => Math.round((new Date(day + 'T12:00') - new Date(first + 'T12:00')) / 864e5) + 1;
-    const written = days.reduce((n, [, items]) => n + items.length, 0);
+    // Pages are numbered in the order they were written, the first one is page 1
+    const days = journalDays(answers, entries), order = new Map(days.map(([day], i) => [day, days.length - i]));
+    const pageNo = (day) => order.get(day);
+    const written = days.reduce((n, [, items]) => n + items.length, 0), older = days.slice(JOURNAL_OPEN);
     body.innerHTML = '<header class="jcover"><span class="label">Your journal</span><h1 class="largetitle">' + esc(me?.name ? low(me.name) + '’s pages' : 'Your pages') + '</h1>' +
       '<p class="label">' + written + ' entr' + (written === 1 ? 'y' : 'ies') + ' · only you can read it</p></header>' +
-      days.map(([day, items]) => {
-        const d = new Date(day + 'T12:00'), isToday = day === today();
-        return '<section class="jpage' + (isToday ? ' today' : '') + '" aria-label="' + esc(d.toDateString()) + '">' + (isToday ? '<span class="jribbon" aria-hidden="true"></span>' : '') +
-          '<div class="jdate"><span>' + (isToday ? 'Today' : d.toLocaleDateString(undefined, { weekday: 'long' })) + '</span><h2>' + d.toLocaleDateString(undefined, { day: 'numeric', month: 'long' }) +
-          (d.getFullYear() !== new Date().getFullYear() ? ' ' + d.getFullYear() : '') + '</h2></div>' +
-          items.map(journalItem).join('') +
-          (isToday ? '<div class="jcompose">' + (ready
-            ? '<div class="writebox"><label class="hide" for="jWrite">Write in today’s page</label><textarea id="jWrite" maxlength="4000" placeholder="' + (items.length ? 'Keep writing…' : 'Dear journal…') + '"></textarea>' + micButton('jMic') + '</div>' +
-              '<button class="primary" id="jAdd" disabled>Add to today’s page</button><p class="fine">Journal entries are just for you. They don’t count toward your three a day.</p>'
-            : '<p class="fine">Writing in the journal needs database update 0009.</p>') + '</div>' : '') +
-          '<span class="jno">' + pageNo(day) + '</span></section>';
-      }).join('');
+      days.slice(0, JOURNAL_OPEN).map(([day, items]) => journalPage(day, items, pageNo(day), day !== today() ? '' : '<div class="jcompose">' + (ready
+        ? '<div class="writebox"><label class="hide" for="jWrite">Write in today’s page</label><textarea id="jWrite" maxlength="4000" placeholder="' + (items.length ? 'Keep writing…' : 'Dear journal…') + '"></textarea>' + micButton('jMic') + '</div>' +
+          '<button class="primary" id="jAdd" disabled>Add to today’s page</button><p class="fine">Journal entries are just for you. They don’t count toward your three a day.</p>'
+        : '<p class="fine">Writing in the journal needs database update 0009.</p>') + '</div>')).join('') +
+      (older.length ? '<button class="jarchive" id="jArchive"><span class="tx"><b>Archive</b><span>' + older.length + ' older page' + (older.length === 1 ? '' : 's') + ', by date</span></span><span class="chev" aria-hidden="true">›</span></button>' : '');
+    const ab = body.querySelector('#jArchive'); if (ab) ab.onclick = () => openJournalArchive(older, pageNo);
     const ta = body.querySelector('#jWrite'); if (!ta) return;
-    const add = body.querySelector('#jAdd'), ok = () => { add.disabled = !ta.value.trim(); ta.style.height = 'auto'; ta.style.height = Math.max(120, ta.scrollHeight) + 'px'; };
+    const add = body.querySelector('#jAdd'), ok = () => { add.disabled = !ta.value.trim(); ta.style.height = 'auto'; ta.style.height = Math.max(110, ta.scrollHeight) + 'px'; };
     ta.oninput = ok;
     body.querySelector('#jMic').onclick = () => toggleDictation(ta, body.querySelector('#jMic'), ok);
     add.onclick = async () => {
@@ -540,6 +544,35 @@ async function openJournal() {
   };
   draw();
   pg._onPop = () => stopDictation();
+}
+// The archive: older pages listed by month, each with its date, how much was written and its first line
+function openJournalArchive(days, pageNo) {
+  const months = new Map();
+  days.forEach(([day, items], i) => {
+    const m = new Date(day + 'T12:00').toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+    if (!months.has(m)) months.set(m, []);
+    months.get(m).push({ day, items, i });
+  });
+  const pg = pushPage('Archive', '<div class="journal"><header class="jcover"><span class="label">Your journal</span><h1 class="largetitle">Archive</h1><p class="label">' + days.length + ' page' + (days.length === 1 ? '' : 's') + '</p></header>' +
+    [...months].map(([m, list]) => '<section class="jmonth" aria-label="' + esc(m) + '"><h2>' + esc(m) + '</h2>' + list.map(({ day, items, i }) => {
+      const d = new Date(day + 'T12:00'), firstLine = String(items[0]?.body || '').split('\n')[0];
+      return '<button class="jrow" data-i="' + i + '"><span class="jd"><b>' + d.getDate() + '</b><span>' + d.toLocaleDateString(undefined, { weekday: 'short' }) + '</span></span>' +
+        '<span class="tx"><span class="jfirst">' + esc(firstLine) + '</span><span class="jcount">' + items.length + ' entr' + (items.length === 1 ? 'y' : 'ies') + ' · page ' + pageNo(day) + '</span></span></button>';
+    }).join('') + '</section>').join('') + '</div>');
+  pg.querySelectorAll('[data-i]').forEach((b) => b.onclick = () => openJournalDay(days, +b.dataset.i, pageNo));
+}
+// One archived page, with the pages before and after it a tap away
+function openJournalDay(days, i, pageNo) {
+  const pg = pushPage('Journal', '<div class="journal" id="jDay"></div>');
+  const box = pg.querySelector('#jDay');
+  const show = (j) => {
+    i = j; const [day, items] = days[i];
+    box.innerHTML = journalPage(day, items, pageNo(day)) +
+      '<div class="jnav"><button class="secondary" data-to="' + (i + 1) + '"' + (i + 1 < days.length ? '' : ' disabled') + '>‹ Older</button>' +
+      '<button class="secondary" data-to="' + (i - 1) + '"' + (i > 0 ? '' : ' disabled') + '>Newer ›</button></div>';
+    box.querySelectorAll('[data-to]').forEach((b) => b.onclick = () => { show(+b.dataset.to); pg.querySelector('.scroll').scrollTo(0, 0); });
+  };
+  show(i);
 }
 
 // ---------------- Exercise sheet ----------------

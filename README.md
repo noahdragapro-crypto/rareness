@@ -90,7 +90,7 @@ The temple's soft vibration uses the Vibration API (Android); iPhones don't allo
 
 Daily answers are private (`supabase/migrations/0006_private_answers.sql`); only the AI reads them on the server.
 
-The **journal** (bottom of the Agenda) shows everything a member has written, a page per day like a book: only what they wrote: reflections, actions, practice writing, written check-ins and free journal entries. Past pages are read-only; today's page takes as many entries as they like, which don't count as tasks. Entries are private, never editable, and not sent to the AI (`supabase/migrations/0009_journal.sql`).
+The **journal** (bottom of the Agenda) shows everything a member has written, a page per day like a book: only what they wrote: reflections, actions, practice writing, written check-ins and free journal entries. The three latest pages show first, older ones are in an archive listed by month. Past pages are read-only; today's page takes as many entries as they like, which don't count as tasks. Entries are private, never editable, and not sent to the AI (`supabase/migrations/0009_journal.sql`).
 
 Dictation uses the browser's speech recognition. Inside the iPhone home-screen app Safari blocks it, so the mic button points to the keyboard's own microphone instead.
 
