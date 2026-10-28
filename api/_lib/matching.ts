@@ -9,7 +9,7 @@ const eligible = (p: Person) => !paywallOn() || Boolean(p.profile.paid_at);
 // With SAME_COUNTRY=on, members only see people from their own country, so only those pairs are scored.
 // Off by default for the friends test (see supabase/migrations/0003_friends_test.sql).
 const sameCountry = (a: Person, b: Person) => process.env.SAME_COUNTRY !== "on" || a.profile.country === b.profile.country;
-const lastActivity = (p: Person) => p.answers.reduce((m, a) => (a.created_at > m ? a.created_at : m), "");
+const lastActivity = (p: Person) => [...p.answers, ...p.practices].reduce((m, a) => (a.created_at > m ? a.created_at : m), "");
 
 async function pool<T>(items: T[], limit: number, deadline: number, fn: (item: T) => Promise<void>) {
   let i = 0;
@@ -25,7 +25,7 @@ async function pool<T>(items: T[], limit: number, deadline: number, fn: (item: T
 export async function refreshAura(person: Person) {
   let aura, summary;
   if (aiEnabled()) {
-    try { ({ aura, summary } = await computeAura(personCard(person.profile, person.answers))); } catch (e) { console.error("aura", e); }
+    try { ({ aura, summary } = await computeAura(personCard(person.profile, person.answers, person.practices))); } catch (e) { console.error("aura", e); }
   }
   if (!aura) return; // keep the previous aura; the basic fallback has no portrait to offer
   const { error } = await db().from("profiles").update({ aura, aura_summary: summary, aura_updated_at: new Date().toISOString() }).eq("id", person.profile.id);
@@ -38,8 +38,8 @@ async function scoreAndSave(a: Person, b: Person) {
   if (aiEnabled()) {
     try {
       const [ab, ba] = await Promise.all([
-        scorePair(personCard(a.profile, a.answers), personCard(b.profile, b.answers)),
-        scorePair(personCard(b.profile, b.answers), personCard(a.profile, a.answers)),
+        scorePair(personCard(a.profile, a.answers, a.practices), personCard(b.profile, b.answers, b.practices)),
+        scorePair(personCard(b.profile, b.answers, b.practices), personCard(a.profile, a.answers, a.practices)),
       ]);
       // One shared score per pair; each side keeps its own reason
       const score = Math.round((ab.score + ba.score) / 2);

@@ -1,6 +1,7 @@
 // Ora app: one page, three tabs (Agenda, Cloud, Chats) and a profile page behind the corner button, plus the sign-in,
 // onboarding and payment screens in the gate layer above them.
 import * as API from './api.js';
+import LIB from '../shared/practices.json';
 
 const $ = (s, r = document) => r.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -32,6 +33,7 @@ const ICON = {
   x: sv('<path d="M6 6l12 12M18 6L6 18"></path>'),
   more: sv('<circle cx="5" cy="12" r="1"></circle><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle>'),
   smile: sv('<circle cx="12" cy="12" r="9.5"></circle><path d="M8.5 14.2c.9 1.2 2.1 1.8 3.5 1.8s2.6-.6 3.5-1.8"></path><circle cx="9.2" cy="10" r=".6"></circle><circle cx="14.8" cy="10" r=".6"></circle>'),
+  guide: sv('<path d="M12 3.5c5 0 9 3.2 9 7.3s-4 7.3-9 7.3c-.9 0-1.8-.1-2.6-.3L5 20l1-3.5C4.2 15.2 3 13.1 3 10.8 3 6.7 7 3.5 12 3.5z"></path><circle cx="12" cy="10.8" r="2.6"></circle>'),
   mic: sv('<rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"></path>'),
   send: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"></path></svg>',
   lock: sv('<rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path>'),
@@ -54,7 +56,7 @@ const INTERESTS = [
 ];
 
 // ---------------- App state ----------------
-let uid = null, me = null, myAnswers = [], people = [], chatList = [], config = { paywall: false };
+let uid = null, me = null, myAnswers = [], myPractices = [], people = [], chatList = [], config = { paywall: false };
 const today = () => API.dayKey();
 const ageOf = (b) => (b ? Math.floor((Date.now() - new Date(b).getTime()) / 31557600000) : null);
 const nameAge = (p) => (p.name || 'Someone') + (p.age ? ', ' + p.age : '');
@@ -63,7 +65,11 @@ function rec(k = today()) {
   for (const a of myAnswers) if (a.day === k && r[a.kind] === false) r[a.kind] = a;
   return r;
 }
-const isDone = (k) => { const r = rec(k); return !!(r.q && r.t && r.m); };
+// A day counts when three things are done: the daily tasks and practices from the library, in any mix
+// (the temple counts once, as the Meditate task)
+const practicedOn = (k) => [...new Set(myPractices.filter((p) => p.day === k && p.exercise !== 'temple').map((p) => p.exercise))];
+const dayCount = (k = today()) => { const r = rec(k); return (r.q ? 1 : 0) + (r.t ? 1 : 0) + (r.m ? 1 : 0) + practicedOn(k).length; };
+const isDone = (k) => dayCount(k) >= 3;
 const todayDone = () => isDone(today());
 function streak() {
   const d = new Date(); let n = 0;
@@ -72,7 +78,7 @@ function streak() {
   return n;
 }
 function bestStreak() {
-  const days = [...new Set(myAnswers.filter((a) => a.kind !== 'signup').map((a) => a.day))].filter(isDone).sort();
+  const days = [...new Set(myAnswers.filter((a) => a.kind !== 'signup').map((a) => a.day).concat(myPractices.map((p) => p.day)))].filter(isDone).sort();
   let best = 0, run = 0, prev = null;
   for (const k of days) {
     const d = new Date(k + 'T12:00');
@@ -81,7 +87,18 @@ function bestStreak() {
   }
   return best;
 }
-const totalDone = () => myAnswers.filter((a) => a.kind !== 'signup').length;
+const totalDone = () => myAnswers.filter((a) => a.kind !== 'signup').length + myPractices.filter((p) => p.exercise !== 'temple').length;
+
+// ---------------- Practice library ----------------
+const PR = LIB.practices, PRACTICE = Object.fromEntries(PR.map((x) => [x.id, x]));
+const sessionsOf = (id) => myPractices.filter((p) => p.exercise === id).length;
+// Levels rise with sessions: Seed, Sprout (3), Bloom (10), Radiance (25)
+const levelFor = (n) => LIB.levels.reduce((l, x, i) => (n >= x.from ? i + 1 : l), 1);
+const levelOf = (id) => levelFor(sessionsOf(id));
+const levelName = (l) => LIB.levels[l - 1].name;
+const levelDots = (l) => '<span class="ldots" aria-hidden="true">' + [1, 2, 3, 4].map((i) => '<i class="' + (i <= l ? 'on' : '') + '"></i>').join('') + '</span>';
+const practiceLen = (x, l) => (x.type === 'write' ? x.chars[l - 1] + '+ characters' : x.mins[l - 1] + ' min');
+const typeLabel = (x) => ({ sit: 'Guided', write: 'Writing', do: 'Do it' }[x.type]);
 
 // ---------------- Bubbles ----------------
 function ringGrad(w) {
@@ -179,9 +196,9 @@ function updateLocks() {
         '<button class="primary" data-finish>Finish my profile</button></div>';
       el.querySelector('[data-finish]').onclick = () => finishSetup();
     } else if (locked) {
-      const r = rec(), n = (r.q ? 1 : 0) + (r.t ? 1 : 0) + (r.m ? 1 : 0);
-      el.innerHTML = '<div class="lock-card"><span style="width:24px;height:24px;display:block">' + ICON.lock + '</span><h2 class="h2">Your ' + what + ' open after today’s exercises</h2>' +
-        '<p class="muted" style="margin:0;font-size:14.5px;line-height:1.45">' + n + ' of 3 done. Each one takes a few minutes and tunes who floats close to you.</p>' +
+      const n = Math.min(3, dayCount());
+      el.innerHTML = '<div class="lock-card"><span style="width:24px;height:24px;display:block">' + ICON.lock + '</span><h2 class="h2">Your ' + what + ' open after three practices today</h2>' +
+        '<p class="muted" style="margin:0;font-size:14.5px;line-height:1.45">' + n + ' of 3 done. Daily tasks and practices from the Meditation library both count, and each one tunes who floats close to you.</p>' +
         '<button class="primary" data-go="0">Go to Agenda</button></div>';
       el.querySelector('[data-go]').onclick = () => goTab(0);
     }
@@ -377,7 +394,7 @@ function todayTasks(off = 0) {
 const dimLabel = (k) => DIMS[dimIndex(k)]?.label || '';
 function renderAgenda() {
   const r = rec(), tasks = todayTasks();
-  const n = tasks.filter((t) => r[t.k]).length, st = streak();
+  const n = Math.min(3, dayCount()), st = streak(), done3 = practicedOn(today());
   const days = []; for (let i = 6; i >= 0; i--) { const d = new Date(); d.setDate(d.getDate() - i); days.push(d); }
   const week = days.map((d, i) => {
     const done = isDone(API.dayKey(d)), isToday = i === 6;
@@ -389,15 +406,18 @@ function renderAgenda() {
       '<div class="head"><div><div class="big">' + st + '</div><div class="label" style="margin-top:4px">day streak</div></div><div class="label" style="text-align:right">best ' + Math.max(bestStreak(), st) + '<br>' + totalDone() + ' exercises</div></div>' +
       '<div class="week">' + week + '</div>' +
       '<div style="display:flex;flex-direction:column;gap:6px"><div class="head" style="font-size:13.5px"><span>' + n + ' of 3 today</span><span class="muted">' + (n === 3 ? 'Streak saved' : (3 - n) + ' to go') + '</span></div>' +
-      '<div class="prog">' + tasks.map((t) => '<span class="' + (r[t.k] ? 'on' : '') + '"></span>').join('') + '</div></div>' +
-      (n === 3 ? '<button class="primary" id="openCloud">Open the Cloud</button>' : '<p class="muted" style="margin:0;font-size:13px;line-height:1.45">Finish all three to unlock the Cloud and your chats. Miss a day and they lock again.</p>') +
+      '<div class="prog">' + [0, 1, 2].map((i) => '<span class="' + (i < n ? 'on' : '') + '"></span>').join('') + '</div></div>' +
+      (n === 3 ? '<button class="primary" id="openCloud">Open the Cloud</button>' : '<p class="muted" style="margin:0;font-size:13px;line-height:1.45">Do three today, from the tasks below or from the Meditation library, to unlock the Cloud and your chats. Miss a day and they lock again.</p>') +
     '</section>' +
+    suggestionCard() +
     '<section class="section" aria-label="Today"><h2 class="h2">Today</h2><div style="display:flex;flex-direction:column;gap:4px">' +
       tasks.map((t, i) => '<button class="task' + (r[t.k] ? ' done' : '') + '" data-task="' + t.k + '">' +
         '<span class="ic">' + t.icon + '</span>' +
         '<span class="tx"><em>' + (i + 1) + ' · ' + dimLabel(t.dim) + '</em><b>' + t.title + '</b><span>' + esc(t.sub) + '</span></span>' +
         '<span class="st">' + (r[t.k] ? ICON.check : '') + '</span></button>').join('') +
-    '</div></section>';
+    '</div></section>' +
+    (done3.length ? '<section class="section" aria-label="Practised today"><h2 class="h2">Practised today</h2><div style="display:flex;flex-direction:column;gap:4px">' +
+      done3.map((id) => practiceRow(PRACTICE[id])).join('') + '</div></section>' : '');
   document.querySelectorAll('[data-task]').forEach((b) => b.onclick = () => {
     const t = tasks.find((x) => x.k === b.dataset.task);
     if (t.k === 'm') { goTab(TAB.meditation); return; } // the temple is open any time, even after today's session
@@ -405,6 +425,7 @@ function renderAgenda() {
     openSheet(t);
   });
   const oc = $('#openCloud'); if (oc) oc.onclick = () => goTab(TAB.cloud);
+  wirePracticeLinks($('#agendaBody'));
 }
 
 // ---------------- Exercise sheet ----------------
@@ -452,32 +473,192 @@ async function complete(t, data, msg, btn) {
 // ---------------- Meditation: the page, the temple, and present bubbles ----------------
 // Focus bubbles: the first within 45 seconds of opening the app, then one every 10 to 12 minutes
 const FOCUS_FIRST = [20, 45], FOCUS_EVERY = [600, 720];
+let libCat = '';
 function renderMeditation() {
   const box = $('#medBody'); if (!box) return;
-  const t = todayTasks().find((x) => x.k === 'm'), done = Boolean(rec().m), mins = t.mins;
+  const t = todayTasks().find((x) => x.k === 'm'), done = Boolean(rec().m), mins = t.mins, n = Math.min(3, dayCount());
+  const list = PR.filter((x) => !libCat || x.cat === libCat);
   box.innerHTML =
-    '<header style="display:flex;flex-direction:column;gap:6px"><span class="brand">Ora</span><h1 class="largetitle">Meditation</h1><span class="label">Be here, now.</span></header>' +
+    '<header style="display:flex;flex-direction:column;gap:6px"><span class="brand">Ora</span><h1 class="largetitle">Meditation</h1><span class="label">' + n + ' of 3 for today · ' + PR.length + ' practices</span></header>' +
+    suggestionCard() +
     '<section class="temple-card" aria-label="The temple">' +
       '<div class="temple-mini" aria-hidden="true">' + crackSVG() + '</div>' +
-      '<div style="display:flex;flex-direction:column;gap:6px"><h2 class="h2" style="color:#fff">The temple</h2>' +
-      '<p style="margin:0;color:rgba(255,255,255,.7);font-size:14.5px;line-height:1.45">A dark, quiet room. Your phone hums softly the whole time you stay. Today’s session is <b style="color:#fff;font-weight:500">' + mins + ' minutes</b>.</p></div>' +
+      '<div style="display:flex;flex-direction:column;gap:6px"><h2 class="h2" style="color:#fff">The temple · today’s meditation</h2>' +
+      '<p style="margin:0;color:rgba(255,255,255,.7);font-size:14.5px;line-height:1.45">' + (done ? 'Done for today. The temple stays open whenever you need it.' : 'A dark, quiet room with soft music. Today’s session is <b style="color:#fff;font-weight:500">' + mins + ' minutes</b>.') + '</p></div>' +
       '<button class="primary light" id="enterTemple">Enter the temple</button>' +
     '</section>' +
-    (done ? '<p class="label" style="text-align:center;margin:0">Today’s meditation is done. The temple stays open whenever you need it.</p>'
-      : '<button class="link" id="logMed" style="align-self:center">I already meditated today, log it</button>') +
-    '<section class="section" aria-label="How meditation works"><h2 class="h2">How meditation works here</h2>' +
-      '<p class="explain">Every day there’s one meditation session, between 7 and 15 minutes depending on the day. Sit comfortably, close your eyes, and follow your breath in the temple. When your mind wanders, notice it, and come back to the breath. That’s the whole practice.</p>' +
-      '<p class="explain">When your session ends, it counts as one of today’s three tasks on your Agenda. Doing all three keeps your streak and opens the Cloud and your chats for the day.</p></section>' +
+    '<section class="section" aria-label="Library"><h2 class="h2">Library</h2>' +
+      '<div class="catrow" role="tablist">' + [''].concat(LIB.categories).map((c) => '<button role="tab" aria-selected="' + (c === libCat) + '" data-cat="' + esc(c) + '">' + esc(c || 'All') + '</button>').join('') + '</div>' +
+      '<div style="display:flex;flex-direction:column;gap:4px">' + list.map(practiceRow).join('') + '</div></section>' +
+    '<section class="section" aria-label="How practice works"><h2 class="h2">How practice works</h2>' +
+      '<p class="explain">Every practice has four levels: ' + LIB.levels.map((l) => l.name).join(', ') + '. You move up after ' + LIB.levels.slice(1).map((l) => l.from).join(', ') + ' sessions, and sessions grow a little deeper at each level.</p>' +
+      '<p class="explain">Three a day, from your daily tasks or from this library, opens the Cloud and your chats. The more you practise, the more your aura reflects who you really are, and the better your matches. After each practice, one short question helps us understand you; only our AI reads your answers.</p>' +
+      '<p class="explain">People you’ve bumped into can see which practices you do most, and join you.</p></section>' +
     '<section class="section" aria-label="Focus bubbles"><h2 class="h2">Focus bubbles</h2>' +
       '<div style="display:flex;gap:14px;align-items:center"><div style="flex:none">' + bubbleHTML({ w: [1, 1, 1, 1, 1, 1], clear: true }, 64) + '</div>' +
-      '<p class="explain" style="margin:0">Soon after you open Ora, and then every ten minutes or so, a bubble floats up over whatever you’re doing. Pop it. It’s a small reminder that you’re here, in the present. It’s part of the practice.</p></div></section>' +
-    '<section class="section" aria-label="How your aura works"><h2 class="h2">How your aura works</h2>' +
-      '<p class="explain">Your aura is six colours: ' + DIMS.map((d) => d.label.toLowerCase()).join(', ') + '. Our AI reads your sign-up answers and your daily steps, and shows how strongly each one runs through you.</p>' +
-      '<p class="explain">The same colours ring everyone in the Cloud. On someone else’s bubble they show what you share, and the more you share, the closer and bigger they float.</p>' +
-      '<p class="explain">Your daily answers are private. Nobody else ever sees them; they only shape your aura.</p></section>';
+      '<p class="explain" style="margin:0">Soon after you open Ora, and then every ten minutes or so, a bubble floats up over whatever you’re doing. Pop it: you’re here, now.</p></div></section>';
   box.querySelector('#enterTemple').onclick = () => openTemple();
-  const lg = box.querySelector('#logMed');
-  if (lg) lg.onclick = async () => { await complete(t, { minutes: mins, timed: false }, 'Logged. Well done.', lg); renderMeditation(); };
+  box.querySelectorAll('[data-cat]').forEach((b) => b.onclick = () => { libCat = b.dataset.cat; renderMeditation(); });
+  wirePracticeLinks(box);
+}
+function practiceRow(x) {
+  const l = levelOf(x.id), doneToday = myPractices.some((p) => p.exercise === x.id && p.day === today());
+  return '<button class="task prow' + (doneToday ? ' done' : '') + '" data-practice="' + x.id + '"><span class="tx"><em>' + esc(x.cat) + ' · ' + typeLabel(x) + ' · ' + practiceLen(x, l) + '</em><b>' + esc(x.name) + '</b>' +
+    '<span class="plevel">' + levelDots(l) + levelName(l) + '</span></span><span class="st">' + (doneToday ? ICON.check : '') + '</span></button>';
+}
+function wirePracticeLinks(root) { root.querySelectorAll('[data-practice]').forEach((b) => b.onclick = () => openPractice(b.dataset.practice)); root.querySelectorAll('[data-guide]').forEach((b) => b.onclick = () => openGuide()); }
+
+// ---------------- One practice: its page, then the guided room, the writing page or the action ----------------
+function openPractice(id) {
+  const x = PRACTICE[id]; if (!x) return;
+  const n = sessionsOf(id), l = levelFor(n), next = LIB.levels[l];
+  const body = '<div class="stack">' +
+    '<header style="display:flex;flex-direction:column;gap:6px"><span class="label">' + esc(x.cat) + ' · ' + typeLabel(x) + '</span><h1 class="largetitle">' + esc(x.name) + '</h1></header>' +
+    '<section class="box" style="display:flex;flex-direction:column;gap:8px" aria-label="Your level"><div class="head"><span class="plevel" style="font-size:15px">' + levelDots(l) + levelName(l) + '</span><span class="label">' + n + ' session' + (n === 1 ? '' : 's') + '</span></div>' +
+      '<p class="label" style="margin:0;font-size:13.5px">' + (next ? (next.from - n) + ' more to reach ' + next.name + '.' : 'The highest level. Beautiful.') + ' This level: ' + practiceLen(x, l) + '.</p></section>' +
+    '<p class="explain">' + esc(x.about) + '</p>' +
+    '<section class="section" aria-label="How"><h2 class="h2">How</h2><ol class="steps-list">' + x.steps.map((st) => '<li>' + esc(st) + '</li>').join('') + '</ol></section>' +
+    '<button class="primary" id="startPr">' + (x.type === 'write' ? 'Start writing' : x.type === 'do' ? 'I’m doing it' : 'Begin · ' + x.mins[l - 1] + ' min') + '</button>' +
+    '</div>';
+  const pg = pushPage(x.name, body);
+  pg.querySelector('#startPr').onclick = () => {
+    if (x.type === 'sit') openTemple({ practice: x, mins: x.mins[l - 1], cues: x.cues });
+    else if (x.type === 'write') openWriting(x, l);
+    else openDoing(x, l);
+  };
+}
+function openWriting(x, l) {
+  const min = x.chars[l - 1];
+  const pg = pushPage(x.name, '<div class="stack"><p class="label">' + esc(x.name) + ' · ' + levelName(l) + '</p><h1 class="largetitle" style="font-size:34px">' + esc(x.prompt) + '</h1>' +
+    '<ul class="hintlist">' + x.steps.map((st) => '<li>' + esc(st) + '</li>').join('') + '</ul>' +
+    '<label class="hide" for="prWrite">' + esc(x.prompt) + '</label><textarea id="prWrite" class="bigwrite" maxlength="4000" placeholder="' + esc(x.prompt) + '"></textarea>' +
+    '<p class="fine" id="prCount"></p><button class="primary" id="prDone" disabled>Done</button><p class="fine" style="text-align:center">Private. Only our AI reads it, to understand you better.</p></div>');
+  const ta = pg.querySelector('#prWrite'), bt = pg.querySelector('#prDone'), cnt = pg.querySelector('#prCount');
+  const ok = () => { const n = ta.value.trim().length; bt.disabled = n < min; cnt.textContent = n < min ? (min - n) + ' more characters for this level' : 'Ready when you are'; };
+  ta.oninput = ok; ok(); setTimeout(() => ta.focus({ preventScroll: true }), 450);
+  bt.onclick = async () => { bt.disabled = true; const r = await recordPractice(x, { level: l, answer: { entry: ta.value.trim() } }); if (r) { popPage(); popPage(); } else bt.disabled = false; };
+}
+function openDoing(x, l) {
+  const pg = pushPage(x.name, '<div class="stack"><p class="label">' + esc(x.name) + ' · ' + levelName(l) + ' · about ' + x.mins[l - 1] + ' min</p><h1 class="largetitle" style="font-size:34px">' + esc(x.about) + '</h1>' +
+    '<ol class="steps-list">' + x.steps.map((st) => '<li>' + esc(st) + '</li>').join('') + '</ol>' +
+    '<label class="lbl" for="prNote">A note (optional)<textarea id="prNote" maxlength="600" placeholder="What did you do?"></textarea></label>' +
+    '<button class="primary" id="prDone">I did it</button></div>');
+  const bt = pg.querySelector('#prDone');
+  bt.onclick = async () => { bt.disabled = true; const note = pg.querySelector('#prNote').value.trim(); const r = await recordPractice(x, { level: l, minutes: x.mins[l - 1], answer: note ? { entry: note } : {} }); if (r) { popPage(); popPage(); } else bt.disabled = false; };
+}
+// Save a finished session, celebrate a level-up, then ask the short check-in question
+async function recordPractice(x, { level, minutes = null, answer = {} }) {
+  const wasDone = todayDone(), before = levelOf(x.id);
+  let row;
+  try { row = await API.savePractice(uid, { exercise: x.id, level, minutes, answer }); }
+  catch (e) {
+    fail(/practices/.test(String(e?.message)) ? { message: 'Practices aren’t switched on yet (database update 0007).' } : e);
+    return null;
+  }
+  myPractices.unshift(row);
+  renderAgenda(); renderMeditation(); updateLocks();
+  const after = levelOf(x.id);
+  setTimeout(() => checkIn(x, row, answer), 450);
+  if (after > before) toast('Level up: ' + levelName(after) + ' in ' + x.name);
+  else if (!wasDone && todayDone()) toast('Three today. The Cloud is open.');
+  else toast(x.name + ' done');
+  if (!wasDone && todayDone() && !matching) {
+    matching = true;
+    API.api('match').then(loadCloud).then(() => refreshMe()).catch(console.error).finally(() => { matching = false; });
+  }
+  return row;
+}
+// The check-in: a small card from the bottom, never full screen. Writing, cards or a selection.
+function checkIn(x, row, answer) {
+  const q = x.after; if (!q) return;
+  const el = document.createElement('section');
+  el.className = 'checkin glass'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'A short question');
+  const multi = q.type === 'select' && q.multi;
+  el.innerHTML = '<p class="label">One question · ' + esc(x.name) + '</p><h2>' + esc(q.q) + '</h2>' +
+    (q.type === 'write' ? '<label class="hide" for="ciText">' + esc(q.q) + '</label><textarea id="ciText" maxlength="600" placeholder="A few words"></textarea>'
+      : '<div class="' + (q.type === 'cards' ? 'cicards' : 'chips') + '">' + q.opts.map((o) => '<button type="button" class="' + (q.type === 'cards' ? 'cicard' : 'chip') + '" data-ci="' + esc(o) + '" aria-pressed="false">' + esc(o) + '</button>').join('') + '</div>') +
+    '<div class="ci-actions"><button class="link" id="ciSkip" style="color:var(--ink2)">Skip</button><button class="primary" id="ciSave" disabled>Save</button></div>';
+  $('#app').appendChild(el);
+  requestAnimationFrame(() => el.classList.add('on'));
+  const save = el.querySelector('#ciSave'), picked = new Set();
+  const close = () => { el.classList.remove('on'); setTimeout(() => el.remove(), 400); };
+  el.querySelector('#ciSkip').onclick = close;
+  const ta = el.querySelector('#ciText');
+  if (ta) { ta.oninput = () => { save.disabled = ta.value.trim().length < 2; }; }
+  el.querySelectorAll('[data-ci]').forEach((b) => b.onclick = () => {
+    const v = b.dataset.ci;
+    if (!multi) picked.clear();
+    if (picked.has(v)) picked.delete(v); else picked.add(v);
+    el.querySelectorAll('[data-ci]').forEach((o) => { const on = picked.has(o.dataset.ci); o.classList.toggle('on', on); o.setAttribute('aria-pressed', on); });
+    save.disabled = !picked.size;
+  });
+  save.onclick = async () => {
+    save.disabled = true;
+    const resp = ta ? { text: ta.value.trim() } : multi ? { choices: [...picked] } : { choice: [...picked][0] };
+    try { await API.practiceAnswer(row.id, { ...answer, ...resp, q: q.q }); toast('Thank you. Your aura is listening.'); } catch (e) { fail(e); }
+    close();
+  };
+}
+
+// ---------------- Today's suggestion and the Ora guide chat ----------------
+let suggestion = null;
+const guideButton = () => '<button class="guidebtn glass" data-guide aria-label="Ask the Ora guide">' + ICON.guide + '<span>Ask Ora</span></button>';
+function suggestionCard() {
+  const s = suggestion && PRACTICE[suggestion.exercise];
+  if (!s) return '';
+  return '<section class="suggest" aria-label="For you today"><div class="head"><span class="label">For you today</span>' + guideButton() + '</div>' +
+    '<b>' + esc(s.name) + '</b><p>' + esc(suggestion.reason) + '</p>' +
+    '<button class="primary" data-practice="' + s.id + '">' + (myPractices.some((p) => p.exercise === s.id && p.day === today()) ? 'Again' : 'Start') + ' · ' + practiceLen(s, levelOf(s.id)) + '</button></section>';
+}
+async function loadSuggestion() {
+  const key = 'ora.suggest.' + uid;
+  try { const c = JSON.parse(store.get(key) || 'null'); if (c && c.day === today() && PRACTICE[c.exercise]) { suggestion = c; return; } } catch (e) {}
+  try {
+    const r = await API.guideSuggest();
+    suggestion = { day: today(), exercise: r.exercise, reason: r.reason };
+  } catch (e) {
+    // Offline or not set up: something not done lately, different each day
+    const pool = PR.filter((x) => !myPractices.some((p) => p.exercise === x.id && p.day >= API.dayKey(new Date(Date.now() - 3 * 864e5))));
+    const x = (pool.length ? pool : PR)[dayNum() % (pool.length || PR.length)];
+    suggestion = { day: today(), exercise: x.id, reason: x.about };
+  }
+  store.set(key, JSON.stringify(suggestion));
+  // The guide also sends it in the chat, once a day
+  const msgs = guideMsgs();
+  if (!msgs.some((m) => m.day === today() && m.suggest)) {
+    msgs.push({ role: 'assistant', day: today(), suggest: suggestion.exercise, content: 'For today, I’d suggest ' + PRACTICE[suggestion.exercise].name + '. ' + suggestion.reason });
+    saveGuide(msgs);
+  }
+  renderAgenda(); renderMeditation(); renderChats();
+}
+const guideKey = () => 'ora.guide.' + uid;
+function guideMsgs() { try { return JSON.parse(store.get(guideKey()) || '[]'); } catch (e) { return []; } }
+function saveGuide(m) { store.set(guideKey(), JSON.stringify(m.slice(-60))); }
+function openGuide() {
+  const pg = pushPage('Ora guide', '<div class="threadhead" style="cursor:default"><span class="guideava">' + ICON.guide + '</span><b style="font-family:var(--serif);font-size:24px;font-weight:400">Ora guide</b><span class="label">Ask about meditation, your practice, your aura</span></div><div class="thread" id="gThread"></div><div style="height:80px"></div>',
+    { footer: '<form class="composer glass" id="gComposer"><label for="gIn" class="hide">Message the guide</label><input id="gIn" autocomplete="off" placeholder="Ask the guide" maxlength="1000"><button class="send" id="gSend" aria-label="Send" disabled>' + ICON.send + '</button></form>' });
+  const th = pg.querySelector('#gThread'), sc = pg.querySelector('.scroll'), inp = pg.querySelector('#gIn'), sb = pg.querySelector('#gSend');
+  let msgs = guideMsgs();
+  if (!msgs.length) msgs.push({ role: 'assistant', day: today(), content: 'Hello' + (me?.name ? ' ' + me.name : '') + '. I’m your Ora guide. Ask me anything about meditation, the practices, or how your aura and matches work.' });
+  const draw = (typing) => {
+    th.innerHTML = msgs.map((m) => '<div class="msg ' + (m.role === 'user' ? 'me' : 'them') + '">' + esc(m.content) +
+      (m.suggest && PRACTICE[m.suggest] ? '<button class="primary small" data-practice="' + m.suggest + '">Start ' + esc(PRACTICE[m.suggest].name) + '</button>' : '') + '</div>').join('') +
+      (typing ? '<div class="msg them typing"><i></i><i></i><i></i></div>' : '');
+    sc.scrollTop = sc.scrollHeight; wirePracticeLinks(th);
+  };
+  draw();
+  inp.oninput = () => { sb.disabled = !inp.value.trim(); };
+  pg.querySelector('#gComposer').onsubmit = async (e) => {
+    e.preventDefault();
+    const x = inp.value.trim(); if (!x) return;
+    inp.value = ''; sb.disabled = true;
+    msgs.push({ role: 'user', day: today(), content: x }); saveGuide(msgs); draw(true);
+    try {
+      const r = await API.guideChat(msgs.map((m) => ({ role: m.role, content: m.content })));
+      msgs.push({ role: 'assistant', day: today(), content: r.reply });
+    } catch (err) { msgs.push({ role: 'assistant', day: today(), content: err.message || 'I couldn’t answer just now. Try again in a moment.' }); }
+    saveGuide(msgs); draw();
+  };
 }
 
 // A crack of light down the middle of a dark wall. Drawn from a seeded random walk so it looks
@@ -528,41 +709,52 @@ function crackSVG() {
 }
 
 // The temple: black screen, a breathing crack of light, and a soft, slow vibration for as long as it's open
-function openTemple() {
+// The temple room: black, the breathing crack, soft music and vibration. With no options it's today's
+// meditation (the Meditate task); with a practice it runs that practice's cues for its length.
+function openTemple(opts = {}) {
+  const daily = !opts.practice, med = todayTasks().find((x) => x.k === 'm');
+  const mins = daily ? med.mins : opts.mins, cues = opts.cues || [['Breathe in', 4], ['Breathe out', 4]];
   const el = document.createElement('section');
-  el.className = 'temple'; el.setAttribute('aria-label', 'The temple');
+  el.className = 'temple'; el.setAttribute('aria-label', daily ? 'The temple' : opts.practice.name);
   const soundOn = store.get('ora.templeSound') !== 'off';
-  el.innerHTML = '<button class="temple-leave" aria-label="Leave the temple">Leave</button>' +
+  el.innerHTML = '<button class="temple-leave" aria-label="Leave">Leave</button>' +
     '<button class="temple-sound" aria-pressed="' + soundOn + '">' + (soundOn ? 'Sound on' : 'Sound off') + '</button>' + crackSVG() +
-    '<p class="temple-time">00:00</p><p class="temple-note" aria-live="polite">Settle in. Let your eyes close.</p>';
+    '<p class="temple-time">00:00 · ' + mins + ' min</p><p class="temple-note" aria-live="polite">' + (daily ? 'Settle in. Let your eyes close.' : esc(opts.practice.name) + '. Settle in.') + '</p>';
   $('#app').appendChild(el);
   requestAnimationFrame(() => el.classList.add('in'));
-  const t0 = Date.now(), med = todayTasks().find((x) => x.k === 'm');
-  let counted = Boolean(rec().m), lock = null;
+  const t0 = Date.now();
+  let counted = daily ? Boolean(rec().m) : false, finished = false, pendingDone = false, lock = null, cueT = null;
   try { navigator.wakeLock?.request('screen').then((l) => { lock = l; }).catch(() => {}); } catch (e) {}
   const hum = startHum();
   const music = startMusic(soundOn);
   const sb = el.querySelector('.temple-sound');
   sb.onclick = () => { const on = sb.getAttribute('aria-pressed') !== 'true'; sb.setAttribute('aria-pressed', on); sb.textContent = on ? 'Sound on' : 'Sound off'; store.set('ora.templeSound', on ? 'on' : 'off'); music.mute(!on); };
-  // Breathe with the light: in as it brightens, out as it fades (the glow runs on an 8-second cycle)
+  // The guidance: each cue for its own number of seconds, round and round
   const note = el.querySelector('.temple-note');
   const say = (txt) => { note.style.opacity = 0; setTimeout(() => { note.textContent = txt; note.style.opacity = 1; }, 400); };
-  let breaths = 0;
-  const breath = setInterval(() => { if (!counted || breaths < 2) say(breaths++ % 2 ? 'Breathe out' : 'Breathe in'); }, 4000);
+  let ci = 0;
+  const nextCue = () => { if (finished) return; const [txt, sec] = cues[ci++ % cues.length]; say(txt); cueT = setTimeout(nextCue, sec * 1000); };
+  cueT = setTimeout(nextCue, 3500);
   const tick = setInterval(() => {
     const sec = Math.floor((Date.now() - t0) / 1000);
-    el.querySelector('.temple-time').textContent = String(Math.floor(sec / 60)).padStart(2, '0') + ':' + String(sec % 60).padStart(2, '0');
-    if (!counted && sec >= med.mins * 60) {
-      counted = true;
-      clearInterval(breath); say('Your ' + med.mins + ' minutes are done. Stay as long as you like.');
-      complete(med, { minutes: med.mins, timed: true, temple: true }, med.mins + ' calm minutes. Well done.');
+    el.querySelector('.temple-time').textContent = String(Math.floor(sec / 60)).padStart(2, '0') + ':' + String(sec % 60).padStart(2, '0') + ' · ' + mins + ' min';
+    if (!finished && sec >= mins * 60) {
+      finished = true; clearTimeout(cueT);
+      say('Your ' + mins + ' minutes are done. Stay as long as you like.');
+      if (daily) {
+        if (!counted) complete(med, { minutes: mins, timed: true, temple: true }, mins + ' calm minutes. Well done.');
+        API.savePractice(uid, { exercise: 'temple', level: levelOf('temple'), minutes: mins }).then((row) => { myPractices.unshift(row); renderMeditation(); }).catch(() => {});
+      } else pendingDone = true;
     }
   }, 1000);
   const leave = () => {
-    clearInterval(tick); clearInterval(breath); hum.stop(); music.stop();
+    clearInterval(tick); clearTimeout(cueT); hum.stop(); music.stop();
     try { lock?.release(); } catch (e) {}
     document.removeEventListener('visibilitychange', onVis);
     el.classList.remove('in'); setTimeout(() => el.remove(), 600);
+    // A practice is saved when you leave after its time is up, so the check-in appears on the app, not in the dark
+    if (pendingDone) { popPage(true); recordPractice(opts.practice, { level: levelOf(opts.practice.id), minutes: mins }); }
+    else if (!daily && !finished) toast('Come back to it anytime');
   };
   const onVis = () => { if (document.hidden) { hum.stop(); music.pause(); } else { hum.start(); music.resume(); } };
   document.addEventListener('visibilitychange', onVis);
@@ -1148,6 +1340,7 @@ async function openPerson(b, opts = {}) {
         '<p class="label" style="font-size:13px;line-height:1.4">These are the colours around ' + esc(b.name || 'their') + '’s bubble.</p>' +
       '</section>') +
       '<section class="section" aria-label="Interests" id="theirInterests"' + ((b.interests || []).length ? '' : ' hidden') + '><h2 class="h2">Interests</h2><div class="facts">' + (b.interests || []).map((x) => '<span class="fact">' + esc(x) + '</span>').join('') + '</div></section>' +
+      '<section class="section" aria-label="Their practice" id="theirPractice" hidden></section>' +
       '<div id="bumpZone" style="display:flex;flex-direction:column;gap:8px">' + bumpZone(b) + '</div>' +
       '<div class="menu-row" style="justify-content:center"><button class="link" data-report style="color:var(--ink2)">Report</button><button class="link" data-block style="color:var(--ink2)">Block</button></div>' +
     '</div>';
@@ -1155,6 +1348,14 @@ async function openPerson(b, opts = {}) {
   wireBump(pg, b, opts);
   pg.querySelector('[data-block]').onclick = (e) => blockPerson(b, e.currentTarget);
   pg.querySelector('[data-report]').onclick = () => openReport(b);
+  // Once you've bumped into each other, you can see what they practise most and join them
+  if (b.chatId) API.practiceSummary(b.id).then((rows) => {
+    const box = pg.querySelector('#theirPractice'), list = rows.filter((r) => PRACTICE[r.exercise]);
+    if (!box || !list.length) return;
+    box.innerHTML = '<h2 class="h2">What ' + esc(b.name || 'they') + ' practises</h2><div style="display:flex;flex-direction:column;gap:4px">' +
+      list.map((r) => { const x = PRACTICE[r.exercise], l = levelFor(r.sessions); return '<button class="task prow" data-practice="' + x.id + '"><span class="tx"><em>' + esc(x.cat) + ' · ' + r.sessions + ' session' + (r.sessions === 1 ? '' : 's') + '</em><b>' + esc(x.name) + '</b><span class="plevel">' + levelDots(l) + levelName(l) + '</span></span><span class="joinlbl">Join</span></button>'; }).join('') + '</div>';
+    box.hidden = false; wirePracticeLinks(box);
+  }).catch(console.error);
   API.profileDetails(b.id).then((d) => {
     if (!d) return;
     const bio = pg.querySelector('#theirBio'), ints = pg.querySelector('#theirInterests');
@@ -1228,6 +1429,7 @@ function renderChats() {
   badge.hidden = !unread; badge.textContent = unread > 9 ? '9+' : unread;
   $('.tab[data-tab="' + TAB.chats + '"]').setAttribute('aria-label', unread ? 'Chats, ' + unread + ' unread' : 'Chats');
   $('#chatsBody').innerHTML = '<header style="display:flex;flex-direction:column;gap:6px"><span class="brand">Ora</span><h1 class="largetitle">Chats</h1><p class="label" style="font-size:14px;line-height:1.45">A chat opens only when you both bump each other. Nobody sees who bumped them.</p></header>' +
+    guideRow() +
     (chatList.length ? '<section aria-label="Conversations" class="hair">' + chatList.map((c) => {
       const p = c.other, last = c.last;
       return '<button class="crow' + (c.unread ? ' unread' : '') + '" data-thread="' + c.id + '">' + bubbleHTML({ w: dimsToW(c.match?.dims), photo: API.photoUrl(p.photo_path) }, 58) +
@@ -1237,7 +1439,14 @@ function renderChats() {
     : '<div class="empty">' + bubbleHTML({ w: [1, 1, 1, 1, 1, 1], plain: true }, 110) + '<h2 class="h2">No chats yet</h2><p class="label" style="font-size:14.5px;line-height:1.45;max-width:280px">Bump people in the Cloud. If they bump you back, you’ll both land here.</p>' +
       '<button class="secondary" style="max-width:220px" id="toCloud">Go to the Cloud</button></div>');
   document.querySelectorAll('[data-thread]').forEach((b) => b.onclick = () => openThread(b.dataset.thread));
+  wirePracticeLinks($('#chatsBody'));
   const tc = $('#toCloud'); if (tc) tc.onclick = () => goTab(TAB.cloud);
+}
+// The guide sits at the top of Chats, always there
+function guideRow() {
+  const last = uid ? guideMsgs().slice(-1)[0] : null;
+  return '<section aria-label="Ora guide" class="hair"><button class="crow" data-guide><span class="guideava big">' + ICON.guide + '</span>' +
+    '<span class="tx"><div><b>Ora guide</b><time>' + (last?.day === today() ? 'today' : '') + '</time></div><p>' + esc(last ? last.content : 'Ask about meditation, your practice and your aura') + '</p></span></button></section>';
 }
 let openChat = null; // { id, draw(message) }
 // ---------------- Emoji, stickers and GIFs ----------------
@@ -1817,6 +2026,8 @@ async function enter(user) {
 async function startApp() {
   hideGate();
   try { myAnswers = await API.myAnswers(uid); } catch (e) { fail(e); }
+  try { myPractices = await API.myPractices(uid); } catch (e) { console.warn('practices', e.message); myPractices = []; }
+  loadSuggestion();
   buildCloud(people); renderAll(); paint();
   loadCloud(); loadChats();
   if (!appStarted) {

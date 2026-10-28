@@ -85,6 +85,21 @@ export async function signupAnswers(uid, rows) {
   check(await sb.from('answers').upsert(payload, { onConflict: 'user_id,day,kind,dim' }));
 }
 
+// ---------- Practices (the Meditation library) ----------
+export async function myPractices(uid, days = 400) {
+  const since = dayKey(new Date(Date.now() - days * 86400000));
+  return check(await sb.from('practices').select('id,exercise,level,minutes,day,created_at').eq('user_id', uid).gte('day', since).order('created_at', { ascending: false }));
+}
+export async function savePractice(uid, p) {
+  return check(await sb.from('practices').insert({ user_id: uid, day: dayKey(), ...p }).select('id,exercise,level,minutes,day,created_at').single());
+}
+export async function practiceAnswer(id, answer) { check(await sb.from('practices').update({ answer }).eq('id', id)); }
+// What someone practises most (only for you, or someone you share a chat with)
+export async function practiceSummary(id) { return check(await sb.rpc('practice_summary', { target: id })) || []; }
+// The Ora guide: today's suggestion and the guide chat
+export const guideSuggest = () => api('guide', 'POST', { mode: 'suggest', day: dayKey() });
+export const guideChat = (messages) => api('guide', 'POST', { mode: 'chat', messages });
+
 // ---------- Cloud, bumps, safety ----------
 // What a member wrote about themselves, for their profile page (members can read finished profiles)
 export async function profileDetails(id) {

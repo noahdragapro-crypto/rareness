@@ -1,0 +1,224 @@
+{
+  "levels": [
+    { "name": "Seed", "from": 0 },
+    { "name": "Sprout", "from": 3 },
+    { "name": "Bloom", "from": 10 },
+    { "name": "Radiance", "from": 25 }
+  ],
+  "categories": ["Meditation", "Breath", "Body & nature", "Journaling", "Self-awareness", "Manifestation", "Kindness & action"],
+  "practices": [
+    {
+      "id": "temple", "name": "The temple", "cat": "Meditation", "type": "sit", "dims": ["routine", "personality"],
+      "mins": [7, 10, 12, 15],
+      "about": "Silent sitting in the dark, with a crack of light that breathes. The heart of Ora.",
+      "steps": ["Sit comfortably, back straight, shoulders soft.", "Close your eyes or rest them on the light.", "Breathe in as it brightens, out as it fades.", "When your mind wanders, notice it and come back."],
+      "cues": [["Breathe in", 4], ["Breathe out", 4]],
+      "after": { "type": "cards", "q": "How did your mind feel?", "opts": ["Still", "Busy", "Heavy", "Light"] }
+    },
+    {
+      "id": "breath", "name": "Breath awareness", "cat": "Meditation", "type": "sit", "dims": ["routine", "personality"],
+      "mins": [5, 8, 12, 15],
+      "about": "Rest your attention on the breath, exactly as it is. The simplest and deepest practice.",
+      "steps": ["Feel the air at the tip of your nose.", "Don't change the breath, just watch it.", "Count ten breaths, then start again at one.", "Lost count? Smile, and begin again."],
+      "cues": [["Feel the breath come in", 5], ["and let it go", 5]],
+      "after": { "type": "select", "q": "What pulled your attention away?", "opts": ["Work", "People", "Plans", "Memories", "My body", "Nothing much"], "multi": true }
+    },
+    {
+      "id": "body-scan", "name": "Body scan", "cat": "Meditation", "type": "sit", "dims": ["routine", "lifestyle"],
+      "mins": [8, 12, 15, 20],
+      "about": "Move your attention slowly through the body, from the crown of the head to the toes.",
+      "steps": ["Lie down or sit comfortably.", "Start at the top of your head.", "Notice each part without judging it.", "Breathe into anything tight, and let it soften."],
+      "cues": [["Your head and face", 20], ["Your neck and shoulders", 20], ["Your arms and hands", 20], ["Your chest and belly", 20], ["Your hips and legs", 20], ["Your feet", 20], ["Your whole body, breathing", 20]],
+      "after": { "type": "write", "q": "Where in your body did you feel the most?" }
+    },
+    {
+      "id": "metta", "name": "Loving-kindness", "cat": "Meditation", "type": "sit", "dims": ["values", "personality"],
+      "mins": [5, 8, 12, 15],
+      "about": "Send warm wishes to yourself, someone you love, a stranger, and everyone.",
+      "steps": ["Bring yourself to mind.", "Silently repeat: may you be happy, may you be at peace.", "Then someone you love, then a stranger.", "End with all beings, everywhere."],
+      "cues": [["May I be happy", 8], ["May I be at peace", 8], ["May you be happy", 8], ["May you be at peace", 8], ["May all beings be free", 8]],
+      "after": { "type": "write", "q": "Who did you send kindness to, and how did it feel?" }
+    },
+    {
+      "id": "mantra", "name": "Mantra", "cat": "Meditation", "type": "sit", "dims": ["routine", "values"],
+      "mins": [5, 8, 12, 15],
+      "about": "Repeat a word or short phrase silently, letting it steady the mind.",
+      "steps": ["Choose a word: peace, here, now, or om.", "Repeat it silently with each out-breath.", "Let it get softer and slower.", "When thoughts come, return to the word."],
+      "cues": [["Here", 6], ["Now", 6]],
+      "after": { "type": "cards", "q": "Which word stayed with you?", "opts": ["Peace", "Here", "Now", "Om"] }
+    },
+    {
+      "id": "open-awareness", "name": "Open awareness", "cat": "Meditation", "type": "sit", "dims": ["personality", "values"],
+      "mins": [5, 8, 12, 15],
+      "about": "Notice whatever arises, sounds, thoughts, feelings, and let it pass like weather.",
+      "steps": ["Sit and open your attention wide.", "Gently label what comes: hearing, thinking, feeling.", "Don't follow it, just name it.", "Rest in the space between."],
+      "cues": [["Hearing", 6], ["Thinking", 6], ["Feeling", 6], ["Resting", 6]],
+      "after": { "type": "select", "q": "What came up most?", "opts": ["Thoughts", "Sounds", "Emotions", "Sensations", "Calm"], "multi": true }
+    },
+    {
+      "id": "candle", "name": "Candle gazing", "cat": "Meditation", "type": "sit", "dims": ["routine", "lifestyle"],
+      "mins": [3, 5, 8, 10],
+      "about": "Trataka: rest your gaze softly on a single flame, then on its afterimage.",
+      "steps": ["Light a candle an arm's length away, at eye level.", "Gaze at the flame without straining.", "When your eyes water, close them.", "Watch the afterimage until it fades."],
+      "cues": [["Soft gaze", 8], ["Let the eyes rest", 8]],
+      "after": { "type": "cards", "q": "The flame felt…", "opts": ["Warm", "Hypnotic", "Hard to hold", "Peaceful"] }
+    },
+    {
+      "id": "box-breathing", "name": "Box breathing", "cat": "Breath", "type": "sit", "dims": ["routine", "personality"],
+      "mins": [3, 5, 8, 10],
+      "about": "In for four, hold for four, out for four, hold for four. Calms the nervous system fast.",
+      "steps": ["Sit up straight and exhale fully.", "Breathe in through the nose for 4.", "Hold for 4, breathe out for 4, hold for 4.", "Keep the rhythm gentle, not forced."],
+      "cues": [["Breathe in · 4", 4], ["Hold · 4", 4], ["Breathe out · 4", 4], ["Hold · 4", 4]],
+      "after": { "type": "cards", "q": "Right now you feel…", "opts": ["Calmer", "The same", "Energised", "Sleepy"] }
+    },
+    {
+      "id": "478", "name": "4-7-8 breathing", "cat": "Breath", "type": "sit", "dims": ["routine", "lifestyle"],
+      "mins": [3, 4, 6, 8],
+      "about": "A long hold and a slow out-breath. Lovely before sleep or after a hard moment.",
+      "steps": ["Rest the tip of the tongue behind your top teeth.", "Breathe in quietly through the nose for 4.", "Hold for 7.", "Breathe out through the mouth for 8."],
+      "cues": [["Breathe in · 4", 4], ["Hold · 7", 7], ["Breathe out · 8", 8]],
+      "after": { "type": "select", "q": "When do you need calm most?", "opts": ["Mornings", "At work", "Evenings", "Before sleep", "With people"], "multi": true }
+    },
+    {
+      "id": "coherent", "name": "Coherent breathing", "cat": "Breath", "type": "sit", "dims": ["routine", "personality"],
+      "mins": [5, 8, 10, 15],
+      "about": "About five and a half seconds in, five and a half out. Balances heart and mind.",
+      "steps": ["Breathe through the nose.", "In for about five seconds, out for about five.", "Keep it smooth, like a slow wave.", "Let the belly rise and fall."],
+      "cues": [["In", 5.5], ["Out", 5.5]],
+      "after": { "type": "cards", "q": "Your energy now is…", "opts": ["Low", "Steady", "Bright", "Restless"] }
+    },
+    {
+      "id": "walking", "name": "Walking meditation", "cat": "Body & nature", "type": "sit", "dims": ["lifestyle", "routine"],
+      "mins": [8, 10, 15, 20],
+      "about": "Walk slowly and feel every step. Indoors or out, phone in your pocket.",
+      "steps": ["Walk at half your usual speed.", "Feel the heel, the sole, the toes.", "Match your breath to your steps.", "When the mind wanders, come back to the feet."],
+      "cues": [["Lift", 3], ["Move", 3], ["Place", 3]],
+      "after": { "type": "write", "q": "What did you notice on your walk?" }
+    },
+    {
+      "id": "stretch", "name": "Mindful stretching", "cat": "Body & nature", "type": "sit", "dims": ["lifestyle", "routine"],
+      "mins": [5, 8, 10, 15],
+      "about": "Slow stretches with full attention on breath and sensation.",
+      "steps": ["Stand or sit, feet grounded.", "Reach up on an in-breath, fold on an out-breath.", "Hold each stretch for five breaths.", "Never push into pain."],
+      "cues": [["Reach and breathe in", 6], ["Release and breathe out", 6]],
+      "after": { "type": "select", "q": "Where do you hold tension?", "opts": ["Neck", "Shoulders", "Back", "Jaw", "Hips", "Nowhere today"], "multi": true }
+    },
+    {
+      "id": "nature", "name": "Sky and nature sit", "cat": "Body & nature", "type": "sit", "dims": ["lifestyle", "interests"],
+      "mins": [5, 8, 10, 15],
+      "about": "Sit outside, or by a window, and simply watch the sky, trees or water.",
+      "steps": ["Find a view of the sky or something growing.", "Let your eyes rest on it, no thinking needed.", "Notice colours, movement, light.", "Breathe slowly and stay."],
+      "cues": [["Look", 8], ["Breathe", 8]],
+      "after": { "type": "cards", "q": "Your peace temple is closest to…", "opts": ["The sea", "Mountains", "A forest", "A quiet room"] }
+    },
+    {
+      "id": "gratitude", "name": "Gratitude journal", "cat": "Journaling", "type": "write", "dims": ["values", "personality"],
+      "chars": [60, 120, 200, 300],
+      "about": "Write three things you are grateful for today, and why.",
+      "steps": ["Think of three things, big or small.", "Write each one, and why it matters.", "Feel it as you write it."],
+      "prompt": "Three things I'm grateful for today…",
+      "after": { "type": "cards", "q": "Your gratitude goes most to…", "opts": ["People", "Nature", "My health", "Small moments"] }
+    },
+    {
+      "id": "morning-pages", "name": "Morning pages", "cat": "Journaling", "type": "write", "dims": ["personality", "goals"],
+      "chars": [150, 300, 500, 750],
+      "about": "Free writing, without stopping or editing. Empty the mind onto the page.",
+      "steps": ["Write whatever comes, without stopping.", "Don't fix spelling, don't judge.", "Keep going until you reach the length."],
+      "prompt": "Write whatever is on your mind…",
+      "after": { "type": "select", "q": "What filled your page?", "opts": ["Worries", "Plans", "People", "Dreams", "Gratitude", "Random thoughts"], "multi": true }
+    },
+    {
+      "id": "reflection", "name": "Evening reflection", "cat": "Journaling", "type": "write", "dims": ["values", "goals"],
+      "chars": [80, 150, 250, 400],
+      "about": "Look back on your day with curiosity: what went well, what you learned.",
+      "steps": ["What went well today?", "What was hard?", "What did you learn about yourself?"],
+      "prompt": "Today, I…",
+      "after": { "type": "cards", "q": "Today was mostly…", "opts": ["Calm", "Busy", "Joyful", "Difficult"] }
+    },
+    {
+      "id": "letting-go", "name": "Letting-go letter", "cat": "Journaling", "type": "write", "dims": ["personality", "values"],
+      "chars": [100, 200, 300, 450],
+      "about": "Write a letter to something you are ready to release: a worry, a habit, a past moment.",
+      "steps": ["Name what you want to let go of.", "Thank it for what it taught you.", "Say goodbye, in your own words."],
+      "prompt": "Dear…, I'm letting you go because…",
+      "after": { "type": "cards", "q": "After writing, you feel…", "opts": ["Lighter", "Emotional", "Unsure", "Free"] }
+    },
+    {
+      "id": "emotion-check", "name": "Emotion check-in", "cat": "Self-awareness", "type": "write", "dims": ["personality", "values"],
+      "chars": [40, 100, 160, 240],
+      "about": "Name what you feel right now, where you feel it, and what it needs.",
+      "steps": ["Pause and ask: what am I feeling?", "Where is it in my body?", "What does this feeling need from me?"],
+      "prompt": "Right now I feel…",
+      "after": { "type": "select", "q": "Pick the feelings that are here", "opts": ["Joy", "Calm", "Love", "Anxiety", "Sadness", "Anger", "Tiredness", "Hope"], "multi": true }
+    },
+    {
+      "id": "values-compass", "name": "Values compass", "cat": "Self-awareness", "type": "write", "dims": ["values", "goals"],
+      "chars": [80, 160, 260, 400],
+      "about": "Find the values that guide you, and one small way to live them today.",
+      "steps": ["Which three values matter most to you?", "When did you last live one fully?", "One small way to live it today."],
+      "prompt": "What matters most to me is…",
+      "after": { "type": "select", "q": "Your top values", "opts": ["Honesty", "Freedom", "Family", "Growth", "Kindness", "Creativity", "Adventure", "Peace"], "multi": true }
+    },
+    {
+      "id": "self-compassion", "name": "Self-compassion letter", "cat": "Self-awareness", "type": "write", "dims": ["personality", "values"],
+      "chars": [100, 200, 300, 450],
+      "about": "Write to yourself the way a kind friend would.",
+      "steps": ["Think of something you're hard on yourself about.", "Write to yourself as a loving friend would.", "End with one kind wish for yourself."],
+      "prompt": "Dear me…",
+      "after": { "type": "write", "q": "What do you most need to hear from someone who loves you?" }
+    },
+    {
+      "id": "shadow", "name": "Patterns and triggers", "cat": "Self-awareness", "type": "write", "dims": ["personality", "goals"],
+      "chars": [80, 160, 260, 400],
+      "about": "Notice a reaction that keeps repeating, and gently look at where it comes from.",
+      "steps": ["Recall a moment you reacted strongly.", "What did it touch in you?", "What would a calmer you do next time?"],
+      "prompt": "A pattern I notice in myself…",
+      "after": { "type": "cards", "q": "In conflict, you tend to…", "opts": ["Talk it out", "Need space first", "Avoid it", "Get fiery"] }
+    },
+    {
+      "id": "scripting", "name": "Manifestation scripting", "cat": "Manifestation", "type": "write", "dims": ["goals", "values"],
+      "chars": [100, 200, 350, 500],
+      "about": "Write about the life you want as if it has already happened, in the present tense.",
+      "steps": ["Pick one area: love, work, home, health.", "Write as if it's already true, in the present tense.", "Add details: what you see, feel, hear."],
+      "prompt": "It's a year from now, and I…",
+      "after": { "type": "cards", "q": "What are you calling in most?", "opts": ["Love", "Purpose", "Peace", "Abundance"] }
+    },
+    {
+      "id": "intention", "name": "Daily intention", "cat": "Manifestation", "type": "write", "dims": ["goals", "routine"],
+      "chars": [20, 40, 80, 120],
+      "about": "Set one clear intention for today, in a single sentence.",
+      "steps": ["Breathe and ask: how do I want to be today?", "Write it as one sentence.", "Read it back three times."],
+      "prompt": "Today, I intend to…",
+      "after": { "type": "select", "q": "Your intention is about…", "opts": ["Myself", "Love", "Work", "Health", "Friends", "Creativity"], "multi": true }
+    },
+    {
+      "id": "vision", "name": "Future self visualization", "cat": "Manifestation", "type": "sit", "dims": ["goals", "lifestyle"],
+      "mins": [5, 8, 10, 12],
+      "about": "Close your eyes and meet the person you are becoming.",
+      "steps": ["Close your eyes and breathe slowly.", "Picture yourself a few years from now, at peace.", "Notice where you are, who's with you.", "Ask them one question, and listen."],
+      "cues": [["See where you are", 10], ["Who is with you?", 10], ["How do you feel?", 10], ["What do they tell you?", 10]],
+      "after": { "type": "write", "q": "What did your future self tell you?" }
+    },
+    {
+      "id": "first-step", "name": "Take a first step", "cat": "Kindness & action", "type": "do", "dims": ["goals", "routine"],
+      "mins": [5, 10, 15, 20],
+      "about": "Do the first small step of something you've been putting off.",
+      "steps": ["Pick one thing you've been avoiding.", "Find the smallest possible first step.", "Do it now, for a few minutes."],
+      "after": { "type": "write", "q": "What step did you take, and what's next?" }
+    },
+    {
+      "id": "offline", "name": "Offline hour", "cat": "Kindness & action", "type": "do", "dims": ["lifestyle", "routine"],
+      "mins": [30, 45, 60, 90],
+      "about": "Put your phone away and be fully where you are.",
+      "steps": ["Turn off notifications.", "Put the phone in another room.", "Do something with your hands, or nothing at all."],
+      "after": { "type": "cards", "q": "Without your phone you…", "opts": ["Felt free", "Missed it", "Read or made something", "Rested"] }
+    },
+    {
+      "id": "kindness", "name": "Act of kindness", "cat": "Kindness & action", "type": "do", "dims": ["values", "personality"],
+      "mins": [5, 10, 15, 20],
+      "about": "Do one kind thing for someone, ideally without them knowing.",
+      "steps": ["Think of someone who could use a lift.", "Do one small kind thing for them.", "Notice how it feels in you."],
+      "after": { "type": "write", "q": "What did you do, and how did it feel?" }
+    }
+  ]
+}

@@ -75,11 +75,18 @@ Send them the link. On iPhone: open it in Safari → Share → **Add to Home Scr
 
 The Cloud fills in as more people sign up. Each new member is scored against everyone else right after sign-up.
 
-## Meditation
+## Meditation and practice
 
-**Meditation** is its own tab. Each day has one session of 7 to 15 minutes (depending on the day); finishing it in the temple checks off the day's meditation on the Agenda. The other two daily tasks, a reflection and an action, change every day. The tab explains how meditation, focus bubbles and the aura work, and opens **the temple**. The temple is a black screen with a natural-looking crack of light that breathes, with "Breathe in / Breathe out" guidance and soft generated meditation music (a warm drone, reverb and singing bowls; a Sound on/off button, plays through the iPhone silent switch on Safari 17+); while it's open the phone gives a soft double pulse every four seconds (Vibration API on Android; on iPhone, iOS 18+ gives a light haptic tick instead, older iPhones stay silent). 
+The **Meditation** tab is a library of 27 practices (`shared/practices.json`) in seven groups: meditation, breath, body and nature, journaling, self-awareness, manifestation, kindness and action. Each has four levels (Seed, Sprout, Bloom, Radiance, after 3, 10 and 25 sessions); higher levels mean longer sessions or longer writing.
 
-**Focus bubbles**: the first within 45 seconds of opening the app, then every 10 to 12 minutes (`FOCUS_FIRST`, `FOCUS_EVERY` in `src/main.js`), a bubble drifts over whatever page is open until it's popped.
+- **Guided** practices run in the temple room (dark, breathing crack, soft generated music, vibration on Android) with their own cues; **writing** practices open a private writing page; **do-it** practices are small real-world actions.
+- After each one, a short **check-in** (writing, cards or a selection) slides up from the bottom. Answers are private and go to the AI with the session, so practice shapes the aura: more sessions and higher levels count as stronger evidence, and shared practices count in matching.
+- A day counts when **three** things are done: the daily tasks (meditate, reflect, take an action) and library practices, in any mix. The temple counts as the Meditate task.
+- People who share a chat can see what the other practises most and **join** it (`practice_summary`, never the answers).
+- The **Ora guide** (`api/guide.ts`) suggests one practice a day for what the person needs (shown on the Agenda and the Meditation tab, and sent in the guide chat) and answers questions about meditation, practice and the aura. It's pinned at the top of Chats. It uses Claude when `ANTHROPIC_API_KEY` is set, simple rules otherwise.
+- Database: `supabase/migrations/0007_practices.sql`.
+
+The temple's soft vibration uses the Vibration API (Android); iPhones don't allow web pages to vibrate. **Focus bubbles**: the first within 45 seconds of opening the app, then every 10 to 12 minutes, a bubble drifts over any page until it's popped.
 
 Daily answers are private (`supabase/migrations/0006_private_answers.sql`); only the AI reads them on the server.
 

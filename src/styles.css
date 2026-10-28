@@ -429,3 +429,43 @@ select.field{font:inherit;font-size:16px;color:var(--ink);-webkit-appearance:non
 @keyframes micpulse{50%{box-shadow:0 0 0 8px rgba(245,166,216,.25)}}
 
 .req{color:#c2185b;font-weight:500}
+
+/* Meditation library */
+.catrow{display:flex;gap:6px;overflow-x:auto;margin:0 -2px 10px;padding:2px;scrollbar-width:none}
+.catrow::-webkit-scrollbar{display:none}
+.catrow button{flex:none;height:34px;padding:0 13px;border-radius:17px;border:.5px solid rgba(17,17,20,.16);background:#fff;font:inherit;font-size:14px;color:var(--ink2);cursor:pointer;white-space:nowrap}
+.catrow button[aria-selected="true"]{background:var(--ink);border-color:var(--ink);color:#fff}
+.prow .tx b{font-family:var(--serif);font-weight:400;font-size:21px}
+.plevel{display:inline-flex;align-items:center;gap:7px;font-size:13px;color:var(--ink2)}
+.ldots{display:inline-flex;gap:3px}
+.ldots i{width:7px;height:7px;border-radius:50%;background:rgba(17,17,20,.14)}
+.ldots i.on{background:linear-gradient(135deg,#8FE8E3,#B89CFF 55%,#F5A6D8)}
+.joinlbl{font-size:14px;color:var(--ink);padding:0 4px}
+.steps-list{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;font-size:15.5px;line-height:1.5;color:var(--ink2)}
+.hintlist{margin:0;padding-left:18px;font-size:14.5px;line-height:1.45;color:var(--ink2)}
+.bigwrite{min-height:240px}
+.suggest{border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:8px;background:linear-gradient(135deg,rgba(143,232,227,.22),rgba(184,156,255,.18) 55%,rgba(245,166,216,.2))}
+.suggest b{font-family:var(--serif);font-weight:400;font-size:26px;line-height:1.1}
+.suggest p{margin:0;font-size:15px;line-height:1.45;color:var(--ink2)}
+.guidebtn{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 12px 0 9px;border-radius:17px;border:0;font:inherit;font-size:14px;color:var(--ink);cursor:pointer}
+.guidebtn svg{width:20px;height:20px}
+.guideava{width:64px;height:64px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#8FE8E3,#B89CFF 55%,#F5A6D8);color:#fff}
+.guideava svg{width:30px;height:30px}
+.guideava.big{width:58px;height:58px;flex:none}
+.primary.small{height:38px;margin-top:8px;font-size:14px;padding:0 14px;width:auto}
+.msg.typing{display:flex;gap:4px;align-items:center}
+.msg.typing i{width:6px;height:6px;border-radius:50%;background:var(--ink3);animation:typing 1.2s infinite}
+.msg.typing i:nth-child(2){animation-delay:.2s}.msg.typing i:nth-child(3){animation-delay:.4s}
+@keyframes typing{0%,60%,100%{opacity:.3}30%{opacity:1}}
+/* Check-in after a practice: a small card from the bottom */
+.checkin{position:absolute;z-index:130;left:max(12px,env(safe-area-inset-left,0px));right:max(12px,env(safe-area-inset-right,0px));bottom:calc(env(safe-area-inset-bottom,0px) + 12px);max-height:60%;overflow-y:auto;border-radius:24px;padding:18px;display:flex;flex-direction:column;gap:12px;transform:translateY(120%);transition:transform .45s var(--spring)}
+.checkin.on{transform:none}
+.checkin h2{margin:0;font-family:var(--serif);font-weight:400;font-size:26px;line-height:1.15}
+.checkin textarea{min-height:90px}
+.cicards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.cicard{min-height:70px;border-radius:16px;border:.5px solid rgba(17,17,20,.16);background:#fff;font:inherit;font-size:15.5px;cursor:pointer;padding:10px}
+.cicard.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.ci-actions{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.ci-actions .primary{width:auto;padding:0 28px}
+.prow.done .tx b{text-decoration:none}
+.prow.done{opacity:1}
