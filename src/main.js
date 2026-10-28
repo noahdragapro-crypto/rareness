@@ -992,44 +992,58 @@ function showPresent() {
   el.className = 'present'; el.setAttribute('aria-label', 'A focus bubble. Pop it.');
   el.innerHTML = bubbleHTML({ w: [1, 1, 1, 1, 1, 1], clear: true }, size) + '<span class="present-cap">Here, now</span>';
   app.appendChild(el); presentEl = el; focusShown++;
-  let x = r + Math.random() * (W - size), y = H + r, vx = 0, vy = -40, t = 0, last = performance.now(), raf = 0, alive = true;
+  let x = r + Math.random() * (W - size), y = H + r, vx = 0, vy = -30, t = 0, last = performance.now(), raf = 0, alive = true;
   const ph = Math.random() * 6.28;
   const step = (now) => {
     if (!alive) return;
     const dt = Math.min(.05, (now - last) / 1000); last = now; t += dt;
-    // Rise gently into view, then wander slowly, kept on screen
-    const tx = W / 2 + Math.sin(t * .23 + ph) * (W / 2 - r - 16), ty = H * .42 + Math.sin(t * .17 + ph * 2) * (H * .28);
-    vx += ((tx - x) * .35 - vx * .9) * dt; vy += ((ty - y) * .35 - vy * .9) * dt;
+    // Rise slowly into view toward the top, then wander lazily, kept on screen; never faster than a drift
+    const tx = W / 2 + Math.sin(t * .11 + ph) * (W / 2 - r - 16), ty = H * .42 + Math.sin(t * .08 + ph * 2) * (H * .28);
+    vx += ((tx - x) * .1 - vx * .55) * dt; vy += ((ty - y) * .1 - vy * .55) * dt;
+    const sp = Math.hypot(vx, vy), max = 55; if (sp > max) { vx *= max / sp; vy *= max / sp; }
     x += vx * dt; y += vy * dt;
-    const sq = Math.sin(t * 2.1 + ph) * .02;
+    const sq = Math.sin(t * 1.3 + ph) * .02;
     el.style.transform = 'translate3d(' + (x - r).toFixed(1) + 'px,' + (y - r).toFixed(1) + 'px,0) scale(' + (1 + sq).toFixed(3) + ',' + (1 - sq).toFixed(3) + ')';
     raf = requestAnimationFrame(step);
   };
   raf = requestAnimationFrame(step);
   el.onclick = () => {
+    if (!alive) return;
     alive = false; cancelAnimationFrame(raf);
-    popFx(x, y, r);
-    el.querySelector('.bubble').animate([{ transform: 'scale(1)', opacity: 1 }, { transform: 'scale(1.1)', opacity: 0 }], { duration: 110, fill: 'forwards' });
-    el.querySelector('.present-cap').remove();
-    setTimeout(() => { el.remove(); presentEl = null; }, 150);
+    el.querySelector('.present-cap')?.remove();
+    // The pop: a quick squeeze, then the film bursts outward and vanishes
+    const b = el.querySelector('.bubble');
+    b.animate([
+      { transform: 'scale(1)', opacity: 1 },
+      { transform: 'scale(1.06,.92)', opacity: 1, offset: .35 },
+      { transform: 'scale(1.3)', opacity: 0 }
+    ], { duration: 190, easing: 'cubic-bezier(.3,0,.6,1)', fill: 'forwards' });
+    setTimeout(() => popFx(x, y, r), 70);
+    setTimeout(() => { el.remove(); presentEl = null; }, 260);
     toast('Here. Now.');
     schedulePresent();
   };
 }
-// A popping bubble: a faint ring and the film breaking into droplets that fly out and fall
+// A popping bubble: a flash of light, an iridescent ring racing outward, and the film breaking
+// into shimmering droplets that fly out and fall
 function popFx(x, y, rad) {
   const app = $('#app');
-  const ring = document.createElement('span'); ring.className = 'fxring';
-  ring.style.cssText = 'width:' + rad * 2 + 'px;height:' + rad * 2 + 'px;left:' + (x - rad) + 'px;top:' + (y - rad) + 'px';
-  app.appendChild(ring);
-  ring.animate([{ transform: 'scale(.9)', opacity: .7 }, { transform: 'scale(1.5)', opacity: 0 }], { duration: 460, easing: 'cubic-bezier(.2,.7,.3,1)', fill: 'forwards' }).onfinish = () => ring.remove();
-  for (let k = 0; k < 14; k++) {
-    const a = Math.random() * Math.PI * 2, sz = 1.5 + Math.random() * 2.5, d = document.createElement('span');
-    d.className = 'fxdrop'; d.style.cssText = 'width:' + sz + 'px;height:' + sz + 'px;left:' + (x + Math.cos(a) * rad) + 'px;top:' + (y + Math.sin(a) * rad) + 'px';
-    app.appendChild(d);
-    const out = rad * (.25 + Math.random() * .55) + 10;
-    d.animate([{ transform: 'translate(0,0)', opacity: 1 }, { transform: 'translate(' + (Math.cos(a) * out * .7) + 'px,' + (Math.sin(a) * out * .7) + 'px)', opacity: .9, offset: .4 },
-      { transform: 'translate(' + Math.cos(a) * out + 'px,' + (Math.sin(a) * out + 30) + 'px)', opacity: 0 }], { duration: 480 + Math.random() * 240, easing: 'cubic-bezier(.15,.7,.4,1)', fill: 'forwards' }).onfinish = () => d.remove();
+  const add = (cls, css) => { const e = document.createElement('span'); e.className = cls; e.style.cssText = css; app.appendChild(e); return e; };
+  const box = 'left:' + (x - rad) + 'px;top:' + (y - rad) + 'px;width:' + rad * 2 + 'px;height:' + rad * 2 + 'px';
+  const flash = add('fxflash', box);
+  flash.animate([{ transform: 'scale(.6)', opacity: .9 }, { transform: 'scale(1.25)', opacity: 0 }], { duration: 300, easing: 'ease-out', fill: 'forwards' }).onfinish = () => flash.remove();
+  const ring = add('fxring', box);
+  ring.animate([{ transform: 'scale(.95)', opacity: .95 }, { transform: 'scale(1.75)', opacity: 0 }], { duration: 520, easing: 'cubic-bezier(.15,.75,.3,1)', fill: 'forwards' }).onfinish = () => ring.remove();
+  const tints = DIMS.map((d) => d.c);
+  for (let k = 0; k < 22; k++) {
+    const a = (k / 22) * Math.PI * 2 + (Math.random() - .5) * .4, sz = 3.5 + Math.random() * 3.5;
+    const d = add('fxdrop', 'width:' + sz + 'px;height:' + sz + 'px;left:' + (x + Math.cos(a) * rad * .92 - sz / 2) + 'px;top:' + (y + Math.sin(a) * rad * .92 - sz / 2) + 'px;--t:' + tints[k % 6]);
+    const out = rad * (.35 + Math.random() * .6) + 12, fall = 34 + Math.random() * 30;
+    d.animate([
+      { transform: 'translate(0,0) scale(1)', opacity: 1 },
+      { transform: 'translate(' + (Math.cos(a) * out * .75).toFixed(1) + 'px,' + (Math.sin(a) * out * .75).toFixed(1) + 'px) scale(1)', opacity: 1, offset: .45 },
+      { transform: 'translate(' + (Math.cos(a) * out).toFixed(1) + 'px,' + (Math.sin(a) * out + fall).toFixed(1) + 'px) scale(.5)', opacity: 0 }
+    ], { duration: 700 + Math.random() * 300, easing: 'cubic-bezier(.12,.7,.4,1)', fill: 'forwards' }).onfinish = () => d.remove();
   }
 }
 

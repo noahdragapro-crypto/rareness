@@ -418,8 +418,9 @@ select.field{font:inherit;font-size:16px;color:var(--ink);-webkit-appearance:non
 .present{position:absolute;left:0;top:0;z-index:120;width:116px;height:116px;padding:0;border:0;background:none;cursor:pointer;-webkit-tap-highlight-color:transparent;will-change:transform}
 .present-cap{position:absolute;left:50%;top:100%;transform:translateX(-50%);margin-top:6px;white-space:nowrap;font-family:var(--serif);font-style:italic;font-size:15px;color:var(--ink2);animation:capfade 6s ease forwards}
 @keyframes capfade{0%,70%{opacity:1}100%{opacity:0}}
-.fxring{position:absolute;z-index:121;border-radius:50%;border:1.25px solid rgba(17,17,20,.22);pointer-events:none}
-.fxdrop{position:absolute;z-index:121;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff,rgba(17,17,20,.18));box-shadow:0 0 0 .5px rgba(17,17,20,.2);pointer-events:none}
+.fxring{position:absolute;z-index:121;border-radius:50%;pointer-events:none;border:2.5px solid transparent;background:conic-gradient(#F5A6D8,#FFF3A6,#9FE5B5,#B89CFF,#8FE8E3,#6FB7FF,#F5A6D8) border-box;-webkit-mask:linear-gradient(#000 0 0) padding-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) padding-box exclude,linear-gradient(#000 0 0)}
+.fxflash{position:absolute;z-index:121;border-radius:50%;pointer-events:none;background:radial-gradient(circle,rgba(255,255,255,.95),rgba(255,255,255,.4) 45%,rgba(255,255,255,0) 70%)}
+.fxdrop{position:absolute;z-index:121;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff 0 30%,var(--t,#B89CFF));box-shadow:0 0 0 .5px rgba(17,17,20,.18),0 1px 3px rgba(17,17,20,.12);pointer-events:none}
 
 /* Aura writing */
 .hints{background:var(--fill);border-radius:var(--r);padding:12px 14px}
