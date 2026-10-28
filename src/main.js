@@ -371,6 +371,7 @@ function renderAgenda() {
     '</div></section>';
   document.querySelectorAll('[data-task]').forEach((b) => b.onclick = () => {
     const t = tasks.find((x) => x.k === b.dataset.task);
+    if (t.k === 'm') { openMeditation(); return; } // the temple is open any time, even after today's session
     if (rec()[t.k]) { toast('Already done today'); return; }
     openSheet(t);
   });
@@ -378,7 +379,7 @@ function renderAgenda() {
 }
 
 // ---------------- Exercise sheet ----------------
-let timerT = null;
+
 function openSheet(t) {
   const sh = $('#sheet');
   sh.setAttribute('aria-label', t.title);
@@ -386,44 +387,19 @@ function openSheet(t) {
   const body = document.createElement('div'); sh.appendChild(body);
   const head = (h) => '<p class="label">' + t.title + ' · ' + dimLabel(t.dim) + '</p><h2>' + esc(h) + '</h2>';
   if (t.k === 'q') {
-    body.innerHTML = head(t.sub) + '<label for="qAns" class="label" style="display:block;margin-bottom:6px">Your answer</label><textarea id="qAns" maxlength="300" placeholder="Whatever comes, in a few words"></textarea><p class="fine" style="margin:6px 0 10px">Your answer appears on your profile for your matches to read.</p><button class="primary" id="qSave" disabled>Save answer</button>';
+    body.innerHTML = head(t.sub) + '<label for="qAns" class="label" style="display:block;margin-bottom:6px">Your answer</label><textarea id="qAns" maxlength="300" placeholder="Whatever comes, in a few words"></textarea><p class="fine" style="margin:6px 0 10px">Only you see this. It quietly shapes your aura.</p><button class="primary" id="qSave" disabled>Save answer</button>';
     const ta = $('#qAns', body), bt = $('#qSave', body);
     ta.oninput = () => { bt.disabled = ta.value.trim().length < 3; };
-    bt.onclick = () => complete(t, { text: ta.value.trim() }, 'Saved. It now appears on your profile.', bt);
+    bt.onclick = () => complete(t, { text: ta.value.trim() }, 'Saved. Only you can see it.', bt);
   } else if (t.k === 't') {
     body.innerHTML = head(t.sub) + '<label for="tAns" class="label" style="display:block;margin-bottom:6px">Your first step</label><textarea id="tAns" maxlength="200" placeholder="The one thing you’ll do now"></textarea><p class="fine" style="margin:6px 0 10px">Only you see this.</p><button class="primary" id="tSave">I took the first step</button>';
     const bt = $('#tSave', body);
     bt.onclick = () => complete(t, { text: $('#tAns', body).value.trim() }, 'Step taken. Keep going.', bt);
-  } else {
-    const mins = 10, C = 2 * Math.PI * 88;
-    let left = 0, running = false;
-    const fmt = (x) => String(Math.floor(x / 60)).padStart(2, '0') + ':' + String(x % 60).padStart(2, '0');
-    const draw = () => {
-      const total = mins * 60, frac = left ? 1 - left / total : 0;
-      body.innerHTML = head('Meditate for ' + mins + ' minutes') +
-        '<p class="fine" style="margin:0">Sit comfortably, close your eyes and follow your breath.</p>' +
-        '<div class="timer"><svg viewBox="0 0 190 190"><circle cx="95" cy="95" r="88" fill="none" stroke="rgba(17,17,20,.08)" stroke-width="1.5"></circle><circle cx="95" cy="95" r="88" fill="none" stroke="#111114" stroke-width="1.5" stroke-dasharray="' + C.toFixed(1) + '" stroke-dashoffset="' + (C * (1 - frac)).toFixed(1) + '"></circle></svg><b>' + fmt(left || total) + '</b></div>' +
-        '<div style="display:flex;flex-direction:column;gap:6px"><button class="primary" id="mGo">' + (running ? 'Pause' : (left ? 'Resume' : 'Start timer')) + '</button><button class="secondary" id="mLog">I already meditated today, log it</button></div>';
-      $('#mGo', body).onclick = () => {
-        if (running) { running = false; clearInterval(timerT); draw(); return; }
-        if (!left) left = mins * 60;
-        running = true; draw(); clearInterval(timerT);
-        timerT = setInterval(() => {
-          left--;
-          if (left <= 0) { clearInterval(timerT); running = false; complete(t, { minutes: mins, timed: true }, 'Ten calm minutes. Well done.'); return; }
-          const bb = body.querySelector('.timer b'), cc = body.querySelectorAll('.timer circle')[1];
-          if (bb) bb.textContent = fmt(left);
-          if (cc) cc.setAttribute('stroke-dashoffset', (C * (left / (mins * 60))).toFixed(1));
-        }, 1000);
-      };
-      $('#mLog', body).onclick = (e) => { clearInterval(timerT); complete(t, { minutes: mins, timed: false }, 'Logged. Well done.', e.currentTarget); };
-    };
-    draw();
   }
   $('#sheetBack').classList.add('on'); sh.classList.add('on');
   const f = sh.querySelector('textarea'); if (f) setTimeout(() => f.focus({ preventScroll: true }), 450);
 }
-function closeSheet() { clearInterval(timerT); $('#sheet').classList.remove('on'); $('#sheetBack').classList.remove('on'); }
+function closeSheet() { $('#sheet').classList.remove('on'); $('#sheetBack').classList.remove('on'); }
 $('#sheetBack').onclick = closeSheet;
 let matching = false;
 async function complete(t, data, msg, btn) {
@@ -442,6 +418,164 @@ async function complete(t, data, msg, btn) {
       API.api('match').then(loadCloud).then(() => refreshMe()).catch(console.error).finally(() => { matching = false; });
     }
   } else toast(msg);
+}
+
+// ---------------- Meditation: the page, the temple, and present bubbles ----------------
+const PRESENT_MEAN = 600; // seconds between present bubbles, on average
+function openMeditation() {
+  const t = todayTasks().find((x) => x.k === 'm'), done = Boolean(rec().m);
+  const body =
+    '<div class="stack">' +
+    '<header style="display:flex;flex-direction:column;gap:6px"><span class="label">Meditation</span><h1 class="largetitle">Be here, now.</h1></header>' +
+    '<section class="temple-card" aria-label="The temple">' +
+      '<div class="temple-mini" aria-hidden="true">' + crackSVG() + '</div>' +
+      '<div style="display:flex;flex-direction:column;gap:6px"><h2 class="h2" style="color:#fff">The temple</h2>' +
+      '<p style="margin:0;color:rgba(255,255,255,.7);font-size:14.5px;line-height:1.45">A dark, quiet room. Your phone hums softly the whole time you stay. Ten minutes count as today’s meditation.</p></div>' +
+      '<button class="primary light" id="enterTemple">Enter the temple</button>' +
+    '</section>' +
+    (done ? '<p class="label" style="text-align:center;margin:0">Today’s meditation is done. The temple stays open whenever you need it.</p>'
+      : '<button class="link" id="logMed" style="align-self:center">I already meditated today, log it</button>') +
+    '<section class="section" aria-label="How meditation works"><h2 class="h2">How meditation works here</h2>' +
+      '<p class="explain">Each day starts with ten minutes of stillness. Sit comfortably, close your eyes, and follow your breath in the temple. When your mind wanders, notice it, and come back to the breath. That’s the whole practice.</p>' +
+      '<p class="explain">Meditating is the first of your three daily steps. Doing all three keeps your streak and opens the Cloud and your chats for the day.</p></section>' +
+    '<section class="section" aria-label="Present bubbles"><h2 class="h2">Present bubbles</h2>' +
+      '<div style="display:flex;gap:14px;align-items:center"><div style="flex:none">' + bubbleHTML({ w: [1, 1, 1, 1, 1, 1], clear: true }, 64) + '</div>' +
+      '<p class="explain" style="margin:0">About every ten minutes, a bubble floats up over whatever you’re doing. Pop it. It’s a small reminder that you’re here, in the present. It’s part of the practice.</p></div></section>' +
+    '<section class="section" aria-label="How your aura works"><h2 class="h2">How your aura works</h2>' +
+      '<p class="explain">Your aura is six colours: ' + DIMS.map((d) => d.label.toLowerCase()).join(', ') + '. Our AI reads your sign-up answers and your daily steps, and shows how strongly each one runs through you.</p>' +
+      '<p class="explain">The same colours ring everyone in the Cloud. On someone else’s bubble they show what you share, and the more you share, the closer and bigger they float.</p>' +
+      '<p class="explain">Your daily answers are private. Nobody else ever sees them; they only shape your aura.</p></section>' +
+    '</div>';
+  const pg = pushPage('Meditation', body);
+  pg.querySelector('#enterTemple').onclick = () => openTemple();
+  const lg = pg.querySelector('#logMed');
+  if (lg) lg.onclick = async () => { await complete(t, { minutes: 10, timed: false }, 'Logged. Well done.', lg); popPage(); };
+}
+
+// A crack of light down the middle of a dark wall: jagged, widest in the middle, light glowing through it
+function crackSVG() {
+  const P = [[50, 0], [47.5, 6], [52.5, 12], [46.5, 19], [52, 25], [45.5, 33], [53.5, 40], [47, 47], [53, 54], [44.5, 61], [51, 68], [46, 75], [53.5, 82], [48, 89], [52, 95], [50, 100]];
+  const w = (y) => .25 + 3.4 * Math.sin(Math.PI * y / 100) ** 1.5;
+  const left = P.map(([x, y], i) => [x - w(y) * (i % 2 ? .8 : 1.15), y]), right = P.map(([x, y], i) => [x + w(y) * (i % 2 ? 1.15 : .8), y]).reverse();
+  const shape = 'M' + left.concat(right).map(([x, y]) => x.toFixed(2) + ' ' + y).join(' L') + ' Z';
+  const branch = (pts) => 'M' + pts.map((q) => q.join(' ')).join(' L');
+  const branches = [[[52.5, 12], [58, 15], [63, 14], [67, 17]], [[46.5, 19], [41, 22], [37, 21]], [[45.5, 33], [39, 37], [35, 43]], [[53.5, 40], [60, 43], [64, 49]],
+    [[44.5, 61], [38, 63], [33, 62]], [[51, 68], [57, 72], [60, 78]], [[46, 75], [40, 79]], [[53.5, 82], [59, 85], [63, 84]]].map(branch).join(' ');
+  return '<svg class="crack" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><defs>' +
+    '<linearGradient id="clight" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff6e6" stop-opacity=".55"></stop><stop offset=".5" stop-color="#fffaf0"></stop><stop offset="1" stop-color="#fff6e6" stop-opacity=".55"></stop></linearGradient>' +
+    '<filter id="cglow" x="-100%" y="-10%" width="300%" height="120%"><feGaussianBlur stdDeviation="2.4"></feGaussianBlur></filter></defs>' +
+    '<path class="cglow" d="' + shape + '" filter="url(#cglow)"></path><path class="cbranch" d="' + branches + '"></path><path class="cfill" d="' + shape + '"></path></svg>';
+}
+
+// The temple: black screen, a breathing crack of light, and a soft, slow vibration for as long as it's open
+function openTemple() {
+  const el = document.createElement('section');
+  el.className = 'temple'; el.setAttribute('aria-label', 'The temple');
+  el.innerHTML = '<button class="temple-leave" aria-label="Leave the temple">Leave</button>' + crackSVG() +
+    '<p class="temple-time" aria-live="polite">00:00</p><p class="temple-note">Close your eyes. Breathe with the light.</p>';
+  $('#app').appendChild(el);
+  requestAnimationFrame(() => el.classList.add('in'));
+  const t0 = Date.now();
+  let counted = Boolean(rec().m), lock = null;
+  try { navigator.wakeLock?.request('screen').then((l) => { lock = l; }).catch(() => {}); } catch (e) {}
+  const hum = startHum();
+  const tick = setInterval(() => {
+    const sec = Math.floor((Date.now() - t0) / 1000);
+    el.querySelector('.temple-time').textContent = String(Math.floor(sec / 60)).padStart(2, '0') + ':' + String(sec % 60).padStart(2, '0');
+    if (!counted && sec >= 600) {
+      counted = true;
+      el.querySelector('.temple-note').textContent = 'Ten minutes. Today’s meditation is counted.';
+      complete(todayTasks().find((x) => x.k === 'm'), { minutes: 10, timed: true, temple: true }, 'Ten calm minutes. Well done.');
+    }
+  }, 1000);
+  const leave = () => {
+    clearInterval(tick); hum.stop();
+    try { lock?.release(); } catch (e) {}
+    document.removeEventListener('visibilitychange', onVis);
+    el.classList.remove('in'); setTimeout(() => el.remove(), 600);
+  };
+  const onVis = () => { if (document.hidden) hum.stop(); else hum.start(); };
+  document.addEventListener('visibilitychange', onVis);
+  el.querySelector('.temple-leave').onclick = leave;
+}
+
+// Soft vibration like a slow heartbeat: a light double touch every four seconds.
+// Android phones use the Vibration API. iPhones have no web vibration; on iOS 18+ a hidden
+// switch gives a light haptic tick instead, which is the closest a web page can get.
+function startHum() {
+  let timer = null;
+  const canVibrate = typeof navigator.vibrate === 'function';
+  let sw = null;
+  if (!canVibrate) {
+    sw = document.createElement('label'); sw.style.cssText = 'position:absolute;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none';
+    sw.innerHTML = '<input type="checkbox" switch>'; document.body.appendChild(sw);
+  }
+  const beat = () => {
+    if (canVibrate) navigator.vibrate([14, 220, 8]);
+    else { sw.click(); setTimeout(() => sw.click(), 240); }
+  };
+  const start = () => { if (timer) return; beat(); timer = setInterval(beat, 4000); };
+  const stop = () => { clearInterval(timer); timer = null; if (canVibrate) navigator.vibrate(0); };
+  start();
+  return { start, stop: () => { stop(); }, remove: () => { stop(); sw?.remove(); } };
+}
+
+// Present bubbles: about every ten minutes, a bubble drifts over whatever's on screen until it's popped
+let presentT = null, presentEl = null;
+function schedulePresent() {
+  clearTimeout(presentT);
+  const mean = Number(store.get('ora.presentEvery')) || PRESENT_MEAN;
+  // Random gaps that average out to the mean, never back-to-back
+  const wait = Math.min(mean * 2.5, Math.max(mean * .3, -Math.log(1 - Math.random()) * mean));
+  presentT = setTimeout(showPresent, wait * 1000);
+}
+function showPresent() {
+  const busy = presentEl || document.hidden || !gate.hidden || $('.temple') || $('#splash');
+  if (busy) { schedulePresent(); return; }
+  const app = $('#app'), W = app.clientWidth, H = app.clientHeight, size = 92, r = size / 2;
+  const el = document.createElement('button');
+  el.className = 'present'; el.setAttribute('aria-label', 'A present bubble. Pop it.');
+  el.innerHTML = bubbleHTML({ w: [1, 1, 1, 1, 1, 1], clear: true }, size) + '<span class="present-cap">Here, now</span>';
+  app.appendChild(el); presentEl = el;
+  let x = r + Math.random() * (W - size), y = H + r, vx = 0, vy = -40, t = 0, last = performance.now(), raf = 0, alive = true;
+  const ph = Math.random() * 6.28;
+  const step = (now) => {
+    if (!alive) return;
+    const dt = Math.min(.05, (now - last) / 1000); last = now; t += dt;
+    // Rise gently into view, then wander slowly, kept on screen
+    const tx = W / 2 + Math.sin(t * .23 + ph) * (W / 2 - r - 16), ty = H * .42 + Math.sin(t * .17 + ph * 2) * (H * .28);
+    vx += ((tx - x) * .35 - vx * .9) * dt; vy += ((ty - y) * .35 - vy * .9) * dt;
+    x += vx * dt; y += vy * dt;
+    const sq = Math.sin(t * 2.1 + ph) * .02;
+    el.style.transform = 'translate3d(' + (x - r).toFixed(1) + 'px,' + (y - r).toFixed(1) + 'px,0) scale(' + (1 + sq).toFixed(3) + ',' + (1 - sq).toFixed(3) + ')';
+    raf = requestAnimationFrame(step);
+  };
+  raf = requestAnimationFrame(step);
+  el.onclick = () => {
+    alive = false; cancelAnimationFrame(raf);
+    popFx(x, y, r);
+    el.querySelector('.bubble').animate([{ transform: 'scale(1)', opacity: 1 }, { transform: 'scale(1.1)', opacity: 0 }], { duration: 110, fill: 'forwards' });
+    el.querySelector('.present-cap').remove();
+    setTimeout(() => { el.remove(); presentEl = null; }, 150);
+    toast('Here. Now.');
+    schedulePresent();
+  };
+}
+// A popping bubble: a faint ring and the film breaking into droplets that fly out and fall
+function popFx(x, y, rad) {
+  const app = $('#app');
+  const ring = document.createElement('span'); ring.className = 'fxring';
+  ring.style.cssText = 'width:' + rad * 2 + 'px;height:' + rad * 2 + 'px;left:' + (x - rad) + 'px;top:' + (y - rad) + 'px';
+  app.appendChild(ring);
+  ring.animate([{ transform: 'scale(.9)', opacity: .7 }, { transform: 'scale(1.5)', opacity: 0 }], { duration: 460, easing: 'cubic-bezier(.2,.7,.3,1)', fill: 'forwards' }).onfinish = () => ring.remove();
+  for (let k = 0; k < 14; k++) {
+    const a = Math.random() * Math.PI * 2, sz = 1.5 + Math.random() * 2.5, d = document.createElement('span');
+    d.className = 'fxdrop'; d.style.cssText = 'width:' + sz + 'px;height:' + sz + 'px;left:' + (x + Math.cos(a) * rad) + 'px;top:' + (y + Math.sin(a) * rad) + 'px';
+    app.appendChild(d);
+    const out = rad * (.25 + Math.random() * .55) + 10;
+    d.animate([{ transform: 'translate(0,0)', opacity: 1 }, { transform: 'translate(' + (Math.cos(a) * out * .7) + 'px,' + (Math.sin(a) * out * .7) + 'px)', opacity: .9, offset: .4 },
+      { transform: 'translate(' + Math.cos(a) * out + 'px,' + (Math.sin(a) * out + 30) + 'px)', opacity: 0 }], { duration: 480 + Math.random() * 240, easing: 'cubic-bezier(.15,.7,.4,1)', fill: 'forwards' }).onfinish = () => d.remove();
+  }
 }
 
 // ---------------- Photo: pick, reframe, upload ----------------
@@ -577,9 +711,9 @@ async function renderProfile() {
     '<section class="section" aria-label="Interests"><div class="head"><h2 class="h2">Interests</h2><span class="counter" id="iCount">' + (me.interests || []).length + '</span></div><div class="chips">' +
       [...INTERESTS, ...(me.interests || []).filter((l) => !INTERESTS.includes(l))].map((l) => '<button class="chip' + ((me.interests || []).includes(l) ? ' on' : '') + '" data-int="' + esc(l) + '" aria-pressed="' + (me.interests || []).includes(l) + '">' + esc(l) + '</button>').join('') + '</div></section>' +
 
-    '<section class="section" aria-label="Your answers"><h2 class="h2">Your answers</h2>' +
+    '<section class="section" aria-label="Your answers"><div class="head"><h2 class="h2">Your answers</h2><span class="label">Only you see these</span></div>' +
       (answers.length ? answers.map((o) => '<div class="answer"><small>' + new Date(o.day + 'T12:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) + '</small><q>' + esc(o.prompt) + '</q><p>' + esc(o.data.text) + '</p></div>').join('')
-        : '<p class="label" style="font-size:14px">Your answers to the morning question appear here, for matches to read.</p>') + '</section>' +
+        : '<p class="label" style="font-size:14px">Your daily reflections appear here. Only you can see them.</p>') + '</section>' +
 
     '<section class="stats" aria-label="Stats"><div><b>' + streak() + '</b><span>Streak</span></div><div><b>' + Math.max(bestStreak(), streak()) + '</b><span>Best</span></div><div><b>' + totalDone() + '</b><span>Exercises</span></div></section>' +
 
@@ -896,7 +1030,6 @@ async function openPerson(b, opts = {}) {
         '<p class="label" style="font-size:13px;line-height:1.4">These are the colours around ' + esc(b.name || 'their') + '’s bubble.</p>' +
       '</section>') +
       '<section class="section" aria-label="Interests" id="theirInterests"' + ((b.interests || []).length ? '' : ' hidden') + '><h2 class="h2">Interests</h2><div class="facts">' + (b.interests || []).map((x) => '<span class="fact">' + esc(x) + '</span>').join('') + '</div></section>' +
-      '<section class="section" aria-label="Their answers" id="theirAnswers"></section>' +
       '<div id="bumpZone" style="display:flex;flex-direction:column;gap:8px">' + bumpZone(b) + '</div>' +
       '<div class="menu-row" style="justify-content:center"><button class="link" data-report style="color:var(--ink2)">Report</button><button class="link" data-block style="color:var(--ink2)">Block</button></div>' +
     '</div>';
@@ -910,11 +1043,6 @@ async function openPerson(b, opts = {}) {
     if (d.bio) { bio.querySelector('.bio').textContent = d.bio; bio.hidden = false; }
     if (d.interests?.length && !(b.interests || []).length) { ints.querySelector('.facts').innerHTML = d.interests.map((x) => '<span class="fact">' + esc(x) + '</span>').join(''); ints.hidden = false; }
   }).catch(console.error);
-  try {
-    const ans = await API.morningAnswers(b.id, 4);
-    const box = pg.querySelector('#theirAnswers');
-    if (box && ans.length) box.innerHTML = '<h2 class="h2">Their answers</h2>' + ans.map((o) => '<div class="answer"><small>' + new Date(o.day + 'T12:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) + '</small><q>' + esc(o.prompt) + '</q><p>' + esc(o.data?.text) + '</p></div>').join('');
-  } catch (e) { console.error(e); }
 }
 function bumpZone(b) {
   if (b.chatId) return '<button class="primary" data-chat>Open chat</button>';
@@ -1555,6 +1683,7 @@ async function startApp() {
     appStarted = true;
     requestAnimationFrame(loop);
     setInterval(updateLocks, 60000);
+    schedulePresent();
     unsubscribeMessages = API.onMessages((m) => { if (openChat && m.chat_id === openChat.id) openChat.add(m); else loadChats(); });
     // If matching never ran for this person (e.g. sign-up closed early), start it now
     if (!me.aura_updated_at) API.api('match').then(() => { loadCloud(); refreshMe(); }).catch(console.error);

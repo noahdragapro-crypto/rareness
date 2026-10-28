@@ -84,9 +84,6 @@ export async function signupAnswers(uid, rows) {
   const payload = rows.map((r) => ({ user_id: uid, day, kind: 'signup', dim: r.dim, prompt: r.prompt, data: r.data }));
   check(await sb.from('answers').upsert(payload, { onConflict: 'user_id,day,kind,dim' }));
 }
-export async function morningAnswers(uid, limit = 5) {
-  return check(await sb.from('answers').select('day,prompt,data').eq('user_id', uid).eq('kind', 'q').order('day', { ascending: false }).limit(limit));
-}
 
 // ---------- Cloud, bumps, safety ----------
 // What a member wrote about themselves, for their profile page (members can read finished profiles)

@@ -75,6 +75,14 @@ Send them the link. On iPhone: open it in Safari → Share → **Add to Home Scr
 
 The Cloud fills in as more people sign up. Each new member is scored against everyone else right after sign-up.
 
+## Meditation
+
+The first daily step opens the **Meditation** page: how meditation, present bubbles and the aura work, and the door to **the temple**. The temple is a black screen with a crack of light that breathes; while it's open the phone gives a soft double pulse every four seconds (Vibration API on Android; on iPhone, iOS 18+ gives a light haptic tick instead, older iPhones stay silent). Ten minutes there count as the day's meditation.
+
+**Present bubbles**: about every ten minutes (random gaps, `PRESENT_MEAN` in `src/main.js`) a bubble drifts over whatever page is open until it's popped.
+
+Daily answers are private (`supabase/migrations/0006_private_answers.sql`); only the AI reads them on the server.
+
 ## Chats
 
 Text, emoji, stickers and GIFs. GIFs need a free GIPHY key in `GIPHY_API_KEY` (developers.giphy.com → Create an app → API). Under your latest message the other person sees nothing new, and you see **Sent** or **Read**; "Read" needs `supabase/migrations/0005_read_receipts.sql`.
