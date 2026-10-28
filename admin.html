@@ -51,6 +51,22 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .wrap{white-space:normal;min-width:180px;max-width:280px;color:var(--ink2)}
 .msg{max-width:440px;margin:18vh auto;text-align:center;display:flex;flex-direction:column;gap:12px;align-items:center}
 .msg a{color:var(--ink)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:8px}
+.grid.two{grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr))}
+.group{display:flex;flex-direction:column;gap:10px}
+.gh{display:flex;flex-direction:column;gap:2px;margin-top:14px}
+.gt{font-size:32px}
+.gh .muted{margin:0}
+.ch{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.ch h2{font-size:22px}
+.bars{display:flex;flex-direction:column;gap:7px}
+.brow{display:grid;grid-template-columns:minmax(80px,38%) 1fr auto;align-items:center;gap:10px;font-size:13.5px}
+.bl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bt{height:10px;display:block}
+.bf{display:block;height:100%;background:var(--bar);border-radius:0 4px 4px 0}
+.bv{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+.bv em{font-style:normal;color:var(--ink3);margin-left:6px}
+.brow:hover .bf{opacity:.8}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 </style>
 </head>

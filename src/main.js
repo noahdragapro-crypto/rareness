@@ -429,7 +429,7 @@ const dimLabel = (k) => DIMS[dimIndex(k)]?.label || '';
 function renderAgenda() {
   const r = rec(), all = todayTasks(), n = Math.min(3, dayCount()), st = streak(), open = cloudOpen();
   // Today's three: the temple, today's task (a reflection one day, an action the next), and Ora Master's pick
-  const temple = all[0], task = dayNum() % 2 ? all[2] : all[1], pick = suggestion && PRACTICE[suggestion.exercise];
+  const temple = all[0], task = dayNum() % 2 ? all[2] : all[1], other = task === all[1] ? all[2] : all[1], pick = suggestion && PRACTICE[suggestion.exercise];
   const pickDone = pick && myPractices.some((p) => p.exercise === pick.id && p.day === today());
   const extra = practicedOn(today()).filter((id) => !pick || id !== pick.id);
   const days = []; for (let i = 6; i >= 0; i--) { const d = new Date(); d.setDate(d.getDate() - i); days.push(d); }
@@ -453,8 +453,11 @@ function renderAgenda() {
       row('data-task="' + task.k + '"', task.icon, 'Today’s task', task.title, task.sub, r[task.k]) +
       (pick ? row('data-practice="' + pick.id + '"', ICON.guide, 'Ora Master’s pick', pick.name, suggestion.reason, pickDone) : '') +
     '</div><p class="label" style="margin:2px 0 0;font-size:13px">Anything from the Meditation library counts too.</p></section>' +
-    (extra.length ? '<section class="section" aria-label="Also practised"><h2 class="h2">Also today</h2><div style="display:flex;flex-direction:column;gap:4px">' +
-      extra.map((id) => practiceRow(PRACTICE[id])).join('') + '</div></section>' : '');
+    // The other daily task (a reflection or an action), and anything else practised today
+    '<section class="section" aria-label="Also today"><h2 class="h2">Also today</h2><div style="display:flex;flex-direction:column;gap:4px">' +
+      '<button class="task' + (r[other.k] ? ' done' : '') + '" data-task="' + other.k + '"><span class="ic">' + other.icon + '</span><span class="tx"><em>Another task</em><b>' + other.title + '</b><span>' + esc(other.sub) + '</span></span>' +
+        '<span class="st">' + (r[other.k] ? ICON.check : '') + '</span></button>' +
+      extra.map((id) => practiceRow(PRACTICE[id])).join('') + '</div></section>';
   document.querySelectorAll('#agendaBody [data-task]').forEach((b) => b.onclick = () => {
     const t = all.find((x) => x.k === b.dataset.task);
     if (t.k === 'm') { openTemple(); return; } // the temple is open any time, even after today's session

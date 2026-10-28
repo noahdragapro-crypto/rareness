@@ -98,7 +98,7 @@ Text, emoji, Ora-themed stickers, GIFs (with quick topics like Meditate, Breathe
 
 ## Team dashboard
 
-`/admin` (for example `https://rareness-kappa.vercel.app/admin`) shows how many members there are, today's activity, new members per day, and a searchable list of every member, with a CSV download. Only emails in the `ADMIN_EMAILS` variable in Vercel can open it: log in to the app with that email first, then open `/admin`.
+`/admin` (for example `https://rareness-kappa.vercel.app/admin`) shows how many members there are, new and active members per day, who they are (gender, age, country, city, language, what they're here for, interests), the same measures per gender (tasks, active days, bumps, chats, messages), which features are used, the Meditation library (sessions, most popular practices, groups, levels, practices nobody has tried), connections (bumps returned, chats, reports, blocks), and a searchable list of every member, with a CSV download. Ora Master chats and focus bubbles stay on each phone, so they aren't counted. Only emails in the `ADMIN_EMAILS` variable in Vercel can open it: log in to the app with that email first, then open `/admin`.
 
 ## Running it locally
 
