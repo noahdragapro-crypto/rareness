@@ -103,7 +103,10 @@ export const guideChat = (messages) => api('guide', 'POST', { mode: 'chat', mess
 // ---------- Cloud, bumps, safety ----------
 // What a member wrote about themselves, for their profile page (members can read finished profiles)
 export async function profileDetails(id) {
-  return check(await sb.from('profiles').select('bio,job,city,interests,status').eq('id', id).maybeSingle());
+  const d = check(await sb.from('profiles').select('bio,job,city,interests,status,languages,pronouns').eq('id', id).maybeSingle());
+  // Extra profile details (migration 0008); missing before the update, so asked for separately
+  if (d) { const x = await sb.from('profiles').select('details').eq('id', id).maybeSingle(); d.details = x.error ? {} : x.data?.details || {}; }
+  return d;
 }
 export async function cloud() { return check(await sb.rpc('cloud')) || []; }
 export async function bump(id) { return check(await sb.rpc('bump', { target: id })); }

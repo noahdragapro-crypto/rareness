@@ -578,9 +578,15 @@ select.field{font:inherit;font-size:16px;color:var(--ink);-webkit-appearance:non
 /* Profile: compact top, then soft cards */
 .phead{display:flex;align-items:center;justify-content:space-between;margin-top:-6px}
 .phero{margin-top:0;padding-top:0!important;gap:4px!important}
-.phero .wrap{margin-top:34px}
+.phero .wrap{margin-top:40px}
 .pcard .fact{background:#fff}
 .pname{font-family:var(--serif);font-weight:400;font-size:36px;line-height:1.05;margin:8px 0 0;letter-spacing:-.01em}
+.info-list{display:flex;flex-direction:column}
+.irow{display:flex;justify-content:space-between;align-items:baseline;gap:16px;padding:10px 0;border-bottom:.5px solid rgba(17,17,20,.1)}
+.irow:last-child{border-bottom:0}
+.irow span{font-size:14px;color:var(--ink2);flex:none}
+.irow b{font-weight:400;font-size:15px;text-align:right}
+.pcard .stats>div{background:#fff}
 .pcard{display:flex;flex-direction:column;gap:12px;padding:18px;border-radius:var(--r);background:var(--fill)}
 .pcard .head{align-items:baseline}
 .link.small{font-size:13.5px;padding:0}

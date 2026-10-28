@@ -1149,54 +1149,93 @@ async function refreshMe() { me = await API.myProfile(uid); refreshYou(); refres
 function field(id, label, val, ph, max, ac, im) {
   return '<label class="lbl" for="' + id + '">' + label + '<input class="field" id="' + id + '" maxlength="' + max + '" value="' + esc(val ?? '') + '" placeholder="' + esc(ph) + '"' + (ac ? ' autocomplete="' + ac + '"' : '') + (im ? ' inputmode="' + im + '"' : '') + '></label>';
 }
-// The profile: everything shown simply, and one Edit button for the whole page.
+// ---------------- Profile ----------------
+// Languages are stored as short codes ("fr,en"); the first one is the main language
+const LANGS = [['en', 'English'], ['fr', 'French'], ['es', 'Spanish'], ['de', 'German'], ['it', 'Italian'], ['pt', 'Portuguese'], ['nl', 'Dutch'], ['ar', 'Arabic'],
+  ['he', 'Hebrew'], ['ru', 'Russian'], ['tr', 'Turkish'], ['zh', 'Chinese'], ['ja', 'Japanese'], ['ko', 'Korean'], ['hi', 'Hindi'], ['sv', 'Swedish'], ['pl', 'Polish'], ['el', 'Greek']];
+const LANG = Object.fromEntries(LANGS);
+const langCodes = (str) => String(str || '').split(',').map((t) => t.trim()).filter(Boolean)
+  .map((t) => (LANG[t.toLowerCase()] ? t.toLowerCase() : (LANGS.find(([, n]) => n.toLowerCase() === t.toLowerCase()) || [])[0])).filter(Boolean);
+const PRONOUNS = ['she/her', 'he/him', 'they/them'];
+// More about you, chosen in Edit profile (stored in profiles.details)
+const DETAILS = [
+  { key: 'here', label: 'Here for', multi: true, opts: ['New friends', 'A community', 'Practice partners', 'Growth', 'Calm'] },
+  { key: 'experience', label: 'Meditation', opts: ['New to it', 'Now and then', 'Most days', 'Every day'] },
+  { key: 'time', label: 'I like to practise', opts: ['Early morning', 'Midday', 'Evening', 'Late at night'] },
+  { key: 'temple', label: 'My peace temple', opts: ['The sea', 'Mountains', 'A forest', 'A garden', 'A quiet room', 'The city at night'] },
+  { key: 'rhythm', label: 'I’m', opts: ['An early bird', 'A night owl', 'Somewhere between'] },
+  { key: 'food', label: 'I eat', opts: ['Everything', 'Vegetarian', 'Vegan', 'Pescatarian'] },
+  { key: 'reading', label: 'Currently reading', text: 60 },
+  { key: 'sign', label: 'Star sign', opts: ['Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo', 'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces'] }
+];
+const detailText = (d, v) => (Array.isArray(v) ? v.join(', ') : v || '');
+let detailsSaveT = null;
+function saveDetails(details) {
+  me.details = details;
+  clearTimeout(detailsSaveT);
+  detailsSaveT = setTimeout(() => API.saveProfile(uid, { details }).catch((e) => fail(/details/.test(String(e?.message)) ? { message: 'These options need database update 0008.' } : e)), 600);
+}
+
+// The profile: everything shown first, one Edit button for the whole page.
 // The status is edited right where it shows, above your bubble.
 let profileEdit = false;
 async function renderProfile() {
   if (!$('#profileBody')) return;
-  const aura = dimsToW(me.aura), age = ageOf(me.birthdate), mine = me.interests || [], E = profileEdit;
+  const aura = dimsToW(me.aura), age = ageOf(me.birthdate), mine = me.interests || [], E = profileEdit, det = me.details || {};
+  const langs = langCodes(me.languages);
   const meetLabel = { women: 'Women', men: 'Men', everyone: 'Everyone' }[me.show_me || 'everyone'];
-  const sub = [age, me.city].filter(Boolean).join(' · ');
-  // Your practice: what you return to most, with levels, and this week's sessions
+  // The small line under your name: city · main language · age
+  const line = [me.city, langs[0] && LANG[langs[0]], age].filter(Boolean).join(' · ').toLowerCase();
+  const card = (title, body, right = '') => '<section class="pcard"><div class="head"><h2 class="h2">' + title + '</h2>' + right + '</div>' + body + '</section>';
+  const infoRow = (k, v) => (v ? '<div class="irow"><span>' + k + '</span><b>' + esc(v) + '</b></div>' : '');
+  // Practices you return to most, with levels, and this week's sessions
   const counts = {}; myPractices.forEach((p) => { counts[p.exercise] = (counts[p.exercise] || 0) + 1; });
   const top = Object.entries(counts).filter(([id]) => PRACTICE[id]).sort((a, b) => b[1] - a[1]).slice(0, 3);
   const weekAgo = API.dayKey(new Date(Date.now() - 6 * 864e5)), thisWeek = myPractices.filter((p) => p.day >= weekAgo).length;
-  const card = (title, body, right = '') => '<section class="pcard"><div class="head"><h2 class="h2">' + title + '</h2>' + right + '</div>' + body + '</section>';
+  const chipsOf = (attr, opts, on, labels) => '<div class="chips">' + opts.map((o, i) => '<button type="button" class="chip' + (on(o) ? ' on' : '') + '" ' + attr + '="' + esc(o) + '" aria-pressed="' + on(o) + '">' + esc(labels ? labels[i] : o) + '</button>').join('') + '</div>';
+
   $('#profileBody').innerHTML =
-    '<header class="phead"><span class="brand">Ora</span><button class="editbtn' + (E ? ' on' : '') + '" id="editBtn">' + (E ? 'Done' : 'Edit profile') + '</button></header>' +
+    '<header style="display:flex;flex-direction:column;gap:6px"><span class="brand">Ora</span><div class="head"><h1 class="largetitle">Profile</h1>' +
+      '<button class="editbtn' + (E ? ' on' : '') + '" id="editBtn">' + (E ? 'Done' : 'Edit profile') + '</button></div></header>' +
     '<div class="me phero"><div class="wrap" id="meBubble" style="position:relative">' + noteHTML(me.status || 'Add a status') + bubbleHTML(youObj(), 168) +
       '<button class="gbtn glass cam" id="camBtn" aria-label="' + (me.photo_path ? 'Change your photo' : 'Add your photo') + '">' + ICON.cam + '</button></div>' +
-      (E ? '' : '<h1 class="pname" id="meName">' + esc(me.name ? low(me.name) : 'your name') + '</h1>' +
-        (sub ? '<p class="label" style="margin:0">' + esc(sub) + '</p>' : '') +
-        (me.pronouns || me.languages ? '<div class="facts" style="justify-content:center;margin-top:6px">' + [me.pronouns, me.languages].filter(Boolean).map((f) => '<span class="fact">' + esc(f) + '</span>').join('') + '</div>' : '')) +
+      (E ? '' : '<p class="pname" id="meName">' + esc(me.name ? low(me.name) : 'your name') + '</p>' + (line ? '<p class="label" style="margin:0">' + esc(line) + '</p>' : '')) +
     '</div>' +
 
     (E
       ? '<section class="section psec"><h2 class="h2">You</h2><div class="grid2">' +
-          field('pName', 'Name', me.name, 'First name', 24, 'given-name') + field('pAge', 'Age', age ?? '', 'Your age', 2, 'off', 'numeric') +
-          '<label class="lbl" for="pCity">City<select class="field" id="pCity">' + cityOptions(me.city) + '</select></label>' + field('pPron', 'Pronouns', me.pronouns, 'she/her', 16) +
-        '</div>' + field('pLang', 'Languages', me.languages, 'French, English', 60) + '</section>' +
-        '<section class="section psec"><div class="head"><h2 class="h2">About</h2><span class="counter" id="bCount"></span></div><label class="hide" for="pBio">About you</label><textarea id="pBio" maxlength="160" placeholder="Who you are, what you love">' + esc(me.bio) + '</textarea></section>' +
-        '<section class="section psec"><h2 class="h2">I’d like to meet</h2><div class="chips">' + [['women', 'Women'], ['men', 'Men'], ['everyone', 'Everyone']].map(([v, l]) => '<button class="chip' + ((me.show_me || 'everyone') === v ? ' on' : '') + '" data-show="' + v + '" aria-pressed="' + ((me.show_me || 'everyone') === v) + '">' + l + '</button>').join('') + '</div></section>' +
-        '<section class="section psec"><h2 class="h2">Interests</h2><div class="chips">' + [...INTERESTS, ...mine.filter((l) => !INTERESTS.includes(l))].map((l) => '<button class="chip' + (mine.includes(l) ? ' on' : '') + '" data-int="' + esc(l) + '" aria-pressed="' + mine.includes(l) + '">' + esc(l) + '</button>').join('') + '</div></section>'
-      : '<section class="stats" aria-label="Stats"><div><b>' + streak() + '</b><span>Day streak</span></div><div><b>' + Math.max(bestStreak(), streak()) + '</b><span>Best</span></div><div><b>' + totalDone() + '</b><span>Practices</span></div></section>' +
+          field('pName', 'Name', me.name, 'First name', 24, 'given-name') +
+          '<label class="lbl" for="pBirth">Date of birth<input class="field" id="pBirth" type="date" max="' + adultMax() + '" value="' + esc(me.birthdate || '') + '"></label>' +
+        '</div><label class="lbl" for="pCity">City<select class="field" id="pCity">' + cityOptions(me.city) + '</select></label></section>' +
+        '<section class="section psec"><div class="head"><h2 class="h2">About you</h2><span class="counter" id="bCount"></span></div><label class="hide" for="pBio">About you</label><textarea id="pBio" maxlength="160" placeholder="Who you are, what you love">' + esc(me.bio) + '</textarea></section>' +
+        '<section class="section psec"><h2 class="h2">Languages</h2><p class="label" style="margin:0">The first one you pick is your main language.</p>' + chipsOf('data-lang', LANGS.map((l) => l[0]), (c) => langs.includes(c), LANGS.map((l) => l[1])) + '</section>' +
+        '<section class="section psec"><h2 class="h2">Pronouns</h2>' + chipsOf('data-pron', PRONOUNS, (o) => me.pronouns === o) + '</section>' +
+        '<section class="section psec"><h2 class="h2">I’d like to meet</h2>' + chipsOf('data-show', ['women', 'men', 'everyone'], (v) => (me.show_me || 'everyone') === v, ['Women', 'Men', 'Everyone']) + '</section>' +
+        DETAILS.map((d) => '<section class="section psec"><h2 class="h2">' + d.label + '</h2>' +
+          (d.text ? '<label class="hide" for="pd_' + d.key + '">' + d.label + '</label><input class="field" id="pd_' + d.key + '" maxlength="' + d.text + '" value="' + esc(det[d.key] || '') + '" placeholder="A title, an author">'
+            : chipsOf('data-det="' + d.key + '" data-opt', d.opts, (o) => (d.multi ? (det[d.key] || []).includes(o) : det[d.key] === o))) + '</section>').join('') +
+        '<section class="section psec"><h2 class="h2">Interests</h2>' + chipsOf('data-int', [...INTERESTS, ...mine.filter((l) => !INTERESTS.includes(l))], (l) => mine.includes(l)) + '</section>'
+
+      : card('About you', (me.bio ? '<p class="bio">' + esc(me.bio) + '</p>' : '<p class="label" style="margin:0">Add a few words about you with Edit profile.</p>') +
+          (mine.length ? '<div class="facts">' + mine.map((l) => '<span class="fact">' + esc(l) + '</span>').join('') + '</div>' : '')) +
         card('Your aura', (me.aura_summary ? '<p class="reason-line">' + esc(me.aura_summary) + '</p>' : '<p class="label" style="margin:0">Your aura sharpens with every practice.</p>') +
           '<div style="display:flex;flex-direction:column;gap:10px">' + auraLines(aura, false) + '</div>', howButton()) +
-        card('Your practice', top.length
+        card('Your information', '<div class="info-list">' +
+          infoRow('Birthday', me.birthdate ? new Date(me.birthdate + 'T12:00').toLocaleDateString(undefined, { day: 'numeric', month: 'long' }) + (age ? ' · ' + age : '') : '') +
+          infoRow('City', me.city) + infoRow('Languages', langs.map((c) => LANG[c]).join(', ')) + infoRow('Pronouns', me.pronouns) + infoRow('I’d like to meet', meetLabel) +
+          DETAILS.map((d) => infoRow(d.label, detailText(d, det[d.key]))).join('') + '</div>') +
+        card('Your streaks', '<div class="stats" style="margin:0"><div><b>' + streak() + '</b><span>Day streak</span></div><div><b>' + Math.max(bestStreak(), streak()) + '</b><span>Best</span></div><div><b>' + totalDone() + '</b><span>Practices</span></div></div>') +
+        card('Your practices', top.length
           ? '<div class="ptop">' + top.map(([id, n]) => { const x = PRACTICE[id], l = levelFor(n); return '<button data-practice="' + id + '"><span><b>' + esc(x.name) + '</b><span class="plevel">' + levelDots(l) + levelName(l) + '</span></span><span class="label">' + n + ' session' + (n === 1 ? '' : 's') + '</span></button>'; }).join('') + '</div>'
           : '<p class="label" style="margin:0">Nothing yet. Your favourite practices will show here.</p>',
           '<span class="label">' + thisWeek + ' this week</span>') +
-        card('About you',
-          (me.bio ? '<p class="bio">' + esc(me.bio) + '</p>' : '<p class="label" style="margin:0">Add a few words about you with Edit profile.</p>') +
-          (mine.length ? '<div class="facts">' + mine.map((l) => '<span class="fact">' + esc(l) + '</span>').join('') + '</div>' : '') +
-          '<p class="label" style="margin:0">I’d like to meet: <span style="color:var(--ink)">' + meetLabel.toLowerCase() + '</span></p>') +
         (config.paywall && me.paid_at ? '<p class="label" style="margin:0;text-align:center">Unlocked on ' + new Date(me.paid_at).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' }) + '. One-time payment.</p>' : '') +
         '<section class="plinks"><button class="task" data-guide><span class="tx"><b>Ora Master</b><span>Ask about meditation, your practice, your aura</span></span><span class="chev" aria-hidden="true">›</span></button>' +
           '<button class="task" id="faqBtn"><span class="tx"><b>Questions and answers</b><span>Everything people usually ask</span></span><span class="chev" aria-hidden="true">›</span></button></section>' +
         '<section class="section" aria-label="Account" style="gap:6px"><button class="secondary" id="signOutBtn">Sign out</button>' +
           '<button class="link danger" id="deleteBtn" style="align-self:center">Delete my account</button></section>');
 
-  $('#editBtn').onclick = () => { profileEdit = !profileEdit; renderProfile(); if (!profileEdit) { refreshYou(); refreshMeBtn(); setTimeout(loadCloud, 900); } };
+  $('#editBtn').onclick = () => { profileEdit = !profileEdit; renderProfile(); $('#profileBody').closest('.sheet, .scroll, section')?.scrollTo?.({top:0}); window.scrollTo(0,0); if (!profileEdit) { refreshYou(); refreshMeBtn(); setTimeout(loadCloud, 900); } };
   $('#camBtn').onclick = () => pickPhoto(async (blob) => { await savePhoto(blob); renderProfile(); refreshYou(); toast('Photo updated'); });
   // Tap the status above your bubble to change it
   const note = $('#meBubble .note');
@@ -1215,18 +1254,34 @@ async function renderProfile() {
     $('#faqBtn').onclick = () => openFAQ();
     $('#signOutBtn').onclick = async () => { await API.signOut(); location.reload(); };
   } else {
+    const root = $('#profileBody');
     const cnt = () => { $('#bCount').textContent = Array.from($('#pBio').value).length + '/160'; };
     cnt();
-    const bind = (id, key) => { $('#' + id).oninput = (e) => saveSoon({ [key]: e.target.value.trim() }); };
-    bind('pName', 'name'); bind('pPron', 'pronouns'); bind('pLang', 'languages');
-    $('#pAge').oninput = (e) => { const v = e.target.value.replace(/\D/g, '').slice(0, 2); e.target.value = v; const n = parseInt(v, 10); if (n >= 18 && n <= 99) saveSoon({ birthdate: birthFromAge(n) }); };
+    $('#pName').oninput = (e) => saveSoon({ name: e.target.value.trim() });
+    $('#pBirth').onchange = (e) => { const v = e.target.value; if (!v) return; const a = ageOf(v); if (a < 18) { toast('Ora is for people 18 and over'); return; } saveSoon({ birthdate: v }); };
     $('#pCity').onchange = (e) => { if (e.target.value) saveSoon({ city: e.target.value }); };
     $('#pBio').oninput = (e) => { saveSoon({ bio: e.target.value }); cnt(); };
-    document.querySelectorAll('#profileBody [data-show]').forEach((b) => b.onclick = () => {
-      saveSoon({ show_me: b.dataset.show }); me.show_me = b.dataset.show;
-      document.querySelectorAll('#profileBody [data-show]').forEach((x) => { const on = x === b; x.classList.toggle('on', on); x.setAttribute('aria-pressed', on); });
+    const toggleOn = (sel, b, on) => { root.querySelectorAll(sel).forEach((x) => { const o = on(x); x.classList.toggle('on', o); x.setAttribute('aria-pressed', o); }); };
+    // Languages: tap order is kept, so the first picked is the main one
+    root.querySelectorAll('[data-lang]').forEach((b) => b.onclick = () => {
+      const c = b.dataset.lang, list = langCodes(me.languages), i = list.indexOf(c);
+      if (i >= 0) list.splice(i, 1); else list.push(c);
+      saveSoon({ languages: list.join(',') }); toggleOn('[data-lang]', b, (x) => list.includes(x.dataset.lang));
     });
-    document.querySelectorAll('#profileBody [data-int]').forEach((b) => b.onclick = () => {
+    root.querySelectorAll('[data-pron]').forEach((b) => b.onclick = () => {
+      const v = me.pronouns === b.dataset.pron ? '' : b.dataset.pron;
+      saveSoon({ pronouns: v }); toggleOn('[data-pron]', b, (x) => x.dataset.pron === v);
+    });
+    root.querySelectorAll('[data-show]').forEach((b) => b.onclick = () => { saveSoon({ show_me: b.dataset.show }); toggleOn('[data-show]', b, (x) => x === b); });
+    root.querySelectorAll('[data-det]').forEach((b) => b.onclick = () => {
+      const d = DETAILS.find((x) => x.key === b.dataset.det), v = b.dataset.opt, det2 = { ...(me.details || {}) };
+      if (d.multi) { const l = [...(det2[d.key] || [])], i = l.indexOf(v); if (i >= 0) l.splice(i, 1); else l.push(v); det2[d.key] = l; }
+      else det2[d.key] = det2[d.key] === v ? '' : v;
+      saveDetails(det2);
+      toggleOn('[data-det="' + d.key + '"]', b, (x) => (d.multi ? det2[d.key].includes(x.dataset.opt) : det2[d.key] === x.dataset.opt));
+    });
+    DETAILS.filter((d) => d.text).forEach((d) => { $('#pd_' + d.key).oninput = (e) => saveDetails({ ...(me.details || {}), [d.key]: e.target.value.trim() }); });
+    root.querySelectorAll('[data-int]').forEach((b) => b.onclick = () => {
       const v = b.dataset.int, list = [...(me.interests || [])], i = list.indexOf(v);
       if (i >= 0) list.splice(i, 1); else list.push(v);
       me.interests = list; saveSoon({ interests: list });
@@ -1535,6 +1590,9 @@ async function openPerson(b, opts = {}) {
     if (!d) return;
     const bio = pg.querySelector('#theirBio'), ints = pg.querySelector('#theirInterests');
     if (d.bio) { bio.querySelector('.bio').textContent = d.bio; bio.hidden = false; }
+    // What they chose to share: languages and the details from their profile
+    const det = d.details || {}, facts = [langCodes(d.languages).map((c) => LANG[c]).join(', '), d.pronouns, ...DETAILS.map((x) => { const v = detailText(x, det[x.key]); return v ? x.label + ': ' + v : ''; })].filter(Boolean);
+    if (facts.length) { bio.insertAdjacentHTML('beforeend', '<div class="facts">' + facts.map((f) => '<span class="fact">' + esc(f) + '</span>').join('') + '</div>'); bio.hidden = false; }
     if (d.interests?.length && !(b.interests || []).length) { ints.querySelector('.facts').innerHTML = d.interests.map((x) => '<span class="fact">' + esc(x) + '</span>').join(''); ints.hidden = false; }
   }).catch(console.error);
 }
@@ -2004,7 +2062,7 @@ function gateBasics(msg) {
       '<label class="lbl" for="obName"><span>First name <span class="req" aria-hidden="true">*</span></span><input class="field" id="obName" maxlength="24" required aria-required="true" autocomplete="given-name" value="' + esc(p.name ?? '') + '" placeholder="Your first name"></label>' +
       (signedIn ? '' : '<label class="lbl" for="email"><span>Email <span class="req" aria-hidden="true">*</span></span><input class="field" id="email" type="email" required aria-required="true" autocomplete="email" inputmode="email" value="' + esc(G.email) + '" placeholder="you@example.com"></label>') +
       '<p class="fine" style="margin:2px 0 -4px"><span class="req">*</span> Required. Everything below is optional and can be added later.</p>' +
-      field('obAge', 'Age', p.age ?? ageOf(p.birthdate) ?? '', 'Your age', 2, 'off', 'numeric') +
+      '<label class="lbl" for="obBirth">Date of birth<input class="field" id="obBirth" type="date" max="' + adultMax() + '" value="' + esc(p.birthdate || '') + '" autocomplete="bday"></label>' +
       '<div class="lbl">I am<div class="chips" style="margin-top:2px">' + GENDERS.map(([v, l]) => '<button type="button" class="chip' + (p.gender === v ? ' on' : '') + '" data-g="' + v + '">' + l + '</button>').join('') + '</div></div>' +
       '<div class="lbl">I’d like to meet<div class="chips" style="margin-top:2px">' + SHOW.map(([v, l]) => '<button type="button" class="chip' + ((p.show_me || 'everyone') === v ? ' on' : '') + '" data-s="' + v + '">' + l + '</button>').join('') + '</div></div>' +
       '<label class="lbl" for="obCity">City<select class="field" id="obCity">' + cityOptions(p.city) + '</select></label>' +
@@ -2016,16 +2074,16 @@ function gateBasics(msg) {
     () => {
       let gender = p.gender, show = p.show_me || 'everyone';
       if (!signedIn) $('#toLogin').onclick = () => gateLogin();
-      $('#obAge').oninput = (e) => { e.target.value = e.target.value.replace(/\D/g, '').slice(0, 2); };
+
       gate.querySelectorAll('[data-g]').forEach((b) => b.onclick = () => { gender = b.dataset.g; gate.querySelectorAll('[data-g]').forEach((x) => x.classList.toggle('on', x === b)); });
       gate.querySelectorAll('[data-s]').forEach((b) => b.onclick = () => { show = b.dataset.s; gate.querySelectorAll('[data-s]').forEach((x) => x.classList.toggle('on', x === b)); });
       $('#f').onsubmit = async (e) => {
         e.preventDefault();
-        const name = $('#obName').value.trim(), city = $('#obCity').value, age = parseInt($('#obAge').value, 10), err = $('#err');
+        const name = $('#obName').value.trim(), city = $('#obCity').value, birth = $('#obBirth').value, age = birth ? ageOf(birth) : null, err = $('#err');
         const say = (m) => { err.textContent = m; err.hidden = false; };
         const email = signedIn ? '' : $('#email').value.trim().toLowerCase();
-        G.basics = { name, age: age || '', gender, show_me: show, city };
-        const missing = () => (!name ? 'Add your first name.' : age && age < 18 ? 'Ora is for people 18 and over.' : age > 99 ? 'Check your age.' : '');
+        G.basics = { name, birthdate: birth, gender, show_me: show, city };
+        const missing = () => (!name ? 'Add your first name.' : birth && age < 18 ? 'Ora is for people 18 and over.' : birth && age > 110 ? 'Check your date of birth.' : '');
         if (!signedIn) {
           G.email = email;
           if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return say('Enter a valid email address.');
@@ -2045,18 +2103,15 @@ function gateBasics(msg) {
             country = me.country || out.country;
           }
           // Your Cloud shows people from your country; it can be changed later in your profile
-          me = await API.saveProfile(uid, { name, ...(age ? { birthdate: birthFromAge(age) } : {}), ...(gender ? { gender } : {}), show_me: show, ...(city ? { city } : {}), country: country || guessCountry() || null });
+          me = await API.saveProfile(uid, { name, ...(birth ? { birthdate: birth } : {}), ...(gender ? { gender } : {}), show_me: show, ...(city ? { city } : {}), country: country || guessCountry() || null });
           G.step = 1; gateOnboard();
         } catch (x) { console.error(x); busy(go, false, 'Continue'); say(x?.message || 'That didn’t work. Try again.'); }
       };
     });
 }
 
-// Only the age is asked; a birth date half a year back keeps it right until the next birthday or so
-function birthFromAge(age) {
-  const d = new Date(); d.setFullYear(d.getFullYear() - age); d.setDate(d.getDate() - 182);
-  return API.dayKey(d);
-}
+// The latest date of birth for someone who is 18 today
+function adultMax() { const d = new Date(); d.setFullYear(d.getFullYear() - 18); return API.dayKey(d); }
 
 // Log back in with just the email (no password or code for now)
 function gateLogin(msg) {

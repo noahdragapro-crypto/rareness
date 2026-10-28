@@ -90,6 +90,8 @@ The temple's soft vibration uses the Vibration API (Android); iPhones don't allo
 
 Daily answers are private (`supabase/migrations/0006_private_answers.sql`); only the AI reads them on the server.
 
+The **profile** shows the name with a small line (city · main language · age, from the date of birth), then About you, the aura, all the person's information, streaks and practices. Edit profile adds several languages (the first is the main one), pronouns and a few fun options (here for, meditation, temple, rhythm, food, reading, star sign), stored in `profiles.details` (`supabase/migrations/0008_profile_details.sql`).
+
 ## Chats
 
 Text, emoji, Ora-themed stickers, GIFs (with quick topics like Meditate, Breathe, Namaste) and shared practices: a card your friend can start with one tap. GIFs need a free GIPHY key in `GIPHY_API_KEY` (developers.giphy.com → Create an app → API). Under your latest message the other person sees nothing new, and you see **Sent** or **Read**; "Read" needs `supabase/migrations/0005_read_receipts.sql`.
