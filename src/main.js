@@ -18,6 +18,15 @@ const DIMS = [
   { key: 'goals', label: 'Goals', c: '#8FE8E3', d: 'What you are looking for' },
   { key: 'routine', label: 'Routine', c: '#6FB7FF', d: 'Daily habits and streaks' }
 ];
+// What each line of an aura means, and what shapes it (shown behind the (i) buttons)
+const DIM_INFO = {
+  values: 'What matters most to you: honesty, kindness, growth, family. Shaped by your own words, your reflections, and practices like the values compass, gratitude and loving-kindness.',
+  lifestyle: 'How you live your days: calm or social, nature or city, slow mornings or full weekends. Shaped by how you describe your life, walking and nature practices, and offline hours.',
+  interests: 'What you love doing and talking about: books, music, art, movement. Shaped by your interests and what you write about.',
+  personality: 'Your temperament: energy, humour, how you meet hard moments. Shaped by your meditation, emotion check-ins, self-compassion and the patterns you notice in yourself.',
+  goals: 'What you are looking for in friends, community and life. Shaped by who you’d love to meet, your intentions, manifestation and the first steps you take.',
+  routine: 'Your rhythm and consistency: how regularly you practise, breathe, move and rest. Shaped by your meditation days, breath work and your streak.'
+};
 const dimIndex = (k) => DIMS.findIndex((d) => d.key === k);
 const dimsToW = (o) => DIMS.map((d) => Math.max(0, Number(o?.[d.key]) || 0));
 
@@ -34,6 +43,7 @@ const ICON = {
   more: sv('<circle cx="5" cy="12" r="1"></circle><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle>'),
   smile: sv('<circle cx="12" cy="12" r="9.5"></circle><path d="M8.5 14.2c.9 1.2 2.1 1.8 3.5 1.8s2.6-.6 3.5-1.8"></path><circle cx="9.2" cy="10" r=".6"></circle><circle cx="14.8" cy="10" r=".6"></circle>'),
   guide: sv('<circle cx="9.5" cy="10" r="5.5"></circle><circle cx="17.3" cy="14.8" r="3.4"></circle><circle cx="11.6" cy="19.2" r="1.9"></circle><path d="M6.9 7.6c.6-.9 1.4-1.5 2.4-1.8" stroke-linecap="round"></path>'),
+  pen: sv('<path d="M4 20l1.2-4.4L15.6 5.2a2 2 0 0 1 2.8 0l.4.4a2 2 0 0 1 0 2.8L8.4 18.8z"></path><path d="M13.5 7.3l3.2 3.2"></path>'),
   mic: sv('<rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"></path>'),
   send: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"></path></svg>',
   lock: sv('<rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path>'),
@@ -59,7 +69,9 @@ const INTERESTS = [
 let uid = null, me = null, myAnswers = [], myPractices = [], people = [], chatList = [], config = { paywall: false };
 const today = () => API.dayKey();
 const ageOf = (b) => (b ? Math.floor((Date.now() - new Date(b).getTime()) / 31557600000) : null);
-const nameAge = (p) => (p.name || 'Someone') + (p.age ? ', ' + p.age : '');
+// Names are shown in lowercase everywhere, as typed otherwise
+const low = (n) => String(n || '').toLocaleLowerCase();
+const nameAge = (p) => (p.name ? low(p.name) : 'someone') + (p.age ? ', ' + p.age : '');
 function rec(k = today()) {
   const r = { q: false, t: false, m: false };
   for (const a of myAnswers) if (a.day === k && r[a.kind] === false) r[a.kind] = a;
@@ -125,8 +137,19 @@ function bubbleHTML(o, size) {
 }
 const oneHot = (i) => DIMS.map((_, j) => (j === i ? 1 : 0));
 const swatch = (i, size = 24) => bubbleHTML({ w: oneHot(i), plain: true }, size);
-const youObj = () => ({ you: true, w: dimsToW(me?.aura), photo: API.photoUrl(me?.photo_path), initial: me?.name ? Array.from(me.name)[0].toUpperCase() : 'you' });
+const youObj = () => ({ you: true, w: dimsToW(me?.aura), photo: API.photoUrl(me?.photo_path), initial: me?.name ? Array.from(low(me.name))[0] : 'you' });
 const noteHTML = (text) => '<div class="note"><div class="nb">' + esc(text) + '</div><i></i><i></i></div>';
+// The six lines of an aura, each with an (i) that explains it
+function auraLines(w) {
+  const tot = w.reduce((a, b) => a + b, 0) || 1;
+  return DIMS.map((d, i) => '<div class="reason-wrap"><div class="reason">' + swatch(i, 24) + '<div class="rt"><div><span class="rlab">' + d.label +
+    '<button type="button" class="info" data-dinfo aria-label="What ' + d.label.toLowerCase() + ' means" aria-expanded="false">i</button></span><span>' + Math.round(w[i] / tot * 100) + '%</span></div>' + glassBar(w[i], i) + '</div></div>' +
+    '<p class="rinfo" hidden>' + DIM_INFO[d.key] + '</p></div>').join('');
+}
+document.addEventListener('click', (e) => {
+  const b = e.target.closest && e.target.closest('[data-dinfo]'); if (!b) return;
+  const p = b.closest('.reason-wrap').querySelector('.rinfo'); p.hidden = !p.hidden; b.setAttribute('aria-expanded', !p.hidden);
+});
 const glassBar = (pct, i) => '<div class="gbar"><span style="width:' + Math.round(pct) + '%;--c:' + DIMS[i].c + '"></span></div>';
 
 // ---------------- Toast ----------------
@@ -403,7 +426,7 @@ function renderAgenda() {
     return '<div class="wd">' + 'SMTWTFS'[d.getDay()] + '<b class="' + (done ? 'done' : '') + (isToday && !done ? ' today' : '') + '">' + (done ? ICON.check : '') + '</b></div>';
   }).join('');
   $('#agendaBody').innerHTML =
-    '<header style="display:flex;flex-direction:column;gap:6px"><span class="brand">Ora</span><h1 class="largetitle">Agenda</h1><span class="label">' + new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' }) + '</span>' + howButton() + '</header>' +
+    '<header style="display:flex;flex-direction:column;gap:6px"><span class="brand">Ora</span><h1 class="largetitle">Agenda</h1><div class="subrow"><span class="label">' + new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' }) + '</span>' + howButton() + '</div></header>' +
     '<section class="box" style="display:flex;flex-direction:column;gap:12px" aria-label="Streak">' +
       '<div class="head"><div><div class="big">' + st + '</div><div class="label" style="margin-top:4px">day streak</div></div><div class="label" style="text-align:right">best ' + Math.max(bestStreak(), st) + '<br>' + totalDone() + ' exercises</div></div>' +
       '<div class="week">' + week + '</div>' +
@@ -481,7 +504,7 @@ function renderMeditation() {
   const t = todayTasks().find((x) => x.k === 'm'), done = Boolean(rec().m), mins = t.mins, n = Math.min(3, dayCount());
   const list = PR.filter((x) => !libCat || x.cat === libCat);
   box.innerHTML =
-    '<header style="display:flex;flex-direction:column;gap:6px"><span class="brand">Ora</span><h1 class="largetitle">Meditation</h1><span class="label">' + n + ' of 3 for today · ' + PR.length + ' practices</span>' + howButton() + '</header>' +
+    '<header style="display:flex;flex-direction:column;gap:6px"><span class="brand">Ora</span><h1 class="largetitle">Meditation</h1><div class="subrow"><span class="label">' + n + ' of 3 today · ' + PR.length + ' practices</span>' + howButton() + '</div></header>' +
     suggestionCard() +
     '<section class="temple-card" aria-label="The temple">' +
       '<div class="temple-mini" aria-hidden="true">' + crackSVG() + '</div>' +
@@ -513,30 +536,59 @@ function wirePracticeLinks(root) {
   root.querySelectorAll('[data-guide]').forEach((b) => b.onclick = () => openGuide());
   root.querySelectorAll('[data-how]').forEach((b) => b.onclick = () => openHowItWorks());
 }
-const howButton = () => '<button class="howbtn" data-how>' + bubbleHTML({ w: [1, 1, 1, 1, 1, 1], clear: true }, 18) + '<span>How we build your aura</span></button>';
+const howButton = () => '<button class="howbtn" data-how aria-label="How we build your aura">' + bubbleHTML({ w: [1, 1, 1, 1, 1, 1], clear: true }, 14) + '<span>How we build your aura</span></button>';
 
 // ---------------- How we build your aura (from the Agenda and Meditation) ----------------
 function openHowItWorks() {
-  const sec = (title, body, extra = '') => '<section class="section howsec"><h2 class="h2">' + title + '</h2>' + extra + body.map((p) => '<p class="explain">' + p + '</p>').join('') + '</section>';
-  const levels = LIB.levels.map((l, i) => '<span class="plevel">' + levelDots(i + 1) + l.name + (l.from ? ' · ' + l.from + '+' : '') + '</span>').join('');
-  const html = '<div class="stack">' +
+  const clear = (sz, w = [1, 1, 1, 1, 1, 1]) => bubbleHTML({ w, clear: true }, sz);
+  const head = (n, title) => '<div class="howhead"><span class="hownum">' + n + '</span><h2 class="h2">' + title + '</h2></div>';
+  const p = (t) => '<p class="explain">' + t + '</p>';
+  const aura = me?.aura ? dimsToW(me.aura) : DIMS.map(() => 1);
+  const kinds = [[ICON.m, 'Guided', 'In the temple room, with gentle cues like “Breathe in · 4”.'], [ICON.pen, 'Writing', 'A prompt and a private page, just for you.'], [ICON.t, 'Do it', 'Small real-life actions: an offline hour, a kind act.']];
+  // A little Cloud: you in the middle, people and empty spots floating around
+  const cloud = '<div class="howcloud" aria-hidden="true">' +
+    [[50, 50, 64, null, 1], [18, 30, 52, [1, 0, 1, 0, 1, 0]], [80, 26, 42, [0, 1, 0, 1, 0, 1]], [84, 72, 34, [1, 1, 0, 0, 1, 1]], [22, 76, 30, [0, 0, 1, 1, 1, 0]], [50, 12, 22], [62, 86, 18], [36, 92, 14]]
+      .map(([x, y, sz, w, you]) => '<span style="left:' + x + '%;top:' + y + '%;width:' + sz + 'px;height:' + sz + 'px">' + (you ? bubbleHTML(youObj(), sz) : clear(sz, w || undefined)) + '</span>').join('') + '</div>';
+  const html = '<div class="stack how">' +
     '<header style="display:flex;flex-direction:column;gap:6px"><span class="label">How Ora works</span><h1 class="largetitle">How we build your aura</h1></header>' +
-    '<div style="display:flex;justify-content:center">' + bubbleHTML(youObj(), 150) + '</div>' +
-    sec('Your aura', ['Your aura is six colours: ' + DIMS.map((d) => d.label.toLowerCase()).join(', ') + '. Together they describe who you are and what you bring to the people around you.',
-      'It starts with your two answers at sign-up, about yourself and about who you’d love to meet. Then it keeps growing with everything you practise. Our AI reads it all and updates your colours, so the more you practise, the truer your aura becomes.']) +
-    sec('Three a day', ['Each day, do three things. They can be your daily tasks on the Agenda (meditate, reflect, take an action), practices from the Meditation library, or any mix of both.',
-      'Three opens the Cloud and your chats for the day and keeps your streak going. Today’s meditation happens in the temple: a dark room with a crack of light that breathes, soft music, and a session of 7 to 15 minutes depending on the day.']) +
-    sec('How the practices are built', ['The library has ' + PR.length + ' practices in ' + LIB.categories.length + ' groups: ' + LIB.categories.join(', ').toLowerCase() + '.',
-      'Each one is one of three kinds. Guided practices run in the temple room with gentle cues, like “Breathe in · 4”. Writing practices give you a prompt and a private page. Do-it practices are small real-life actions, like an offline hour or an act of kindness.',
-      'Every practice has four levels. You move up as you return to it, and each level goes a little deeper: a longer session, or a little more writing. Practices you do often, at higher levels, weigh more in your aura.'], '<div class="howlevels">' + levels + '</div>') +
-    sec('One question after each practice', ['When you finish, one short question slides up: a few words, a choice between cards, or a few options to pick. It takes seconds, and you can skip it.',
-      'These answers help us understand what you feel and need, so your aura, your suggestions and the people near you in the Cloud fit you better. They’re private: only our AI reads them.']) +
-    sec('Focus bubbles', ['Soon after you open Ora, and then every ten minutes or so, a bubble floats up over whatever you’re doing. Pop it. It’s a small reminder that you’re here, now, and it’s part of the practice.'], '<div style="display:flex;justify-content:center;padding:4px 0">' + bubbleHTML({ w: [1, 1, 1, 1, 1, 1], clear: true }, 70) + '</div>') +
-    sec('Ora Master', ['Each day, Ora Master suggests one practice for what you seem to need, on your Agenda and in its chat. You can ask it anything about meditation, your practice or your aura. It’s at the top of your Chats.']) +
-    sec('The Cloud', ['The Cloud shows the community as glass bubbles. The more you have in common, the bigger and closer someone floats, and the colours around their bubble show what you share. Empty bubbles are spots waiting for new people.']) +
-    sec('Bumping into people', ['See someone you’d like to know? Bump them. Nobody knows who bumped them, unless they bump you back. Then you’ve bumped into each other, and a chat opens.',
-      'In a chat you can send messages, emoji, stickers, GIFs, and practices to do together. You can also see what the other person practises most, and join them.']) +
-    sec('What stays private', ['Your answers, your writing and your check-ins are only read by our AI. Nobody else sees them. Other people see your photo, name, age if you gave it, status, about, interests, and, once you’ve bumped into each other, which practices you do most.']) +
+    '<section class="howhero"><div>' + bubbleHTML(youObj(), 132) + '</div><p class="reason-line">Your aura is the ring of colours around your bubble. It grows with everything you practise.</p></section>' +
+
+    '<section class="section">' + head(1, 'Your aura') +
+      p('Six colours describe who you are and what you bring to others. It starts with your two answers at sign-up, about yourself and about who you’d love to meet, then grows with your practice. Our AI reads it all and updates your colours.') +
+      '<div class="box howlines">' + auraLines(aura) + '<p class="fine" style="margin:4px 0 0">Tap <span class="info static">i</span> on a line to see what it means and what shapes it. The percentage is how much of your aura that colour takes.</p></div></section>' +
+
+    '<section class="section">' + head(2, 'Three a day') +
+      '<div class="howthree">' + [['Daily tasks', 'Meditate, reflect, take an action'], ['Practices', 'Anything from the library'], ['Any mix', 'Three opens your Cloud and chats']].map(([t, d], i) => '<div><span class="ring3">' + (i + 1) + '</span><b>' + t + '</b><span>' + d + '</span></div>').join('') + '</div>' +
+      '<div class="temple-card" style="gap:10px"><div class="temple-mini" style="height:90px" aria-hidden="true">' + crackSVG() + '</div><p style="margin:0;color:rgba(255,255,255,.75);font-size:14.5px;line-height:1.45">Today’s meditation happens in the temple: a dark room, a crack of light that breathes, soft music, and 7 to 15 minutes depending on the day.</p></div></section>' +
+
+    '<section class="section">' + head(3, 'How the practices are built') +
+      p(PR.length + ' practices in ' + LIB.categories.length + ' groups: ' + LIB.categories.join(', ').toLowerCase() + '. Each one is one of three kinds:') +
+      '<div class="howkinds">' + kinds.map(([ic, t, d]) => '<div class="box"><span class="kic">' + ic + '</span><b>' + t + '</b><span>' + d + '</span></div>').join('') + '</div>' +
+      p('Every practice has four levels. Come back to it and you move up; each level goes a little deeper. Practices you do often, at higher levels, weigh more in your aura.') +
+      '<div class="box howlevels">' + LIB.levels.map((l, i) => '<div><span class="plevel">' + levelDots(i + 1) + '<b>' + l.name + '</b></span><span class="label">' + (l.from ? 'after ' + l.from + ' sessions' : 'to begin') + '</span></div>').join('') + '</div></section>' +
+
+    '<section class="section">' + head(4, 'One question after each practice') +
+      p('When you finish, one short question slides up. A few words, a choice of cards, or some options to pick. Seconds, and you can skip it.') +
+      '<div class="howcheck" aria-hidden="true"><span class="label">One question · The temple</span><b>How did your mind feel?</b><div class="cicards">' + ['Still', 'Busy', 'Heavy', 'Light'].map((o, i) => '<span class="cicard' + (i === 0 ? ' on' : '') + '">' + o + '</span>').join('') + '</div></div>' +
+      p('Your answers help us understand what you feel and need, so your aura, your suggestions and the people near you fit you better. Only our AI reads them.') + '</section>' +
+
+    '<section class="section">' + head(5, 'Focus bubbles') +
+      '<div style="display:flex;gap:14px;align-items:center"><div style="flex:none">' + clear(64) + '</div>' +
+      '<p class="explain" style="margin:0">Soon after you open Ora, and then every ten minutes or so, a bubble floats up over whatever you’re doing. Pop it: you’re here, now. It’s part of the practice.</p></div></section>' +
+
+    '<section class="section">' + head(6, 'Ora Master') +
+      '<div style="display:flex;gap:14px;align-items:center">' + masterAva(64) + '<p class="explain" style="margin:0">Each day it suggests one practice for what you seem to need. Ask it anything about meditation, your practice or your aura. It’s at the top of your Chats.</p></div></section>' +
+
+    '<section class="section">' + head(7, 'The Cloud') + cloud +
+      p('The community floats around you as glass bubbles. The more you share, the bigger and closer someone is, and the colours around their bubble show what you share. Empty bubbles are spots waiting for new people.') + '</section>' +
+
+    '<section class="section">' + head(8, 'Bumping into people') +
+      '<div class="howbump" aria-hidden="true">' + clear(58, [1, 0, 1, 0, 1, 0]) + '<span class="bumpic">' + ICON.bump + '</span>' + clear(58, [0, 1, 0, 1, 0, 1]) + '</div>' +
+      p('See someone you’d like to know? Bump them. Nobody knows who bumped them, unless they bump you back. Then you’ve bumped into each other, and a chat opens.') +
+      p('In a chat: messages, emoji, stickers, GIFs, and practices to do together. You can also see what they practise most, and join them.') + '</section>' +
+
+    '<section class="section">' + head(9, 'What stays private') +
+      '<div class="box" style="display:flex;gap:12px;align-items:flex-start"><span style="width:22px;height:22px;flex:none;display:block">' + ICON.lock + '</span><p class="explain" style="margin:0">Your answers, your writing and your check-ins are read only by our AI. Others see your photo, name, age if you gave it, status, about and interests, and, once you’ve bumped into each other, which practices you do most.</p></div></section>' +
     '</div>';
   pushPage('How we build your aura', html);
 }
@@ -729,7 +781,7 @@ function openGuide() {
     { footer: '<form class="composer glass" id="gComposer"><label for="gIn" class="hide">Message Ora Master</label><input id="gIn" autocomplete="off" placeholder="Ask Ora Master" maxlength="1000"><button class="send" id="gSend" aria-label="Send" disabled>' + ICON.send + '</button></form>' });
   const th = pg.querySelector('#gThread'), sc = pg.querySelector('.scroll'), inp = pg.querySelector('#gIn'), sb = pg.querySelector('#gSend');
   let msgs = guideMsgs();
-  if (!msgs.length) msgs.push({ role: 'assistant', day: today(), content: 'Hello' + (me?.name ? ' ' + me.name : '') + '. I’m Ora Master. Ask me anything about meditation, the practices, or how your aura and the people around you are found.' });
+  if (!msgs.length) msgs.push({ role: 'assistant', day: today(), content: 'Hello' + (me?.name ? ' ' + low(me.name) : '') + '. I’m Ora Master. Ask me anything about meditation, the practices, or how your aura and the people around you are found.' });
   const draw = (typing) => {
     th.innerHTML = msgs.map((m) => '<div class="msg ' + (m.role === 'user' ? 'me' : 'them') + '">' + esc(m.content) +
       (m.suggest && PRACTICE[m.suggest] ? '<button class="primary small" data-practice="' + m.suggest + '">Start ' + esc(PRACTICE[m.suggest].name) + '</button>' : '') + '</div>').join('') +
@@ -1120,13 +1172,13 @@ async function renderProfile() {
     '<header style="display:flex;flex-direction:column;gap:6px"><div class="head"><span class="brand">Ora</span><span class="label">Profile ' + completeness() + '% complete</span></div><h1 class="largetitle">Profile</h1></header>' +
     '<div class="me"><div class="wrap" id="meBubble" style="position:relative;margin-top:24px">' + noteHTML(me.status || 'Write a status') + bubbleHTML(youObj(), 176) +
       '<button class="gbtn glass cam" id="camBtn" aria-label="' + (me.photo_path ? 'Change your photo' : 'Add your photo') + '">' + ICON.cam + '</button></div>' +
-      '<h2 class="h2" id="meName" style="font-size:32px;margin-top:6px">' + esc(me.name || 'Your name') + '</h2><p class="label" id="meSub">' + esc(sub || 'Add your city') + '</p>' +
+      '<h2 class="h2" id="meName" style="font-size:32px;margin-top:6px">' + esc(me.name ? low(me.name) : 'your name') + '</h2><p class="label" id="meSub">' + esc(sub || 'Add your city') + '</p>' +
       (facts.length ? '<div class="facts" style="justify-content:center;margin-top:4px">' + facts.map((f) => '<span class="fact">' + f[0] + esc(f[1]) + '</span>').join('') + '</div>' : '') +
     '</div>' +
 
     '<section class="section" aria-label="Your aura"><div class="head"><h2 class="h2">Your aura</h2><span class="label">Updated by AI from your answers</span></div>' +
       (me.aura_summary ? '<p class="reason-line">' + esc(me.aura_summary) + '</p>' : '<p class="label" style="font-size:14px">Your aura appears after your first answers are read.</p>') +
-      DIMS.map((d, i) => '<div class="reason">' + swatch(i, 24) + '<div class="rt"><div>' + d.label + '<span>' + Math.round(aura[i] / tot * 100) + '%</span></div>' + glassBar(aura[i], i) + '</div></div>').join('') +
+      auraLines(aura) +
     '</section>' +
 
     '<section class="section" aria-label="Status"><div class="head"><h2 class="h2">Status</h2><span class="counter" id="pCount"></span></div>' +
@@ -1166,7 +1218,7 @@ async function renderProfile() {
 
   const cnt = () => { $('#pCount').textContent = Array.from($('#pStatus').value).length + '/20'; $('#bCount').textContent = Array.from($('#pBio').value).length + '/160'; };
   cnt();
-  const head = () => { $('#meName').textContent = me.name || 'Your name'; $('#meSub').textContent = [ageOf(me.birthdate), me.city].filter(Boolean).join(' · ') || 'Add your city'; };
+  const head = () => { $('#meName').textContent = me.name ? low(me.name) : 'your name'; $('#meSub').textContent = [ageOf(me.birthdate), me.city].filter(Boolean).join(' · ') || 'Add your city'; };
   const bind = (id, key, after, num) => { $('#' + id).oninput = (e) => { let v = e.target.value; if (num) { v = v.replace(/\D/g, ''); e.target.value = v; } saveSoon({ [key]: num ? (v ? Number(v) : null) : v.trim() }); if (after) after(); }; };
   bind('pName', 'name', () => { head(); refreshYou(); }); $('#pCity').onchange = (e) => { if (!e.target.value) return; saveSoon({ city: e.target.value }); head(); };
   bind('pPron', 'pronouns'); bind('pHeight', 'height_cm', null, true); bind('pJob', 'job'); bind('pLang', 'languages');
@@ -1422,7 +1474,7 @@ function loop(now) {
 // and the dims set the coloured ring.
 function toBubble(row) {
   return {
-    id: row.id, name: row.name, age: row.age, city: row.city, job: row.job, status: clip(row.status, 20),
+    id: row.id, name: low(row.name), age: row.age, city: row.city, job: row.job, status: clip(row.status, 20),
     interests: row.interests || [], photo: API.photoUrl(row.photo_path),
     // Someone not scored yet still shows up, mid-distance with an even ring, until matching catches up
     score: row.score ?? 50, compat: Math.max(.05, Math.min(1, ((row.score ?? 50) - 25) / 70)), w: row.dims ? dimsToW(row.dims) : DIMS.map(() => 1), dims: row.dims || {},
@@ -1549,7 +1601,7 @@ function openReport(b) {
 // ---------------- Chats ----------------
 const ago = (ts) => { const s = (Date.now() - new Date(ts).getTime()) / 1000; if (s < 60) return 'now'; if (s < 3600) return Math.floor(s / 60) + ' min'; if (s < 86400) return Math.floor(s / 3600) + ' h'; return new Date(ts).toLocaleDateString(undefined, { weekday: 'short' }); };
 async function loadChats() {
-  try { chatList = await API.chats(uid); renderChats(); } catch (e) { console.error(e); }
+  try { chatList = await API.chats(uid); chatList.forEach((c) => { if (c.other) c.other.name = low(c.other.name); }); renderChats(); } catch (e) { console.error(e); }
 }
 function renderChats() {
   const unread = chatList.filter((c) => c.unread).length, badge = $('#chatBadge');
@@ -2127,7 +2179,7 @@ async function finishOnboarding() {
   showGate('<p class="label">Your aura</p>' +
     '<div style="display:flex;justify-content:center;padding:4px 0">' + bubbleHTML(youObj(), 190) + '</div>' +
     (me.aura_summary ? '<p class="reason-line" style="text-align:center">' + esc(me.aura_summary) + '</p>' : '<p class="lead" style="text-align:center">Your aura will sharpen as you answer the daily rituals.</p>') +
-    '<div style="display:flex;flex-direction:column;gap:10px">' + DIMS.map((d, k) => '<div class="reason">' + swatch(k, 24) + '<div class="rt"><div>' + d.label + '<span>' + Math.round(aura[k] / tot * 100) + '%</span></div>' + glassBar(aura[k], k) + '</div></div>').join('') + '</div>' +
+    '<div style="display:flex;flex-direction:column;gap:10px">' + auraLines(aura) + '</div>' +
     '<p class="fine">The colours around your bubble come from this. On other people’s bubbles, they show why you match.</p>' +
     '<div class="grow"></div><button class="primary" id="go">' + (needsMembership() ? 'Continue' : 'Enter Ora') + '</button>',
     () => { $('#go').onclick = () => afterOnboarding(); });

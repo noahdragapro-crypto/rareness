@@ -84,6 +84,9 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:1.5px so
 .pbar>*{pointer-events:auto}
 .pbar .ptitle{flex:1;text-align:center;font-family:var(--serif);font-size:20px;opacity:0;transition:opacity .25s}
 .pbar.on .ptitle{opacity:1}
+/* A soft frosted bar behind the title once the page scrolls, so text doesn't run under it */
+.pbar::before{content:'';position:absolute;inset:0;z-index:-1;background:rgba(255,255,255,.78);-webkit-backdrop-filter:blur(18px) saturate(1.6);backdrop-filter:blur(18px) saturate(1.6);box-shadow:0 .5px 0 rgba(17,17,20,.08);opacity:0;transition:opacity .25s}
+.pbar.on::before{opacity:1}
 .shade{position:absolute;inset:0;z-index:45;background:rgba(17,17,20,.10);opacity:0;pointer-events:none;transition:opacity .5s var(--ease)}
 .shade.on{opacity:1}
 
@@ -490,8 +493,6 @@ select.field{font:inherit;font-size:16px;color:var(--ink);-webkit-appearance:non
 .traytabs button{font-size:13.5px}
 
 /* How it works, FAQ */
-.howbtn{align-self:flex-start;display:inline-flex;align-items:center;gap:7px;margin-top:4px;height:32px;padding:0 12px 0 8px;border-radius:16px;border:.5px solid rgba(17,17,20,.14);background:#fff;font:inherit;font-size:13.5px;color:var(--ink);cursor:pointer}
-.howbtn .bubble{width:18px!important;height:18px!important}
 .howsec{gap:8px}
 .howlevels{display:flex;flex-wrap:wrap;gap:6px 14px}
 .faq{display:flex;flex-direction:column;border-top:.5px solid rgba(17,17,20,.12)}
@@ -502,3 +503,43 @@ select.field{font:inherit;font-size:16px;color:var(--ink);-webkit-appearance:non
 .faq details[open] summary::after{transform:translateY(-50%) rotate(45deg)}
 .faq details p{margin:0 0 14px;font-size:15px;line-height:1.5;color:var(--ink2)}
 .chev{flex:none;font-size:24px;color:var(--ink3);padding:0 6px}
+
+/* Aura lines: the (i) and its explanation */
+.reason-wrap{display:flex;flex-direction:column}
+.rlab{display:inline-flex!important;align-items:center;gap:6px;color:var(--ink)!important}
+.info{width:17px;height:17px;padding:0;border-radius:50%;border:.5px solid rgba(17,17,20,.3);background:transparent;font:italic 500 11px/1 var(--serif);color:var(--ink2);cursor:pointer;display:inline-grid;place-items:center}
+.info[aria-expanded="true"]{background:var(--ink);color:#fff;border-color:var(--ink)}
+.rinfo{margin:6px 0 4px 36px;font-size:13.5px;line-height:1.45;color:var(--ink2)}
+
+/* The small 'How we build your aura' button, on the right under the profile bubble */
+.subrow{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.howbtn{flex:none;display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 9px 0 6px;border-radius:13px;border:.5px solid rgba(17,17,20,.14);background:rgba(255,255,255,.8);font:inherit;font-size:11.5px;color:var(--ink2);cursor:pointer;white-space:nowrap}
+.howbtn .bubble{width:14px!important;height:14px!important}
+/* How we build your aura */
+.how .howhero{display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;padding:18px 16px 20px;border-radius:var(--r);background:linear-gradient(160deg,rgba(143,232,227,.18),rgba(184,156,255,.14) 50%,rgba(245,166,216,.16))}
+.how .howhero .reason-line{max-width:300px}
+.howhead{display:flex;align-items:center;gap:10px}
+.hownum{width:26px;height:26px;flex:none;border-radius:50%;display:grid;place-items:center;font-family:var(--serif);font-size:15px;background:#fff;box-shadow:inset 0 0 0 .5px rgba(17,17,20,.18),0 2px 8px rgba(17,17,20,.06)}
+.howlines{display:flex;flex-direction:column;gap:10px}
+.info.static{display:inline-grid;vertical-align:-3px;cursor:default}
+.howthree{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.howthree>div{display:flex;flex-direction:column;align-items:center;text-align:center;gap:4px;padding:12px 6px;border-radius:14px;background:var(--fill)}
+.howthree b{font-weight:500;font-size:14px}
+.howthree span:last-child{font-size:12px;line-height:1.3;color:var(--ink2)}
+.ring3{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-family:var(--serif);font-size:16px;background:#fff;box-shadow:inset 0 0 0 1.5px transparent;background-image:linear-gradient(#fff,#fff),conic-gradient(#F5A6D8,#FFF3A6,#9FE5B5,#B89CFF,#8FE8E3,#6FB7FF,#F5A6D8);background-origin:border-box;background-clip:padding-box,border-box;border:1.5px solid transparent}
+.howkinds{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.howkinds .box{display:flex;flex-direction:column;gap:4px;padding:12px}
+.howkinds b{font-family:var(--serif);font-weight:400;font-size:19px}
+.howkinds span:last-child{font-size:12.5px;line-height:1.35;color:var(--ink2)}
+.kic{width:26px;height:26px;display:block;color:var(--ink)}
+.howlevels{display:flex;flex-direction:column;gap:8px}
+.howlevels>div{display:flex;justify-content:space-between;align-items:center}
+.howlevels b{font-weight:500;color:var(--ink)}
+.howcheck{display:flex;flex-direction:column;gap:10px;padding:16px;border-radius:22px;background:#fff;box-shadow:0 10px 34px rgba(17,17,20,.1),inset 0 0 0 .5px rgba(17,17,20,.08)}
+.howcheck b{font-family:var(--serif);font-weight:400;font-size:22px}
+.howcheck .cicard{display:grid;place-items:center;min-height:52px;font-size:14.5px;cursor:default}
+.howcloud{position:relative;height:220px;border-radius:var(--r);background:radial-gradient(circle at 50% 50%,rgba(184,156,255,.10),transparent 70%)}
+.howcloud>span{position:absolute;transform:translate(-50%,-50%);display:block}
+.howcloud .bubble{width:100%!important;height:100%!important}
+.howbump{display:flex;align-items:center;justify-content:center;gap:2px}
+.bumpic{width:30px;height:30px;color:var(--ink2);display:block}
