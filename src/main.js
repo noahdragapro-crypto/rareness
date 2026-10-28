@@ -82,6 +82,14 @@ function rec(k = today()) {
 const practicedOn = (k) => [...new Set(myPractices.filter((p) => p.day === k && p.exercise !== 'temple').map((p) => p.exercise))];
 const dayCount = (k = today()) => { const r = rec(k); return (r.q ? 1 : 0) + (r.t ? 1 : 0) + (r.m ? 1 : 0) + practicedOn(k).length; };
 const isDone = (k) => dayCount(k) >= 3;
+// The day has three parts. The Cloud and chats open with one thing done in the morning, two by the
+// afternoon (from noon) and three by the evening (from 6 pm); doing more earlier counts for later.
+const PERIODS = [{ name: 'Morning', from: 0 }, { name: 'Afternoon', from: 12 }, { name: 'Evening', from: 18 }];
+const periodNow = () => { const h = new Date().getHours(); return h >= 18 ? 2 : h >= 12 ? 1 : 0; };
+const needNow = () => periodNow() + 1;
+const cloudOpen = () => dayCount() >= needNow();
+// Until when what's done today keeps the Cloud open
+const openUntil = () => { const n = dayCount(); return n >= 3 ? 'for the rest of the day' : n >= 2 ? 'until 6 pm' : 'until noon'; };
 const todayDone = () => isDone(today());
 function streak() {
   const d = new Date(); let n = 0;
@@ -148,7 +156,11 @@ function auraLines(w, info = true) {
 }
 document.addEventListener('click', (e) => {
   const b = e.target.closest && e.target.closest('[data-dinfo]'); if (!b) return;
-  const p = b.closest('.reason-wrap').querySelector('.rinfo'); p.hidden = !p.hidden; b.setAttribute('aria-expanded', !p.hidden);
+  const p = b.closest('.reason-wrap').querySelector('.rinfo'), opening = p.hidden;
+  // Only one explanation open at a time
+  document.querySelectorAll('.rinfo').forEach((x) => { x.hidden = true; });
+  document.querySelectorAll('[data-dinfo]').forEach((x) => x.setAttribute('aria-expanded', 'false'));
+  p.hidden = !opening; b.setAttribute('aria-expanded', opening);
 });
 const glassBar = (pct, i) => '<div class="gbar"><span style="width:' + Math.round(pct) + '%;--c:' + DIMS[i].c + '"></span></div>';
 
@@ -209,7 +221,7 @@ function goTab(i, after) {
 document.querySelectorAll('.tab').forEach((b) => b.addEventListener('click', () => goTab(+b.dataset.tab)));
 
 function updateLocks() {
-  const locked = !todayDone() || !setupDone();
+  const locked = !cloudOpen() || !setupDone();
   document.querySelectorAll('.tab[data-tab="' + TAB.cloud + '"],.tab[data-tab="' + TAB.chats + '"]').forEach((b) => b.classList.toggle('locked', locked));
   [['#cloudLock', 'Cloud'], ['#chatsLock', 'chats']].forEach(([sel, what]) => {
     const el = $(sel); el.hidden = !locked;
@@ -219,9 +231,9 @@ function updateLocks() {
         '<button class="primary" data-finish>Finish my profile</button></div>';
       el.querySelector('[data-finish]').onclick = () => finishSetup();
     } else if (locked) {
-      const n = Math.min(3, dayCount());
-      el.innerHTML = '<div class="lock-card"><span style="width:24px;height:24px;display:block">' + ICON.lock + '</span><h2 class="h2">Your ' + what + ' open after three practices today</h2>' +
-        '<p class="muted" style="margin:0;font-size:14.5px;line-height:1.45">' + n + ' of 3 done. Daily tasks and practices from the Meditation library both count, and each one tunes who floats close to you.</p>' +
+      const per = PERIODS[periodNow()].name.toLowerCase();
+      el.innerHTML = '<div class="lock-card"><span style="width:24px;height:24px;display:block">' + ICON.lock + '</span><h2 class="h2">One practice this ' + per + ' opens your ' + what + '</h2>' +
+        '<p class="muted" style="margin:0;font-size:14.5px;line-height:1.45">The temple, today’s task, Ora Master’s pick or anything from the library. ' + Math.min(3, dayCount()) + ' of 3 done today.</p>' +
         '<button class="primary" data-go="0">Go to Agenda</button></div>';
       el.querySelector('[data-go]').onclick = () => goTab(0);
     }
@@ -418,34 +430,37 @@ function todayTasks(off = 0) {
 }
 const dimLabel = (k) => DIMS[dimIndex(k)]?.label || '';
 function renderAgenda() {
-  const r = rec(), tasks = todayTasks();
-  const n = Math.min(3, dayCount()), st = streak(), done3 = practicedOn(today());
+  const r = rec(), all = todayTasks(), n = Math.min(3, dayCount()), st = streak(), pNow = periodNow(), open = cloudOpen();
+  // Today's three: the temple, today's task (a reflection one day, an action the next), and Ora Master's pick
+  const temple = all[0], task = dayNum() % 2 ? all[2] : all[1], pick = suggestion && PRACTICE[suggestion.exercise];
+  const pickDone = pick && myPractices.some((p) => p.exercise === pick.id && p.day === today());
+  const extra = practicedOn(today()).filter((id) => !pick || id !== pick.id);
   const days = []; for (let i = 6; i >= 0; i--) { const d = new Date(); d.setDate(d.getDate() - i); days.push(d); }
   const week = days.map((d, i) => {
     const done = isDone(API.dayKey(d)), isToday = i === 6;
     return '<div class="wd">' + 'SMTWTFS'[d.getDay()] + '<b class="' + (done ? 'done' : '') + (isToday && !done ? ' today' : '') + '">' + (done ? ICON.check : '') + '</b></div>';
   }).join('');
+  const row = (attrs, ic, label, title, sub, done) => '<button class="task hi' + (done ? ' done' : '') + '" ' + attrs + '><span class="ic">' + ic + '</span>' +
+    '<span class="tx"><em>' + label + '</em><b>' + esc(title) + '</b><span>' + esc(sub) + '</span></span><span class="st">' + (done ? ICON.check : '') + '</span></button>';
   $('#agendaBody').innerHTML =
     '<header style="display:flex;flex-direction:column;gap:6px"><span class="brand">Ora</span><h1 class="largetitle">Agenda</h1><div class="subrow"><span class="label">' + new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' }) + '</span>' + howButton() + '</div></header>' +
-    '<section class="box" style="display:flex;flex-direction:column;gap:12px" aria-label="Streak">' +
-      '<div class="head"><div><div class="big">' + st + '</div><div class="label" style="margin-top:4px">day streak</div></div><div class="label" style="text-align:right">best ' + Math.max(bestStreak(), st) + '<br>' + totalDone() + ' exercises</div></div>' +
+    '<section class="box" style="display:flex;flex-direction:column;gap:14px" aria-label="Streak">' +
+      '<div class="head"><div><div class="big">' + st + '</div><div class="label" style="margin-top:4px">day streak</div></div><div class="label" style="text-align:right">best ' + Math.max(bestStreak(), st) + '<br>' + n + ' of 3 today</div></div>' +
       '<div class="week">' + week + '</div>' +
-      '<div style="display:flex;flex-direction:column;gap:6px"><div class="head" style="font-size:13.5px"><span>' + n + ' of 3 today</span><span class="muted">' + (n === 3 ? 'Streak saved' : (3 - n) + ' to go') + '</span></div>' +
-      '<div class="prog">' + [0, 1, 2].map((i) => '<span class="' + (i < n ? 'on' : '') + '"></span>').join('') + '</div></div>' +
-      (n === 3 ? '<button class="primary" id="openCloud">Open the Cloud</button>' : '<p class="muted" style="margin:0;font-size:13px;line-height:1.45">Do three today, from the tasks below or from the Meditation library, to unlock the Cloud and your chats. Miss a day and they lock again.</p>') +
+      '<div class="periods">' + PERIODS.map((p, i) => '<div class="' + (i < n ? 'on' : '') + (i === pNow ? ' now' : '') + '"><span class="pdot">' + (i < n ? ICON.check : '') + '</span><span>' + p.name + '</span></div>').join('') + '</div>' +
+      (open ? '<button class="primary" id="openCloud">Open the Cloud</button><p class="muted" style="margin:-4px 0 0;font-size:13px;text-align:center">Open ' + openUntil() + '.</p>'
+        : '<p class="muted" style="margin:0;font-size:13px;line-height:1.45">One task this ' + PERIODS[pNow].name.toLowerCase() + ' opens the Cloud and your chats. Three in a day keeps your streak.</p>') +
     '</section>' +
-    suggestionCard() +
-    '<section class="section" aria-label="Today"><h2 class="h2">Today</h2><div style="display:flex;flex-direction:column;gap:4px">' +
-      tasks.map((t, i) => '<button class="task' + (r[t.k] ? ' done' : '') + '" data-task="' + t.k + '">' +
-        '<span class="ic">' + t.icon + '</span>' +
-        '<span class="tx"><em>' + (i + 1) + ' · ' + dimLabel(t.dim) + '</em><b>' + t.title + '</b><span>' + esc(t.sub) + '</span></span>' +
-        '<span class="st">' + (r[t.k] ? ICON.check : '') + '</span></button>').join('') +
-    '</div></section>' +
-    (done3.length ? '<section class="section" aria-label="Practised today"><h2 class="h2">Practised today</h2><div style="display:flex;flex-direction:column;gap:4px">' +
-      done3.map((id) => practiceRow(PRACTICE[id])).join('') + '</div></section>' : '');
-  document.querySelectorAll('[data-task]').forEach((b) => b.onclick = () => {
-    const t = tasks.find((x) => x.k === b.dataset.task);
-    if (t.k === 'm') { goTab(TAB.meditation); return; } // the temple is open any time, even after today's session
+    '<section class="section" aria-label="Today’s three"><h2 class="h2">Today’s three</h2><div style="display:flex;flex-direction:column;gap:6px">' +
+      row('data-task="m"', ICON.m, 'The temple', 'Meditate', temple.mins + ' minutes in the temple', r.m) +
+      row('data-task="' + task.k + '"', task.icon, 'Today’s task', task.title, task.sub, r[task.k]) +
+      (pick ? row('data-practice="' + pick.id + '"', ICON.guide, 'Ora Master’s pick', pick.name, suggestion.reason, pickDone) : '') +
+    '</div><p class="label" style="margin:2px 0 0;font-size:13px">Anything from the Meditation library counts too.</p></section>' +
+    (extra.length ? '<section class="section" aria-label="Also practised"><h2 class="h2">Also today</h2><div style="display:flex;flex-direction:column;gap:4px">' +
+      extra.map((id) => practiceRow(PRACTICE[id])).join('') + '</div></section>' : '');
+  document.querySelectorAll('#agendaBody [data-task]').forEach((b) => b.onclick = () => {
+    const t = all.find((x) => x.k === b.dataset.task);
+    if (t.k === 'm') { openTemple(); return; } // the temple is open any time, even after today's session
     if (rec()[t.k]) { toast('Already done today'); return; }
     openSheet(t);
   });
@@ -477,22 +492,25 @@ function openSheet(t) {
 function closeSheet() { $('#sheet').classList.remove('on'); $('#sheetBack').classList.remove('on'); }
 $('#sheetBack').onclick = closeSheet;
 let matching = false;
+// After any task or practice: say what it opened, and refresh the aura and matches when the Cloud opens
+function afterDone(wasOpen, wasDone, msg) {
+  if (!wasDone && todayDone()) toast('Three today. Your streak is safe.');
+  else if (!wasOpen && cloudOpen()) toast('The Cloud and chats are open ' + openUntil() + '.');
+  else if (msg) toast(msg);
+  if (((!wasOpen && cloudOpen()) || (!wasDone && todayDone())) && !matching) {
+    matching = true;
+    API.api('match').then(loadCloud).then(() => refreshMe()).catch(console.error).finally(() => { matching = false; });
+  }
+}
 async function complete(t, data, msg, btn) {
   if (btn) btn.disabled = true;
-  const was = todayDone();
+  const was = todayDone(), wasOpen = cloudOpen();
   try {
     const row = await API.saveAnswer(uid, { day: today(), kind: t.k, dim: t.dim, prompt: t.k === 'm' ? t.title : t.sub, data });
     myAnswers = myAnswers.filter((a) => !(a.day === row.day && a.kind === row.kind)).concat(row);
   } catch (e) { if (btn) btn.disabled = false; fail(e); return; }
   closeSheet(); renderAgenda(); renderMeditation(); updateLocks();
-  if (!was && todayDone()) {
-    toast('All done. The Cloud is open.');
-    // New answers: refresh the aura and matches in the background, then reload the Cloud
-    if (!matching) {
-      matching = true;
-      API.api('match').then(loadCloud).then(() => refreshMe()).catch(console.error).finally(() => { matching = false; });
-    }
-  } else toast(msg);
+  afterDone(wasOpen, was, msg);
 }
 
 // ---------------- Meditation: the page, the temple, and present bubbles ----------------
@@ -555,7 +573,8 @@ function openHowItWorks() {
     sec('Your aura', p('Six colours describe who you are and what you bring to others. It begins with your two answers at sign-up, then grows with everything you practise. Our AI reads it all and updates the colours.') +
       '<div class="box howlines">' + auraLines(aura) + '<p class="fine" style="margin:0">Tap <span class="info static">i</span> to see what a line means. The percentage is that colour’s share of your aura.</p></div>') +
 
-    sec('Three a day', p('Do three things each day: the tasks on your Agenda, practices from the library, or a mix. That opens the Cloud and your chats, and keeps your streak.') +
+    sec('Three a day', p('Your day has three parts. One thing done in the morning opens the Cloud and your chats; from noon they ask for a second, and from 6 pm a third. Do more earlier and it counts for later. Three in a day keeps your streak.') +
+      p('Any task counts. Your Agenda highlights three: the temple, today’s task, and Ora Master’s pick.') +
       '<div class="temple-card howtemple"><div class="temple-mini" style="height:84px" aria-hidden="true">' + crackSVG() + '</div><p>Meditation happens in the temple: a dark room, a crack of light that breathes, soft music, for 7 to 15 minutes depending on the day.</p></div>') +
 
     sec('The practices', p(PR.length + ' practices in ' + LIB.categories.length + ' groups, from breath work to journaling and manifestation. Each is one of three kinds:') +
@@ -587,12 +606,13 @@ function openFAQ() {
     ['Getting started', [
       ['What do I need to create an account?', 'Just your first name and your email. Everything else, like your age, city and photo, can be added later from your profile.'],
       ['How do I log back in?', 'Enter the same email on the “Log in” screen. There’s no password for now.'],
-      ['Why can’t I open the Cloud or Chats?', 'They open once your profile is finished (a photo and your two answers) and you’ve done three things today. Your Agenda shows how many are left.'],
+      ['Why can’t I open the Cloud or Chats?', 'They need a finished profile (a photo and your two answers), and one task in each part of the day: one in the morning, a second from noon, a third from 6 pm. Doing more earlier counts for later.'],
       ['Is Ora a dating app?', 'No. Ora is a community for making friends who share your way of living: presence, practice and kindness.']
     ]],
     ['Your day and your practice', [
-      ['What counts toward my three a day?', 'Your daily tasks on the Agenda (meditate, reflect, take an action) and any practice from the Meditation library, in any mix. Each different practice counts once a day.'],
-      ['What happens if I miss a day?', 'Your streak starts again, and the Cloud and Chats lock until you’ve done three that day. Nothing else is lost: your levels and aura stay.'],
+      ['What counts toward my three a day?', 'Anything: the temple, today’s task, Ora Master’s pick, or any practice from the Meditation library. Each different practice counts once a day.'],
+      ['What happens if I miss a day?', 'Your streak starts again when a day ends with fewer than three. Your levels and aura stay.'],
+      ['Why did the Cloud lock again this afternoon?', 'From noon it asks for a second task of the day, and from 6 pm a third. One more opens it again.'],
       ['How do levels work?', 'Every practice has four levels: ' + LIB.levels.map((l) => l.name + (l.from ? ' (after ' + l.from + ' sessions)' : '')).join(', ') + '. Each level goes a little deeper.'],
       ['How long is today’s meditation?', 'Between 7 and 15 minutes, depending on the day. The Meditation tab shows today’s length.'],
       ['Can I leave a practice before it ends?', 'Yes, anytime. It only counts once its time is up, or once you’ve written enough for its level.'],
@@ -671,7 +691,7 @@ function openDoing(x, l) {
 }
 // Save a finished session, celebrate a level-up, then ask the short check-in question
 async function recordPractice(x, { level, minutes = null, answer = {} }) {
-  const wasDone = todayDone(), before = levelOf(x.id);
+  const wasDone = todayDone(), wasOpen = cloudOpen(), before = levelOf(x.id);
   let row;
   try { row = await API.savePractice(uid, { exercise: x.id, level, minutes, answer }); }
   catch (e) {
@@ -682,13 +702,7 @@ async function recordPractice(x, { level, minutes = null, answer = {} }) {
   renderAgenda(); renderMeditation(); updateLocks();
   const after = levelOf(x.id);
   setTimeout(() => checkIn(x, row, answer), 450);
-  if (after > before) toast('Level up: ' + levelName(after) + ' in ' + x.name);
-  else if (!wasDone && todayDone()) toast('Three today. The Cloud is open.');
-  else toast(x.name + ' done');
-  if (!wasDone && todayDone() && !matching) {
-    matching = true;
-    API.api('match').then(loadCloud).then(() => refreshMe()).catch(console.error).finally(() => { matching = false; });
-  }
+  afterDone(wasOpen, wasDone, after > before ? 'Level up: ' + levelName(after) + ' in ' + x.name : x.name + ' done');
   return row;
 }
 // The check-in: a small card from the bottom, never full screen. Writing, cards or a selection.

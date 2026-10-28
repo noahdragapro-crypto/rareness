@@ -9,7 +9,7 @@ export const maxDuration = 60;
 
 type Msg = { role: "user" | "assistant"; content: string };
 
-const ABOUT_ORA = `Ora is a mindful community app for making friends. Every day members do three things: the daily tasks (meditate, reflect, take an action) or practices from the Meditation library, in any mix. Three a day opens the Cloud (other members as glass bubbles: closer and bigger means more in common) and Chats (which open when two people bump each other).
+const ABOUT_ORA = `Ora is a mindful community app for making friends. The day has three parts: one task done in the morning opens the Cloud (other members as glass bubbles: closer and bigger means more in common) and Chats (which open when two people bump each other); from noon they need a second task, and from 6 pm a third. Doing more earlier counts for later, and three in a day keeps the streak. Any task counts; the Agenda highlights three: the temple (today's meditation), today's task (a reflection or a small action) and Ora Master's pick, and anything from the Meditation library counts too.
 Each member has an aura: six colours (${DIMS.join(", ")}) read by AI from their own words at sign-up, their daily answers and their practice. Practising more often, and at higher levels (Seed, Sprout, Bloom, Radiance: levels rise after 3, 10 and 25 sessions of a practice), makes the aura stronger and more accurate. The Cloud compares people's words and practices in both directions, especially how well each fits who the other would love to meet. Answers are private: only the AI reads them.`;
 
 const libraryList = () => catalog().practices.map((x) => `${x.id}: ${x.name} (${x.cat}) - ${x.about}`).join("\n");

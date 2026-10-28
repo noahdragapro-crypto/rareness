@@ -81,7 +81,7 @@ The **Meditation** tab is a library of 27 practices (`shared/practices.json`) in
 
 - **Guided** practices run in the temple room (dark, breathing crack, soft generated music, vibration on Android) with their own cues; **writing** practices open a private writing page; **do-it** practices are small real-world actions.
 - After each one, a short **check-in** (writing, cards or a selection) slides up from the bottom. Answers are private and go to the AI with the session, so practice shapes the aura: more sessions and higher levels count as stronger evidence, and shared practices count in matching.
-- A day counts when **three** things are done: the daily tasks (meditate, reflect, take an action) and library practices, in any mix. The temple counts as the Meditate task.
+- The day has three parts: one task in the **morning** opens the Cloud and chats; from **noon** they need a second task and from **6 pm** a third (`PERIODS` in `src/main.js`). Doing more earlier counts for later; three in a day keeps the streak. Any task counts; the Agenda highlights **today's three**: the temple, today's task (a reflection one day, an action the next) and Ora Master's pick.
 - People who share a chat can see what the other practises most and **join** it (`practice_summary`, never the answers).
 - **Ora Master** (`api/guide.ts`, three bubbles as its picture) suggests one practice a day for what the person needs (shown on the Agenda and the Meditation tab, and sent in the guide chat) and answers questions about meditation, practice and the aura. It's pinned at the top of Chats. It uses Claude when `ANTHROPIC_API_KEY` is set, simple rules otherwise.
 - Database: `supabase/migrations/0007_practices.sql`.
