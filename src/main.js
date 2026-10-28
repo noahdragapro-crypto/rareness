@@ -88,8 +88,6 @@ const PERIODS = [{ name: 'Morning', from: 0 }, { name: 'Afternoon', from: 12 }, 
 const periodNow = () => { const h = new Date().getHours(); return h >= 18 ? 2 : h >= 12 ? 1 : 0; };
 const needNow = () => periodNow() + 1;
 const cloudOpen = () => dayCount() >= needNow();
-// Until when what's done today keeps the Cloud open
-const openUntil = () => { const n = dayCount(); return n >= 3 ? 'for the rest of the day' : n >= 2 ? 'until 6 pm' : 'until noon'; };
 const todayDone = () => isDone(today());
 function streak() {
   const d = new Date(); let n = 0;
@@ -231,8 +229,7 @@ function updateLocks() {
         '<button class="primary" data-finish>Finish my profile</button></div>';
       el.querySelector('[data-finish]').onclick = () => finishSetup();
     } else if (locked) {
-      const per = PERIODS[periodNow()].name.toLowerCase();
-      el.innerHTML = '<div class="lock-card"><span style="width:24px;height:24px;display:block">' + ICON.lock + '</span><h2 class="h2">One practice this ' + per + ' opens your ' + what + '</h2>' +
+      el.innerHTML = '<div class="lock-card"><span style="width:24px;height:24px;display:block">' + ICON.lock + '</span><h2 class="h2">One more practice opens your ' + what + '</h2>' +
         '<p class="muted" style="margin:0;font-size:14.5px;line-height:1.45">The temple, today’s task, Ora Master’s pick or anything from the library. ' + Math.min(3, dayCount()) + ' of 3 done today.</p>' +
         '<button class="primary" data-go="0">Go to Agenda</button></div>';
       el.querySelector('[data-go]').onclick = () => goTab(0);
@@ -430,7 +427,7 @@ function todayTasks(off = 0) {
 }
 const dimLabel = (k) => DIMS[dimIndex(k)]?.label || '';
 function renderAgenda() {
-  const r = rec(), all = todayTasks(), n = Math.min(3, dayCount()), st = streak(), pNow = periodNow(), open = cloudOpen();
+  const r = rec(), all = todayTasks(), n = Math.min(3, dayCount()), st = streak(), open = cloudOpen();
   // Today's three: the temple, today's task (a reflection one day, an action the next), and Ora Master's pick
   const temple = all[0], task = dayNum() % 2 ? all[2] : all[1], pick = suggestion && PRACTICE[suggestion.exercise];
   const pickDone = pick && myPractices.some((p) => p.exercise === pick.id && p.day === today());
@@ -444,12 +441,12 @@ function renderAgenda() {
     '<span class="tx"><em>' + label + '</em><b>' + esc(title) + '</b><span>' + esc(sub) + '</span></span><span class="st">' + (done ? ICON.check : '') + '</span></button>';
   $('#agendaBody').innerHTML =
     '<header style="display:flex;flex-direction:column;gap:6px"><span class="brand">Ora</span><h1 class="largetitle">Agenda</h1><div class="subrow"><span class="label">' + new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' }) + '</span>' + howButton() + '</div></header>' +
-    '<section class="box" style="display:flex;flex-direction:column;gap:14px" aria-label="Streak">' +
-      '<div class="head"><div><div class="big">' + st + '</div><div class="label" style="margin-top:4px">day streak</div></div><div class="label" style="text-align:right">best ' + Math.max(bestStreak(), st) + '<br>' + n + ' of 3 today</div></div>' +
+    '<section class="box" style="display:flex;flex-direction:column;gap:12px" aria-label="Streak">' +
+      '<div class="head"><div><div class="big">' + st + '</div><div class="label" style="margin-top:4px">day streak</div></div><div class="label" style="text-align:right">best ' + Math.max(bestStreak(), st) + '<br>' + totalDone() + ' exercises</div></div>' +
       '<div class="week">' + week + '</div>' +
-      '<div class="periods">' + PERIODS.map((p, i) => '<div class="' + (i < n ? 'on' : '') + (i === pNow ? ' now' : '') + '"><span class="pdot">' + (i < n ? ICON.check : '') + '</span><span>' + p.name + '</span></div>').join('') + '</div>' +
-      (open ? '<button class="primary" id="openCloud">Open the Cloud</button><p class="muted" style="margin:-4px 0 0;font-size:13px;text-align:center">Open ' + openUntil() + '.</p>'
-        : '<p class="muted" style="margin:0;font-size:13px;line-height:1.45">One task this ' + PERIODS[pNow].name.toLowerCase() + ' opens the Cloud and your chats. Three in a day keeps your streak.</p>') +
+      '<div style="display:flex;flex-direction:column;gap:6px"><div class="head" style="font-size:13.5px"><span>' + n + ' of 3 today</span><span class="muted">' + (n === 3 ? 'Streak saved' : (3 - n) + ' to go') + '</span></div>' +
+      '<div class="prog">' + [0, 1, 2].map((i) => '<span class="' + (i < n ? 'on' : '') + '"></span>').join('') + '</div></div>' +
+      (open ? '<button class="primary" id="openCloud">Open the Cloud</button>' : '<p class="muted" style="margin:0;font-size:13px;line-height:1.45">One more task opens the Cloud and your chats. Three today keeps your streak.</p>') +
     '</section>' +
     '<section class="section" aria-label="Today’s three"><h2 class="h2">Today’s three</h2><div style="display:flex;flex-direction:column;gap:6px">' +
       row('data-task="m"', ICON.m, 'The temple', 'Meditate', temple.mins + ' minutes in the temple', r.m) +
@@ -495,7 +492,7 @@ let matching = false;
 // After any task or practice: say what it opened, and refresh the aura and matches when the Cloud opens
 function afterDone(wasOpen, wasDone, msg) {
   if (!wasDone && todayDone()) toast('Three today. Your streak is safe.');
-  else if (!wasOpen && cloudOpen()) toast('The Cloud and chats are open ' + openUntil() + '.');
+  else if (!wasOpen && cloudOpen()) toast('The Cloud and chats are open.');
   else if (msg) toast(msg);
   if (((!wasOpen && cloudOpen()) || (!wasDone && todayDone())) && !matching) {
     matching = true;
@@ -573,8 +570,9 @@ function openHowItWorks() {
     sec('Your aura', p('Six colours describe who you are and what you bring to others. It begins with your two answers at sign-up, then grows with everything you practise. Our AI reads it all and updates the colours.') +
       '<div class="box howlines">' + auraLines(aura) + '<p class="fine" style="margin:0">Tap <span class="info static">i</span> to see what a line means. The percentage is that colour’s share of your aura.</p></div>') +
 
-    sec('Three a day', p('Your day has three parts. One thing done in the morning opens the Cloud and your chats; from noon they ask for a second, and from 6 pm a third. Do more earlier and it counts for later. Three in a day keeps your streak.') +
-      p('Any task counts. Your Agenda highlights three: the temple, today’s task, and Ora Master’s pick.') +
+    sec('Three a day', p('Three tasks a day keep your streak. Any task counts, and your Agenda highlights three: the temple, today’s task, and Ora Master’s pick.') +
+      '<div class="box howday">' + [['Morning', 'One task opens the Cloud and your chats.'], ['Afternoon', 'From noon, they ask for a second.'], ['Evening', 'From 6 pm, a third.']].map(([t, d]) => '<div><b>' + t + '</b><span>' + d + '</span></div>').join('') + '</div>' +
+      p('Do more earlier and it counts for later: three in the morning keeps everything open all day.') +
       '<div class="temple-card howtemple"><div class="temple-mini" style="height:84px" aria-hidden="true">' + crackSVG() + '</div><p>Meditation happens in the temple: a dark room, a crack of light that breathes, soft music, for 7 to 15 minutes depending on the day.</p></div>') +
 
     sec('The practices', p(PR.length + ' practices in ' + LIB.categories.length + ' groups, from breath work to journaling and manifestation. Each is one of three kinds:') +
