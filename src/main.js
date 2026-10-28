@@ -235,6 +235,8 @@ function swipeable(view, edgeOnly) {
   view.addEventListener('touchstart', (e) => {
     mode = 'no';
     if (pages.length || e.touches.length > 1 || view !== views[cur] || $('#sheet').classList.contains('on')) return;
+    // Rows that scroll sideways (like the library's categories) keep their own swipe
+    if (e.target.closest && e.target.closest('[data-hscroll]')) return;
     const tt = e.touches[0], r = appEl.getBoundingClientRect();
     if (edgeOnly && tt.clientX - r.left > 30 && r.right - tt.clientX > 30) return;
     if (edgeOnly) e.stopPropagation(); // keep the Cloud from panning during an edge swipe
@@ -401,7 +403,7 @@ function renderAgenda() {
     return '<div class="wd">' + 'SMTWTFS'[d.getDay()] + '<b class="' + (done ? 'done' : '') + (isToday && !done ? ' today' : '') + '">' + (done ? ICON.check : '') + '</b></div>';
   }).join('');
   $('#agendaBody').innerHTML =
-    '<header style="display:flex;flex-direction:column;gap:6px"><span class="brand">Ora</span><h1 class="largetitle">Agenda</h1><span class="label">' + new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' }) + '</span></header>' +
+    '<header style="display:flex;flex-direction:column;gap:6px"><span class="brand">Ora</span><h1 class="largetitle">Agenda</h1><span class="label">' + new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' }) + '</span>' + howButton() + '</header>' +
     '<section class="box" style="display:flex;flex-direction:column;gap:12px" aria-label="Streak">' +
       '<div class="head"><div><div class="big">' + st + '</div><div class="label" style="margin-top:4px">day streak</div></div><div class="label" style="text-align:right">best ' + Math.max(bestStreak(), st) + '<br>' + totalDone() + ' exercises</div></div>' +
       '<div class="week">' + week + '</div>' +
@@ -479,7 +481,7 @@ function renderMeditation() {
   const t = todayTasks().find((x) => x.k === 'm'), done = Boolean(rec().m), mins = t.mins, n = Math.min(3, dayCount());
   const list = PR.filter((x) => !libCat || x.cat === libCat);
   box.innerHTML =
-    '<header style="display:flex;flex-direction:column;gap:6px"><span class="brand">Ora</span><h1 class="largetitle">Meditation</h1><span class="label">' + n + ' of 3 for today · ' + PR.length + ' practices</span></header>' +
+    '<header style="display:flex;flex-direction:column;gap:6px"><span class="brand">Ora</span><h1 class="largetitle">Meditation</h1><span class="label">' + n + ' of 3 for today · ' + PR.length + ' practices</span>' + howButton() + '</header>' +
     suggestionCard() +
     '<section class="temple-card" aria-label="The temple">' +
       '<div class="temple-mini" aria-hidden="true">' + crackSVG() + '</div>' +
@@ -488,7 +490,7 @@ function renderMeditation() {
       '<button class="primary light" id="enterTemple">Enter the temple</button>' +
     '</section>' +
     '<section class="section" aria-label="Library"><h2 class="h2">Library</h2>' +
-      '<div class="catrow" role="tablist">' + [''].concat(LIB.categories).map((c) => '<button role="tab" aria-selected="' + (c === libCat) + '" data-cat="' + esc(c) + '">' + esc(c || 'All') + '</button>').join('') + '</div>' +
+      '<div class="catrow" role="tablist" data-hscroll>' + [''].concat(LIB.categories).map((c) => '<button role="tab" aria-selected="' + (c === libCat) + '" data-cat="' + esc(c) + '">' + esc(c || 'All') + '</button>').join('') + '</div>' +
       '<div style="display:flex;flex-direction:column;gap:4px">' + list.map(practiceRow).join('') + '</div></section>' +
     '<section class="section" aria-label="How practice works"><h2 class="h2">How practice works</h2>' +
       '<p class="explain">Every practice has four levels: ' + LIB.levels.map((l) => l.name).join(', ') + '. You move up after ' + LIB.levels.slice(1).map((l) => l.from).join(', ') + ' sessions, and sessions grow a little deeper at each level.</p>' +
@@ -506,7 +508,89 @@ function practiceRow(x) {
   return '<button class="task prow' + (doneToday ? ' done' : '') + '" data-practice="' + x.id + '"><span class="tx"><em>' + esc(x.cat) + ' · ' + typeLabel(x) + ' · ' + practiceLen(x, l) + '</em><b>' + esc(x.name) + '</b>' +
     '<span class="plevel">' + levelDots(l) + levelName(l) + '</span></span><span class="st">' + (doneToday ? ICON.check : '') + '</span></button>';
 }
-function wirePracticeLinks(root) { root.querySelectorAll('[data-practice]').forEach((b) => b.onclick = () => openPractice(b.dataset.practice)); root.querySelectorAll('[data-guide]').forEach((b) => b.onclick = () => openGuide()); }
+function wirePracticeLinks(root) {
+  root.querySelectorAll('[data-practice]').forEach((b) => b.onclick = () => openPractice(b.dataset.practice));
+  root.querySelectorAll('[data-guide]').forEach((b) => b.onclick = () => openGuide());
+  root.querySelectorAll('[data-how]').forEach((b) => b.onclick = () => openHowItWorks());
+}
+const howButton = () => '<button class="howbtn" data-how>' + bubbleHTML({ w: [1, 1, 1, 1, 1, 1], clear: true }, 18) + '<span>How we build your aura</span></button>';
+
+// ---------------- How we build your aura (from the Agenda and Meditation) ----------------
+function openHowItWorks() {
+  const sec = (title, body, extra = '') => '<section class="section howsec"><h2 class="h2">' + title + '</h2>' + extra + body.map((p) => '<p class="explain">' + p + '</p>').join('') + '</section>';
+  const levels = LIB.levels.map((l, i) => '<span class="plevel">' + levelDots(i + 1) + l.name + (l.from ? ' · ' + l.from + '+' : '') + '</span>').join('');
+  const html = '<div class="stack">' +
+    '<header style="display:flex;flex-direction:column;gap:6px"><span class="label">How Ora works</span><h1 class="largetitle">How we build your aura</h1></header>' +
+    '<div style="display:flex;justify-content:center">' + bubbleHTML(youObj(), 150) + '</div>' +
+    sec('Your aura', ['Your aura is six colours: ' + DIMS.map((d) => d.label.toLowerCase()).join(', ') + '. Together they describe who you are and what you bring to the people around you.',
+      'It starts with your two answers at sign-up, about yourself and about who you’d love to meet. Then it keeps growing with everything you practise. Our AI reads it all and updates your colours, so the more you practise, the truer your aura becomes.']) +
+    sec('Three a day', ['Each day, do three things. They can be your daily tasks on the Agenda (meditate, reflect, take an action), practices from the Meditation library, or any mix of both.',
+      'Three opens the Cloud and your chats for the day and keeps your streak going. Today’s meditation happens in the temple: a dark room with a crack of light that breathes, soft music, and a session of 7 to 15 minutes depending on the day.']) +
+    sec('How the practices are built', ['The library has ' + PR.length + ' practices in ' + LIB.categories.length + ' groups: ' + LIB.categories.join(', ').toLowerCase() + '.',
+      'Each one is one of three kinds. Guided practices run in the temple room with gentle cues, like “Breathe in · 4”. Writing practices give you a prompt and a private page. Do-it practices are small real-life actions, like an offline hour or an act of kindness.',
+      'Every practice has four levels. You move up as you return to it, and each level goes a little deeper: a longer session, or a little more writing. Practices you do often, at higher levels, weigh more in your aura.'], '<div class="howlevels">' + levels + '</div>') +
+    sec('One question after each practice', ['When you finish, one short question slides up: a few words, a choice between cards, or a few options to pick. It takes seconds, and you can skip it.',
+      'These answers help us understand what you feel and need, so your aura, your suggestions and the people near you in the Cloud fit you better. They’re private: only our AI reads them.']) +
+    sec('Focus bubbles', ['Soon after you open Ora, and then every ten minutes or so, a bubble floats up over whatever you’re doing. Pop it. It’s a small reminder that you’re here, now, and it’s part of the practice.'], '<div style="display:flex;justify-content:center;padding:4px 0">' + bubbleHTML({ w: [1, 1, 1, 1, 1, 1], clear: true }, 70) + '</div>') +
+    sec('Ora Master', ['Each day, Ora Master suggests one practice for what you seem to need, on your Agenda and in its chat. You can ask it anything about meditation, your practice or your aura. It’s at the top of your Chats.']) +
+    sec('The Cloud', ['The Cloud shows the community as glass bubbles. The more you have in common, the bigger and closer someone floats, and the colours around their bubble show what you share. Empty bubbles are spots waiting for new people.']) +
+    sec('Bumping into people', ['See someone you’d like to know? Bump them. Nobody knows who bumped them, unless they bump you back. Then you’ve bumped into each other, and a chat opens.',
+      'In a chat you can send messages, emoji, stickers, GIFs, and practices to do together. You can also see what the other person practises most, and join them.']) +
+    sec('What stays private', ['Your answers, your writing and your check-ins are only read by our AI. Nobody else sees them. Other people see your photo, name, age if you gave it, status, about, interests, and, once you’ve bumped into each other, which practices you do most.']) +
+    '</div>';
+  pushPage('How we build your aura', html);
+}
+
+// ---------------- Questions and answers (from the profile only) ----------------
+function openFAQ() {
+  const price = config.price || '$5';
+  const QA = [
+    ['Getting started', [
+      ['What do I need to create an account?', 'Just your first name and your email. Everything else, like your age, city and photo, can be added later from your profile.'],
+      ['How do I log back in?', 'Enter the same email on the “Log in” screen. There’s no password for now.'],
+      ['Why can’t I open the Cloud or Chats?', 'They open once your profile is finished (a photo and your two answers) and you’ve done three things today. Your Agenda shows how many are left.'],
+      ['Is Ora a dating app?', 'No. Ora is a community for making friends who share your way of living: presence, practice and kindness.']
+    ]],
+    ['Your day and your practice', [
+      ['What counts toward my three a day?', 'Your daily tasks on the Agenda (meditate, reflect, take an action) and any practice from the Meditation library, in any mix. Each different practice counts once a day.'],
+      ['What happens if I miss a day?', 'Your streak starts again, and the Cloud and Chats lock until you’ve done three that day. Nothing else is lost: your levels and aura stay.'],
+      ['How do levels work?', 'Every practice has four levels: ' + LIB.levels.map((l) => l.name + (l.from ? ' (after ' + l.from + ' sessions)' : '')).join(', ') + '. Each level goes a little deeper.'],
+      ['How long is today’s meditation?', 'Between 7 and 15 minutes, depending on the day. The Meditation tab shows today’s length.'],
+      ['Can I leave a practice before it ends?', 'Yes, anytime. It only counts once its time is up, or once you’ve written enough for its level.'],
+      ['What are focus bubbles?', 'A bubble that floats over the app soon after you open it, then every ten minutes or so. Pop it: it’s a reminder to come back to the present.']
+    ]],
+    ['The temple', [
+      ['Why doesn’t my phone vibrate in the temple?', 'iPhones don’t let websites use vibration, so the temple uses soft music instead. Android phones vibrate gently.'],
+      ['There’s no sound in the temple.', 'Check your volume, and tap the “Sound on” button at the top right. If it says “Tap for sound”, one tap starts it.']
+    ]],
+    ['Your aura', [
+      ['How is my aura made?', 'Our AI reads your two answers from sign-up, your daily answers, the practices you do and your check-ins, and shows how strongly each of the six colours runs through you.'],
+      ['Why did my aura change?', 'It updates as you practise and answer. The more you practise, the more it reflects who you are today.'],
+      ['Who sees my answers?', 'Nobody. Only our AI reads them, to shape your aura and suggestions.']
+    ]],
+    ['People, bumps and chats', [
+      ['How does bumping work?', 'Tap Bump on someone’s profile. They won’t know, unless they bump you too. Then a chat opens for both of you.'],
+      ['Why is someone big and close in my Cloud?', 'You have a lot in common: your words, your practice and what you’re each hoping to find.'],
+      ['What can people see about me?', 'Your photo, name, age if you gave it, status, about and interests. After you bump into each other, also which practices you do most. Never your answers.'],
+      ['How do I share a practice with a friend?', 'In a chat, tap the smiley button, then Practices, and pick one. They get a card to start it.'],
+      ['Someone is bothering me.', 'Open their profile and tap Block or Report. Blocking hides you from each other and stops messages.']
+    ]],
+    ['Ora Master', [
+      ['What is Ora Master?', 'Your guide in the app. It suggests one practice a day and answers questions about meditation, your practice and your aura.'],
+      ['Are my conversations with Ora Master private?', 'They’re saved on your phone, and your messages are sent to our AI to answer you. Nobody else reads them.']
+    ]],
+    ['Account', [
+      ['Does Ora cost anything?', config.paywall ? 'One payment of ' + price + ' opens everything, for good. No subscription.' : 'Ora is free while the community is growing.'],
+      ['How do I change my photo or details?', 'From your profile: tap your bubble on the Cloud, or the bubble at the top right of the other pages.'],
+      ['How do I delete my account?', 'At the bottom of your profile, tap “Delete my account”. Your profile, photos and answers are removed.']
+    ]]
+  ];
+  const html = '<div class="stack"><header style="display:flex;flex-direction:column;gap:6px"><span class="label">Help</span><h1 class="largetitle">Questions and answers</h1></header>' +
+    QA.map(([group, items]) => '<section class="section" aria-label="' + esc(group) + '"><h2 class="h2">' + esc(group) + '</h2><div class="faq">' +
+      items.map(([q, a]) => '<details><summary>' + esc(q) + '</summary><p>' + esc(a) + '</p></details>').join('') + '</div></section>').join('') +
+    '<p class="label" style="text-align:center">Something else? Ask Ora Master in your Chats.</p></div>';
+  pushPage('Questions and answers', html);
+}
 
 // ---------------- One practice: its page, then the guided room, the writing page or the action ----------------
 function openPractice(id) {
@@ -1004,6 +1088,28 @@ function completeness() {
 function field(id, label, val, ph, max, ac, im) {
   return '<label class="lbl" for="' + id + '">' + label + '<input class="field" id="' + id + '" maxlength="' + max + '" value="' + esc(val ?? '') + '" placeholder="' + esc(ph) + '"' + (ac ? ' autocomplete="' + ac + '"' : '') + (im ? ' inputmode="' + im + '"' : '') + '></label>';
 }
+// Interests: only the ones you chose, until you tap Edit
+let editInterests = false;
+function interestsHTML() {
+  const mine = me.interests || [];
+  const all = [...INTERESTS, ...mine.filter((l) => !INTERESTS.includes(l))];
+  return '<div class="head"><h2 class="h2">Interests</h2><button class="link" id="intEdit">' + (editInterests ? 'Done' : 'Edit') + '</button></div>' +
+    (editInterests
+      ? '<div class="chips">' + all.map((l) => '<button class="chip' + (mine.includes(l) ? ' on' : '') + '" data-int="' + esc(l) + '" aria-pressed="' + mine.includes(l) + '">' + esc(l) + '</button>').join('') + '</div>'
+      : mine.length ? '<div class="facts">' + mine.map((l) => '<span class="fact">' + esc(l) + '</span>').join('') + '</div>'
+        : '<p class="label" style="font-size:14px;margin:0">None yet. Tap Edit to add a few.</p>');
+}
+function wireInterests() {
+  const box = $('#intBox'); if (!box) return;
+  box.querySelector('#intEdit').onclick = () => { editInterests = !editInterests; box.innerHTML = interestsHTML(); wireInterests(); };
+  box.querySelectorAll('[data-int]').forEach((b) => b.onclick = () => {
+    const v = b.dataset.int, list = [...(me.interests || [])], i = list.indexOf(v);
+    if (i >= 0) list.splice(i, 1); else list.push(v);
+    me.interests = list; saveSoon({ interests: list });
+    b.classList.toggle('on', list.includes(v)); b.setAttribute('aria-pressed', list.includes(v));
+  });
+}
+
 async function renderProfile() {
   if (!$('#profileBody')) return;
   const aura = dimsToW(me.aura), tot = aura.reduce((a, b) => a + b, 0) || 1;
@@ -1040,8 +1146,7 @@ async function renderProfile() {
     '<section class="section" aria-label="I’d like to meet"><h2 class="h2">I’d like to meet</h2><div class="chips">' +
       [['women', 'Women'], ['men', 'Men'], ['everyone', 'Everyone']].map(([v, l]) => '<button class="chip' + (me.show_me === v ? ' on' : '') + '" data-show="' + v + '" aria-pressed="' + (me.show_me === v) + '">' + l + '</button>').join('') + '</div></section>' +
 
-    '<section class="section" aria-label="Interests"><div class="head"><h2 class="h2">Interests</h2><span class="counter" id="iCount">' + (me.interests || []).length + '</span></div><div class="chips">' +
-      [...INTERESTS, ...(me.interests || []).filter((l) => !INTERESTS.includes(l))].map((l) => '<button class="chip' + ((me.interests || []).includes(l) ? ' on' : '') + '" data-int="' + esc(l) + '" aria-pressed="' + (me.interests || []).includes(l) + '">' + esc(l) + '</button>').join('') + '</div></section>' +
+    '<section class="section" aria-label="Interests" id="intBox">' + interestsHTML() + '</section>' +
 
     '<section class="section" aria-label="Your answers"><div class="head"><h2 class="h2">Your answers</h2><span class="label">Only you see these</span></div>' +
       (answers.length ? answers.map((o) => '<div class="answer"><small>' + new Date(o.day + 'T12:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) + '</small><q>' + esc(o.prompt) + '</q><p>' + esc(o.data.text) + '</p></div>').join('')
@@ -1050,6 +1155,10 @@ async function renderProfile() {
     '<section class="stats" aria-label="Stats"><div><b>' + streak() + '</b><span>Streak</span></div><div><b>' + Math.max(bestStreak(), streak()) + '</b><span>Best</span></div><div><b>' + totalDone() + '</b><span>Exercises</span></div></section>' +
 
     (config.paywall && me.paid_at ? '<section class="section" aria-label="Access"><h2 class="h2">Access</h2><div class="box" style="font-size:14.5px">Unlocked on ' + new Date(me.paid_at).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' }) + '. One-time payment, nothing more to pay.</div></section>' : '') +
+
+    '<section class="section" aria-label="Help"><h2 class="h2">Help</h2><div style="display:flex;flex-direction:column;gap:4px">' +
+      '<button class="task" id="howBtn"><span class="tx"><b>How we build your aura</b><span>Practices, focus bubbles, questions, the Cloud and bumping</span></span><span class="chev" aria-hidden="true">›</span></button>' +
+      '<button class="task" id="faqBtn"><span class="tx"><b>Questions and answers</b><span>Everything people usually ask</span></span><span class="chev" aria-hidden="true">›</span></button></div></section>' +
 
     '<section class="section" aria-label="Account"><h2 class="h2">Account</h2><div style="display:flex;flex-direction:column;gap:6px">' +
       '<button class="secondary" id="signOutBtn">Sign out</button>' +
@@ -1072,13 +1181,9 @@ async function renderProfile() {
     document.querySelectorAll('[data-show]').forEach((x) => { const on = x.dataset.show === me.show_me; x.classList.toggle('on', on); x.setAttribute('aria-pressed', on); });
     setTimeout(loadCloud, 900);
   });
-  document.querySelectorAll('[data-int]').forEach((b) => b.onclick = () => {
-    const v = b.dataset.int, list = [...(me.interests || [])], i = list.indexOf(v);
-    if (i >= 0) list.splice(i, 1);
-    else list.push(v);
-    saveSoon({ interests: list });
-    b.classList.toggle('on', list.includes(v)); b.setAttribute('aria-pressed', list.includes(v)); $('#iCount').textContent = list.length;
-  });
+  wireInterests();
+  $('#howBtn').onclick = () => openHowItWorks();
+  $('#faqBtn').onclick = () => openFAQ();
   $('#camBtn').onclick = () => pickPhoto(async (blob) => { await savePhoto(blob); renderProfile(); refreshYou(); toast('Photo updated'); });
   $('#signOutBtn').onclick = async () => { await API.signOut(); location.reload(); };
   $('#deleteBtn').onclick = async (e) => {
@@ -1568,7 +1673,7 @@ async function openThread(chatId) {
     } else if (tab === 2) {
       // GIFs: quick searches in Ora's spirit, or anything you type
       tb.innerHTML = '<input class="field gifsearch" id="gifQ" placeholder="Search GIFs" value="' + esc(gifQ) + '" autocomplete="off">' +
-        '<div class="gifchips">' + GIF_TOPICS.map((g) => '<button type="button" data-gq="' + esc(g) + '" aria-pressed="' + (g === gifQ) + '">' + esc(g) + '</button>').join('') + '</div><div class="gifgrid" id="gifGrid"></div>';
+        '<div class="gifchips" data-hscroll>' + GIF_TOPICS.map((g) => '<button type="button" data-gq="' + esc(g) + '" aria-pressed="' + (g === gifQ) + '">' + esc(g) + '</button>').join('') + '</div><div class="gifgrid" id="gifGrid"></div>';
       tb.querySelector('#gifQ').oninput = (e) => { gifQ = e.target.value; clearTimeout(gifT); gifT = setTimeout(loadGifs, 350); };
       tb.querySelectorAll('[data-gq]').forEach((b) => b.onclick = () => { gifQ = b.dataset.gq; tb.querySelector('#gifQ').value = gifQ; tb.querySelectorAll('[data-gq]').forEach((x) => x.setAttribute('aria-pressed', x === b)); loadGifs(); });
       loadGifs();
