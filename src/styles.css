@@ -619,3 +619,7 @@ input.field[type=date]::-webkit-date-and-time-value{text-align:left}
 .temple-ask div{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:18px}
 .temple-ask button{height:46px;border-radius:23px;border:.5px solid rgba(255,255,255,.22);background:transparent;color:#fff;font:inherit;font-size:15px;cursor:pointer}
 .temple-ask button.on{background:#fff;color:#111114;border-color:#fff}
+/* Ora Master's pick once it's done today: shown, not startable again */
+.secondary.small{height:38px;margin-top:8px;font-size:14px;padding:0 14px;width:auto}
+.secondary:disabled{cursor:default;color:var(--ink2)}
+.secondary:disabled svg{width:16px;height:16px}

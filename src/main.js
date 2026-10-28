@@ -430,7 +430,7 @@ function renderAgenda() {
   const r = rec(), all = todayTasks(), n = Math.min(3, dayCount()), st = streak(), open = cloudOpen();
   // Today's three: the temple, today's task (a reflection one day, an action the next), and Ora Master's pick
   const temple = all[0], task = dayNum() % 2 ? all[2] : all[1], other = task === all[1] ? all[2] : all[1], pick = suggestion && PRACTICE[suggestion.exercise];
-  const pickDone = pick && myPractices.some((p) => p.exercise === pick.id && p.day === today());
+  const pickDone = pick && doneToday(pick.id);
   const extra = practicedOn(today()).filter((id) => !pick || id !== pick.id);
   const days = []; for (let i = 6; i >= 0; i--) { const d = new Date(); d.setDate(d.getDate() - i); days.push(d); }
   const week = days.map((d, i) => {
@@ -451,7 +451,7 @@ function renderAgenda() {
     '<section class="section" aria-label="Today’s three"><h2 class="h2">Today’s three</h2><div style="display:flex;flex-direction:column;gap:6px">' +
       row('data-task="m"', ICON.m, 'The temple', 'Meditate', temple.mins + ' minutes in the temple', r.m) +
       row('data-task="' + task.k + '"', task.icon, 'Today’s task', task.title, task.sub, r[task.k]) +
-      (pick ? row('data-practice="' + pick.id + '"', ICON.guide, 'Ora Master’s pick', pick.name, suggestion.reason, pickDone) : '') +
+      (pick ? row(pickDone ? 'data-pickdone' : 'data-practice="' + pick.id + '"', ICON.guide, 'Ora Master’s pick', pick.name, suggestion.reason, pickDone) : '') +
     '</div><p class="label" style="margin:2px 0 0;font-size:13px">Anything from the Meditation library counts too.</p></section>' +
     // The other daily task (a reflection or an action), and anything else practised today
     '<section class="section" aria-label="Also today"><h2 class="h2">Also today</h2><div style="display:flex;flex-direction:column;gap:4px">' +
@@ -465,6 +465,8 @@ function renderAgenda() {
     openSheet(t);
   });
   const oc = $('#openCloud'); if (oc) oc.onclick = () => goTab(TAB.cloud);
+  // Ora Master's pick, once done, stays done for the day
+  const pd = $('#agendaBody [data-pickdone]'); if (pd) pd.onclick = () => toast('Already done today');
   wirePracticeLinks($('#agendaBody'));
 }
 
@@ -749,12 +751,13 @@ const masterAva = (size) => '<span class="masterava" style="width:' + size + 'px
   '<span style="left:0;top:4%;width:62%;height:62%">' + bubbleHTML({ w: [1, 1, 1, 1, 1, 1], clear: true }, Math.round(size * .62)) + '</span>' +
   '<span style="right:0;top:34%;width:44%;height:44%">' + bubbleHTML({ w: [0, 1, 0, 1, 0, 1], clear: true }, Math.round(size * .44)) + '</span>' +
   '<span style="left:30%;bottom:0;width:30%;height:30%">' + bubbleHTML({ w: [1, 0, 1, 0, 1, 0], clear: true }, Math.round(size * .3)) + '</span></span>';
+const doneToday = (id) => myPractices.some((p) => p.exercise === id && p.day === today());
 function suggestionCard() {
   const s = suggestion && PRACTICE[suggestion.exercise];
   if (!s) return '';
   return '<section class="suggest" aria-label="For you today"><div class="head"><span class="label">For you today</span>' + guideButton() + '</div>' +
     '<b>' + esc(s.name) + '</b><p>' + esc(suggestion.reason) + '</p>' +
-    '<button class="primary" data-practice="' + s.id + '">' + (myPractices.some((p) => p.exercise === s.id && p.day === today()) ? 'Again' : 'Start') + ' · ' + practiceLen(s, levelOf(s.id)) + '</button></section>';
+    (doneToday(s.id) ? '<button class="secondary" disabled>' + ICON.check + ' Done today</button>' : '<button class="primary" data-practice="' + s.id + '">Start · ' + practiceLen(s, levelOf(s.id)) + '</button>') + '</section>';
 }
 async function loadSuggestion() {
   const key = 'ora.suggest.' + uid;
@@ -796,7 +799,8 @@ function openGuide() {
   if (!msgs.length) msgs.push({ role: 'assistant', day: today(), content: 'Hello' + (me?.name ? ' ' + low(me.name) : '') + '. I’m Ora Master. Ask me anything about meditation, the practices, or how your aura and the people around you are found.' });
   const draw = (typing) => {
     th.innerHTML = msgs.map((m) => '<div class="msg ' + (m.role === 'user' ? 'me' : 'them') + '">' + esc(m.content) +
-      (m.suggest && PRACTICE[m.suggest] ? '<button class="primary small" data-practice="' + m.suggest + '">Start ' + esc(PRACTICE[m.suggest].name) + '</button>' : '') + '</div>').join('') +
+      (m.suggest && PRACTICE[m.suggest] ? (m.day === today() && doneToday(m.suggest) ? '<button class="secondary small" disabled>' + ICON.check + ' Done today</button>'
+        : '<button class="primary small" data-practice="' + m.suggest + '">Start ' + esc(PRACTICE[m.suggest].name) + '</button>') : '') + '</div>').join('') +
       (typing ? '<div class="msg them typing"><i></i><i></i><i></i></div>' : '');
     sc.scrollTop = sc.scrollHeight; wirePracticeLinks(th);
   };
