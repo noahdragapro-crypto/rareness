@@ -77,7 +77,7 @@ The Cloud fills in as more people sign up. Each new member is scored against eve
 
 ## Meditation
 
-**Meditation** is its own tab. Each day has one session of 7 to 15 minutes (depending on the day); finishing it in the temple checks off the day's meditation on the Agenda. The other two daily tasks, a reflection and an action, change every day. The tab explains how meditation, focus bubbles and the aura work, and opens **the temple**. The temple is a black screen with a crack of light that breathes; while it's open the phone gives a soft double pulse every four seconds (Vibration API on Android; on iPhone, iOS 18+ gives a light haptic tick instead, older iPhones stay silent). 
+**Meditation** is its own tab. Each day has one session of 7 to 15 minutes (depending on the day); finishing it in the temple checks off the day's meditation on the Agenda. The other two daily tasks, a reflection and an action, change every day. The tab explains how meditation, focus bubbles and the aura work, and opens **the temple**. The temple is a black screen with a natural-looking crack of light that breathes, with "Breathe in / Breathe out" guidance and soft generated meditation music (a warm drone, reverb and singing bowls; a Sound on/off button, plays through the iPhone silent switch on Safari 17+); while it's open the phone gives a soft double pulse every four seconds (Vibration API on Android; on iPhone, iOS 18+ gives a light haptic tick instead, older iPhones stay silent). 
 
 **Focus bubbles**: the first within 45 seconds of opening the app, then every 10 to 12 minutes (`FOCUS_FIRST`, `FOCUS_EVERY` in `src/main.js`), a bubble drifts over whatever page is open until it's popped.
 

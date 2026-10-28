@@ -480,51 +480,141 @@ function renderMeditation() {
   if (lg) lg.onclick = async () => { await complete(t, { minutes: mins, timed: false }, 'Logged. Well done.', lg); renderMeditation(); };
 }
 
-// A crack of light down the middle of a dark wall: jagged, widest in the middle, light glowing through it
+// A crack of light down the middle of a dark wall. Drawn from a seeded random walk so it looks
+// natural (uneven edges, chips, hairline fractures branching off) and stays the same every time.
+let crackCache = '';
 function crackSVG() {
-  const P = [[50, 0], [47.5, 6], [52.5, 12], [46.5, 19], [52, 25], [45.5, 33], [53.5, 40], [47, 47], [53, 54], [44.5, 61], [51, 68], [46, 75], [53.5, 82], [48, 89], [52, 95], [50, 100]];
-  const w = (y) => .25 + 3.4 * Math.sin(Math.PI * y / 100) ** 1.5;
-  const left = P.map(([x, y], i) => [x - w(y) * (i % 2 ? .8 : 1.15), y]), right = P.map(([x, y], i) => [x + w(y) * (i % 2 ? 1.15 : .8), y]).reverse();
-  const shape = 'M' + left.concat(right).map(([x, y]) => x.toFixed(2) + ' ' + y).join(' L') + ' Z';
-  const branch = (pts) => 'M' + pts.map((q) => q.join(' ')).join(' L');
-  const branches = [[[52.5, 12], [58, 15], [63, 14], [67, 17]], [[46.5, 19], [41, 22], [37, 21]], [[45.5, 33], [39, 37], [35, 43]], [[53.5, 40], [60, 43], [64, 49]],
-    [[44.5, 61], [38, 63], [33, 62]], [[51, 68], [57, 72], [60, 78]], [[46, 75], [40, 79]], [[53.5, 82], [59, 85], [63, 84]]].map(branch).join(' ');
-  return '<svg class="crack" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><defs>' +
-    '<linearGradient id="clight" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff6e6" stop-opacity=".55"></stop><stop offset=".5" stop-color="#fffaf0"></stop><stop offset="1" stop-color="#fff6e6" stop-opacity=".55"></stop></linearGradient>' +
-    '<filter id="cglow" x="-100%" y="-10%" width="300%" height="120%"><feGaussianBlur stdDeviation="2.4"></feGaussianBlur></filter></defs>' +
-    '<path class="cglow" d="' + shape + '" filter="url(#cglow)"></path><path class="cbranch" d="' + branches + '"></path><path class="cfill" d="' + shape + '"></path></svg>';
+  if (crackCache) return crackCache;
+  let seed = 20261028;
+  const rnd = () => { seed |= 0; seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  const W = 120, H = 240, N = 90, f = (n) => n.toFixed(2);
+  // The main fissure: wanders left and right, now and then kinks, pulled gently back to the centre
+  const pts = []; let x = W / 2, dx = 0;
+  for (let i = 0; i <= N; i++) {
+    const y = i / N * H;
+    dx = dx * .55 + (rnd() - .5) * 2.6 + (W / 2 - x) * .04 + (rnd() < .08 ? (rnd() - .5) * 7 : 0);
+    x += dx; pts.push([x, y]);
+  }
+  // Widest in the middle, never even: each edge is chipped on its own
+  const width = (i) => { const t = i / N; return (.15 + 3.1 * Math.pow(Math.sin(Math.PI * t), 1.3)) * (.7 + rnd() * .6); };
+  const L = [], R = [];
+  pts.forEach(([px, py], i) => { const w = width(i); L.push([px - w * (.4 + rnd() * .8), py]); R.push([px + w * (.4 + rnd() * .8), py]); });
+  const shape = 'M' + L.concat(R.reverse()).map(([a, c]) => f(a) + ' ' + f(c)).join(' L') + ' Z';
+  // Hairline fractures: short random walks that branch off and fade, sometimes splitting again
+  const cracks = [];
+  const grow = (sx, sy, ang, len, w) => {
+    let cx = sx, cy = sy, a = ang; const seg = [[cx, cy]];
+    for (let k = 0; k < len; k++) {
+      a += (rnd() - .5) * .7; cx += Math.cos(a) * 2.6; cy += Math.sin(a) * 2.6; seg.push([cx, cy]);
+      if (k > 3 && rnd() < .07 && w > .35) grow(cx, cy, a + (rnd() < .5 ? -1 : 1) * (.5 + rnd() * .6), Math.floor(len * .5), w * .6);
+    }
+    cracks.push({ d: 'M' + seg.map(([a2, c2]) => f(a2) + ' ' + f(c2)).join(' L'), w });
+  };
+  for (let i = 6; i < N - 6; i += 3 + Math.floor(rnd() * 5)) {
+    if (rnd() < .45) continue;
+    const [px, py] = pts[i], side = rnd() < .5 ? -1 : 1;
+    // Out to one side, mostly running downward, sometimes up
+    const out = side * (.45 + rnd() * .85), ang = rnd() < .3 ? -Math.PI / 2 + out : Math.PI / 2 - out;
+    grow(px, py, ang, 5 + Math.floor(rnd() * 12), .5 + rnd() * .6);
+  }
+  crackCache = '<svg class="crack" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><defs>' +
+    '<linearGradient id="clight" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff3df" stop-opacity=".5"></stop><stop offset=".5" stop-color="#fffaf2"></stop><stop offset="1" stop-color="#fff3df" stop-opacity=".5"></stop></linearGradient>' +
+    '<filter id="cglow" x="-60%" y="-10%" width="220%" height="120%"><feGaussianBlur stdDeviation="3.2"></feGaussianBlur></filter>' +
+    '<filter id="crough"><feTurbulence type="fractalNoise" baseFrequency="1.4" numOctaves="2" seed="7"></feTurbulence><feDisplacementMap in="SourceGraphic" scale="1.2"></feDisplacementMap></filter></defs>' +
+    '<path class="cglow" d="' + shape + '" filter="url(#cglow)"></path>' +
+    cracks.map((c) => '<path class="cbranch" d="' + c.d + '" style="stroke-width:' + f(c.w) + '"></path>').join('') +
+    '<path class="cfill" d="' + shape + '" filter="url(#crough)"></path></svg>';
+  return crackCache;
 }
 
 // The temple: black screen, a breathing crack of light, and a soft, slow vibration for as long as it's open
 function openTemple() {
   const el = document.createElement('section');
   el.className = 'temple'; el.setAttribute('aria-label', 'The temple');
-  el.innerHTML = '<button class="temple-leave" aria-label="Leave the temple">Leave</button>' + crackSVG() +
-    '<p class="temple-time" aria-live="polite">00:00</p><p class="temple-note">Close your eyes. Breathe with the light.</p>';
+  const soundOn = store.get('ora.templeSound') !== 'off';
+  el.innerHTML = '<button class="temple-leave" aria-label="Leave the temple">Leave</button>' +
+    '<button class="temple-sound" aria-pressed="' + soundOn + '">' + (soundOn ? 'Sound on' : 'Sound off') + '</button>' + crackSVG() +
+    '<p class="temple-time">00:00</p><p class="temple-note" aria-live="polite">Settle in. Let your eyes close.</p>';
   $('#app').appendChild(el);
   requestAnimationFrame(() => el.classList.add('in'));
   const t0 = Date.now(), med = todayTasks().find((x) => x.k === 'm');
   let counted = Boolean(rec().m), lock = null;
   try { navigator.wakeLock?.request('screen').then((l) => { lock = l; }).catch(() => {}); } catch (e) {}
   const hum = startHum();
+  const music = startMusic(soundOn);
+  const sb = el.querySelector('.temple-sound');
+  sb.onclick = () => { const on = sb.getAttribute('aria-pressed') !== 'true'; sb.setAttribute('aria-pressed', on); sb.textContent = on ? 'Sound on' : 'Sound off'; store.set('ora.templeSound', on ? 'on' : 'off'); music.mute(!on); };
+  // Breathe with the light: in as it brightens, out as it fades (the glow runs on an 8-second cycle)
+  const note = el.querySelector('.temple-note');
+  const say = (txt) => { note.style.opacity = 0; setTimeout(() => { note.textContent = txt; note.style.opacity = 1; }, 400); };
+  let breaths = 0;
+  const breath = setInterval(() => { if (!counted || breaths < 2) say(breaths++ % 2 ? 'Breathe out' : 'Breathe in'); }, 4000);
   const tick = setInterval(() => {
     const sec = Math.floor((Date.now() - t0) / 1000);
     el.querySelector('.temple-time').textContent = String(Math.floor(sec / 60)).padStart(2, '0') + ':' + String(sec % 60).padStart(2, '0');
     if (!counted && sec >= med.mins * 60) {
       counted = true;
-      el.querySelector('.temple-note').textContent = med.mins + ' minutes. Today’s meditation is done.';
+      clearInterval(breath); say('Your ' + med.mins + ' minutes are done. Stay as long as you like.');
       complete(med, { minutes: med.mins, timed: true, temple: true }, med.mins + ' calm minutes. Well done.');
     }
   }, 1000);
   const leave = () => {
-    clearInterval(tick); hum.stop();
+    clearInterval(tick); clearInterval(breath); hum.stop(); music.stop();
     try { lock?.release(); } catch (e) {}
     document.removeEventListener('visibilitychange', onVis);
     el.classList.remove('in'); setTimeout(() => el.remove(), 600);
   };
-  const onVis = () => { if (document.hidden) hum.stop(); else hum.start(); };
+  const onVis = () => { if (document.hidden) { hum.stop(); music.pause(); } else { hum.start(); music.resume(); } };
   document.addEventListener('visibilitychange', onVis);
   el.querySelector('.temple-leave').onclick = leave;
+}
+
+// Soft meditation music, made live in the browser: a warm drone that swells with the breath, a little
+// reverb, and now and then a singing bowl. It plays even with an iPhone's silent switch on (Safari 17+).
+function startMusic(on) {
+  let ctx;
+  try { ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return { stop() {}, mute() {}, pause() {}, resume() {} }; }
+  try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
+  const now = ctx.currentTime, master = ctx.createGain(), vol = .2;
+  master.gain.setValueAtTime(0, now); if (on) master.gain.linearRampToValueAtTime(vol, now + 5);
+  master.connect(ctx.destination);
+  // Reverb: a few seconds of fading noise as the room
+  const rev = ctx.createConvolver(), len = ctx.sampleRate * 4, ir = ctx.createBuffer(2, len, ctx.sampleRate);
+  for (let c = 0; c < 2; c++) { const d = ir.getChannelData(c); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.5); }
+  rev.buffer = ir; const wet = ctx.createGain(); wet.gain.value = .55; rev.connect(wet).connect(master);
+  // The drone: D, A, D, F#, A, two slightly detuned voices each, through a soft low-pass
+  const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 900; lp.Q.value = .3;
+  const pad = ctx.createGain(); pad.gain.value = .5; lp.connect(pad); pad.connect(master); pad.connect(rev);
+  const nodes = [];
+  [73.42, 110, 146.83, 185, 220].forEach((fq, i) => {
+    [-1.2, 1.2].forEach((det) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = i < 2 ? 'sine' : 'triangle'; o.frequency.value = fq; o.detune.value = det * 4;
+      g.gain.value = i < 2 ? .16 : .045; o.connect(g).connect(lp); o.start(); nodes.push(o);
+    });
+  });
+  // Breathing swell, in step with the light (8 seconds)
+  const lfo = ctx.createOscillator(), lg = ctx.createGain(); lfo.frequency.value = 1 / 8; lg.gain.value = .22; lfo.connect(lg).connect(pad.gain); lfo.start(); nodes.push(lfo);
+  // Singing bowls: an inharmonic ring that fades over several seconds
+  const bowl = () => {
+    const t = ctx.currentTime + .05, base = [293.66, 369.99, 440, 587.33][Math.floor(Math.random() * 4)], g = ctx.createGain();
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.06, t + .02); g.gain.exponentialRampToValueAtTime(.0001, t + 9);
+    g.connect(master); g.connect(rev);
+    [[1, 1], [2.76, .35], [5.4, .12]].forEach(([m, a]) => [0, .9].forEach((beat) => {
+      const o = ctx.createOscillator(), og = ctx.createGain(); o.type = 'sine'; o.frequency.value = base * m + beat; og.gain.value = a / 2;
+      o.connect(og).connect(g); o.start(t); o.stop(t + 9.2);
+    }));
+  };
+  let bowlT = setTimeout(function next() { bowl(); bowlT = setTimeout(next, 7000 + Math.random() * 7000); }, 2500);
+  return {
+    mute(off) { const t = ctx.currentTime; master.gain.cancelScheduledValues(t); master.gain.setValueAtTime(master.gain.value, t); master.gain.linearRampToValueAtTime(off ? 0 : vol, t + 1.5); },
+    pause() { ctx.suspend(); }, resume() { ctx.resume(); },
+    stop() {
+      clearTimeout(bowlT); const t = ctx.currentTime;
+      master.gain.cancelScheduledValues(t); master.gain.setValueAtTime(master.gain.value, t); master.gain.linearRampToValueAtTime(0, t + 1.5);
+      setTimeout(() => { nodes.forEach((o) => { try { o.stop(); } catch (e) {} }); ctx.close(); }, 1700);
+    }
+  };
 }
 
 // Soft vibration like a slow heartbeat: a light double touch every four seconds.
@@ -560,7 +650,7 @@ function schedulePresent() {
 function showPresent() {
   const busy = presentEl || document.hidden || !gate.hidden || $('.temple') || $('#splash');
   if (busy) { schedulePresent(); return; }
-  const app = $('#app'), W = app.clientWidth, H = app.clientHeight, size = 92, r = size / 2;
+  const app = $('#app'), W = app.clientWidth, H = app.clientHeight, size = 116, r = size / 2;
   const el = document.createElement('button');
   el.className = 'present'; el.setAttribute('aria-label', 'A focus bubble. Pop it.');
   el.innerHTML = bubbleHTML({ w: [1, 1, 1, 1, 1, 1], clear: true }, size) + '<span class="present-cap">Here, now</span>';
