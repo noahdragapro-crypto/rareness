@@ -32,6 +32,7 @@ const ICON = {
   x: sv('<path d="M6 6l12 12M18 6L6 18"></path>'),
   more: sv('<circle cx="5" cy="12" r="1"></circle><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle>'),
   smile: sv('<circle cx="12" cy="12" r="9.5"></circle><path d="M8.5 14.2c.9 1.2 2.1 1.8 3.5 1.8s2.6-.6 3.5-1.8"></path><circle cx="9.2" cy="10" r=".6"></circle><circle cx="14.8" cy="10" r=".6"></circle>'),
+  mic: sv('<rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"></path>'),
   send: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"></path></svg>',
   lock: sv('<rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path>'),
   pin: sv('<path d="M12 21s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12z"></path><circle cx="12" cy="9" r="2.5"></circle>'),
@@ -166,11 +167,16 @@ function goTab(i, after) {
 document.querySelectorAll('.tab').forEach((b) => b.addEventListener('click', () => goTab(+b.dataset.tab)));
 
 function updateLocks() {
-  const locked = !todayDone();
+  const locked = !todayDone() || !setupDone();
   document.querySelectorAll('.tab[data-tab="1"],.tab[data-tab="2"]').forEach((b) => b.classList.toggle('locked', locked));
   [['#cloudLock', 'Cloud'], ['#chatsLock', 'chats']].forEach(([sel, what]) => {
     const el = $(sel); el.hidden = !locked;
-    if (locked) {
+    if (locked && !setupDone()) {
+      el.innerHTML = '<div class="lock-card"><span style="width:24px;height:24px;display:block">' + ICON.lock + '</span><h2 class="h2">Finish your profile to open your ' + what + '</h2>' +
+        '<p class="muted" style="margin:0;font-size:14.5px;line-height:1.45">' + (me?.photo_path ? 'Two short questions left' : 'A photo and two short questions') + ', so we can read your aura and find the people who share the most with you.</p>' +
+        '<button class="primary" data-finish>Finish my profile</button></div>';
+      el.querySelector('[data-finish]').onclick = () => finishSetup();
+    } else if (locked) {
       const r = rec(), n = (r.q ? 1 : 0) + (r.t ? 1 : 0) + (r.m ? 1 : 0);
       el.innerHTML = '<div class="lock-card"><span style="width:24px;height:24px;display:block">' + ICON.lock + '</span><h2 class="h2">Your ' + what + ' open after today’s exercises</h2>' +
         '<p class="muted" style="margin:0;font-size:14.5px;line-height:1.45">' + n + ' of 3 done. Each one takes a few minutes and tunes who floats close to you.</p>' +
@@ -1394,15 +1400,20 @@ function runSplash() {
 }
 
 // ---------------- Gate: sign-in, onboarding, access fee ----------------
+// Aura writing: two open questions, written or dictated. Claude reads them to shape the aura and to match.
+// Saved as sign-up answers; the dim is only where they're filed (the AI reads the words, not the label).
 const SIGNUP = [
-  { dim: 'values', multi: 3, prompt: 'What matters most to you in a partner?', opts: ['Accountability', 'Depth', 'Intelligence', 'Humour', 'Artistic', 'Awareness', 'Ambition', 'Honesty'] },
-  { dim: 'personality', multi: 3, prompt: 'Friends would describe you as…', opts: ['Accountability', 'Depth', 'Intelligence', 'Humour', 'Artistic', 'Awareness', 'Ambition', 'Honesty'] },
-  { dim: 'goals', multi: 2, prompt: 'What are you looking for?', opts: ['A long-term relationship', 'Something that grows slowly', 'To find a community', 'New people to meet', 'Not sure yet'] }
+  { dim: 'personality', prompt: 'Tell us about yourself', title: 'Tell us about yourself',
+    hints: ['Who are you, in a few honest lines?', 'What does your meditation practice look like?', 'What book are you reading right now?', 'What’s your peace temple, the place or moment where you feel calm?', 'What lights you up lately?'],
+    ph: 'Write freely, or tap the microphone and just talk.' },
+  { dim: 'goals', prompt: 'Who are you looking for?', title: 'Who are you looking for?',
+    hints: ['Who is the person you hope to meet?', 'What do they care about, and how do they live?', 'Do they meditate? What’s their peace temple?', 'What would you love to share with them?', 'What can’t you do without in someone?'],
+    ph: 'Describe them in your own words.' }
 ];
-// Aura quick test, right after the photo: what matters in a partner, interests, how friends describe you, what you're looking for
-const TEST = [SIGNUP[0], { dim: 'interests' }, SIGNUP[1], SIGNUP[2]];
-const Q0 = 2; // first quick-test step, after basics and photo
+const TEST = SIGNUP;
+const Q0 = 2; // the writing comes after basics and photo
 const STEPS = Q0 + TEST.length;
+const WRITE_MIN = 40;
 const gate = $('#gate');
 const COUNTRIES = 'AD AE AF AG AL AM AO AR AT AU AZ BA BB BD BE BF BG BH BI BJ BN BO BR BS BT BW BY BZ CA CD CF CG CH CI CL CM CN CO CR CU CV CY CZ DE DJ DK DM DO DZ EC EE EG ER ES ET FI FJ FM FR GA GB GD GE GH GM GN GQ GR GT GW GY HK HN HR HT HU ID IE IL IN IQ IR IS IT JM JO JP KE KG KH KI KM KN KR KW KZ LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME MG MH MK ML MM MN MO MR MT MU MV MW MX MY MZ NA NE NG NI NL NO NP NR NZ OM PA PE PG PH PK PL PR PS PT PW PY QA RE RO RS RU RW SA SB SC SD SE SG SI SK SL SM SN SO SR SS ST SV SY SZ TD TG TH TJ TL TM TN TO TR TT TV TW TZ UA UG US UY UZ VA VC VE VN VU WS XK YE ZA ZM ZW'.split(' ');
 // Fixed city list, so everyone's city is spelled the same in our data
@@ -1545,9 +1556,11 @@ function gateOnboard() {
       '<div style="display:flex;justify-content:center;padding:6px 0"><button id="obPhoto" style="border:0;background:none;padding:0;cursor:pointer;position:relative" aria-label="' + (me.photo_path ? 'Change photo' : 'Add a photo') + '">' + bubbleHTML(youObj(), 176) + '<span class="gbtn glass cam" style="position:absolute;right:2px;bottom:2px">' + ICON.cam + '</span></button></div>' +
       '<label class="lbl" for="obStatus">Your status<input class="field" id="obStatus" maxlength="20" value="' + esc(G.status ?? me.status ?? '') + '" placeholder="What’s on your mind"></label>' +
       '<p class="fine" style="margin-top:-6px">Shown above your bubble in other people’s Cloud. 20 characters.</p>' +
-      '<p class="err" id="err" role="alert" hidden></p><div class="grow"></div><button class="primary" id="go">' + (me.photo_path ? 'Continue' : 'Add a photo') + '</button>',
+      '<p class="err" id="err" role="alert" hidden></p><div class="grow"></div><button class="primary" id="go">' + (me.photo_path ? 'Continue' : 'Add a photo') + '</button>' +
+      '<button class="link" id="later" style="align-self:center;color:var(--ink2)">Finish later, start today’s practice</button>',
       () => {
         gate.querySelector('[data-back]').onclick = () => { G.step--; gateOnboard(); };
+        $('#later').onclick = async () => { const st = $('#obStatus').value.trim(); if (st && st !== (me.status || '')) me = await API.saveProfile(uid, { status: st }).catch(() => me); skipSetup(); };
         $('#obStatus').oninput = (e) => { G.status = e.target.value; };
         const pick = () => pickPhoto(async (blob) => { await savePhoto(blob); gateOnboard(); });
         $('#obPhoto').onclick = pick;
@@ -1559,54 +1572,63 @@ function gateOnboard() {
         };
       });
   } else {
-    const k = i - Q0, q = TEST[k];
-    const head = stepsBar(i) + backBtn + '<p class="label">Aura quick test · ' + (k + 1) + ' of ' + TEST.length + '</p>';
-    const next = () => { if (k === TEST.length - 1) finishOnboarding(); else { G.step++; gateOnboard(); } };
-    const wire = () => { gate.querySelector('[data-back]').onclick = () => { G.step--; gateOnboard(); }; };
-    if (q.dim === 'interests') {
-      showGate(head + '<h1 class="largetitle">What are your interests?</h1><p class="lead">Pick at least 3.</p>' +
-        '<div class="chips grid">' + INTERESTS.map((l) => '<button class="chip' + (G.interests.includes(l) ? ' on' : '') + '" data-int="' + esc(l) + '">' + esc(l) + '</button>').join('') + '</div>' +
-        '<div class="grow"></div><button class="primary" id="go"' + (G.interests.length < 3 ? ' disabled' : '') + '>Continue</button>',
-        () => {
-          wire();
-          gate.querySelectorAll('[data-int]').forEach((b) => b.onclick = () => {
-            const v = b.dataset.int, j = G.interests.indexOf(v);
-            if (j >= 0) G.interests.splice(j, 1); else G.interests.push(v);
-            b.classList.toggle('on', G.interests.includes(v)); $('#go').disabled = G.interests.length < 3;
-          });
-          $('#go').onclick = next;
-        });
-    } else {
-      // Several answers allowed: tap to toggle, then Continue
-      const sel = () => (G.answers[q.dim] ||= []);
-      showGate(head + '<h1 class="largetitle">' + esc(q.prompt) + '</h1><p class="lead">Pick up to ' + q.multi + '.</p>' +
-        '<div class="opts grid' + (q.opts.every((o) => o.length <= 12) ? ' g3' : '') + '">' + q.opts.map((o) => '<button class="opt' + (sel().includes(o) ? ' on' : '') + '" aria-pressed="' + sel().includes(o) + '" data-o="' + esc(o) + '">' + esc(o) + '</button>').join('') + '</div>' +
-        '<div class="grow"></div><button class="primary" id="go"' + (sel().length ? '' : ' disabled') + '>' + (k === TEST.length - 1 ? 'Read my aura' : 'Continue') + '</button>',
-        () => {
-          wire();
-          gate.querySelectorAll('[data-o]').forEach((b) => b.onclick = () => {
-            const v = b.dataset.o, a = sel(), j = a.indexOf(v);
-            if (j >= 0) a.splice(j, 1); else if (a.length < q.multi) a.push(v); else { toast('Pick up to ' + q.multi); return; }
-            b.classList.toggle('on', a.includes(v)); b.setAttribute('aria-pressed', a.includes(v)); $('#go').disabled = !a.length;
-          });
-          $('#go').onclick = next;
-        });
-    }
+    const k = i - Q0, q = TEST[k], last = k === TEST.length - 1;
+    const val = G.answers[q.dim] ?? '';
+    showGate(stepsBar(i) + backBtn + '<p class="label">Your aura · ' + (k + 1) + ' of ' + TEST.length + '</p><h1 class="largetitle">' + esc(q.title) + '</h1>' +
+      '<div class="hints"><span class="label">Some ideas</span><ul>' + q.hints.map((h) => '<li>' + esc(h) + '</li>').join('') + '</ul></div>' +
+      '<div class="writebox"><label class="hide" for="obWrite">' + esc(q.title) + '</label><textarea id="obWrite" maxlength="1500" placeholder="' + esc(q.ph) + '">' + esc(val) + '</textarea>' +
+        (SpeechRec ? '<button type="button" class="mic" id="mic" aria-label="Dictate" aria-pressed="false">' + ICON.mic + '</button>' : '') + '</div>' +
+      '<p class="fine" id="wcount" style="margin-top:-4px"></p>' +
+      '<div class="grow"></div><button class="primary" id="go" disabled>' + (last ? 'Read my aura' : 'Continue') + '</button>' +
+      '<button class="link" id="later" style="align-self:center;color:var(--ink2)">Finish later, start today’s practice</button>',
+      () => {
+        gate.querySelector('[data-back]').onclick = () => { stopDictation(); G.step--; gateOnboard(); };
+        const ta = $('#obWrite'), go = $('#go'), wc = $('#wcount');
+        const ok = () => {
+          G.answers[q.dim] = ta.value;
+          const n = ta.value.trim().length;
+          go.disabled = n < WRITE_MIN;
+          wc.textContent = n < WRITE_MIN ? 'A few more words, please (' + (WRITE_MIN - n) + ' more characters).' : 'Only our AI reads this, to shape your aura and find your matches.';
+        };
+        ta.oninput = ok; ok();
+        if (SpeechRec) $('#mic').onclick = () => toggleDictation(ta, $('#mic'), ok);
+        go.onclick = () => { stopDictation(); if (last) finishOnboarding(); else { G.step++; gateOnboard(); } };
+        $('#later').onclick = () => { stopDictation(); skipSetup(); };
+      });
   }
 }
+
+// Dictation where the browser supports it (Chrome, Safari). Words are added to what's already written.
+const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+let rec_ = null;
+function stopDictation() { try { rec_?.stop(); } catch (e) {} rec_ = null; }
+function toggleDictation(ta, btn, onChange) {
+  if (rec_) { stopDictation(); btn.setAttribute('aria-pressed', 'false'); return; }
+  const r = new SpeechRec();
+  r.lang = navigator.language || 'en-US'; r.continuous = true; r.interimResults = true;
+  const base = ta.value.trim();
+  r.onresult = (e) => {
+    let text = '';
+    for (let j = 0; j < e.results.length; j++) text += e.results[j][0].transcript;
+    ta.value = (base ? base + ' ' : '') + text.trim(); onChange();
+  };
+  r.onend = () => { btn.setAttribute('aria-pressed', 'false'); rec_ = null; };
+  r.onerror = (e) => { if (e.error === 'not-allowed') toast('Allow the microphone to dictate'); };
+  try { r.start(); rec_ = r; btn.setAttribute('aria-pressed', 'true'); } catch (e) { toast('Dictation isn’t available here'); }
+}
+
+// Skip the rest of setup for now: the Agenda and meditation open right away; the Cloud and chats
+// wait until the photo and the two aura answers are done.
+function skipSetup() { startApp(); }
+function finishSetup() { G = { email: G.email, step: me.photo_path ? Q0 : 1, answers: G.answers || {}, interests: [] }; gateOnboard(); }
+const setupDone = () => Boolean(me?.onboarded);
 
 async function finishOnboarding() {
   showGate('<div class="grow"></div><div style="display:flex;justify-content:center">' + bubbleHTML(youObj(), 190) + '</div>' +
     '<h1 class="largetitle" style="text-align:center">Reading your aura…</h1><p class="lead" style="text-align:center;margin:0 auto">This takes a few seconds.</p><div style="display:flex;justify-content:center"><div class="spinner"></div></div><div class="grow"></div>');
   try {
-    await API.signupAnswers(uid, [
-      ...SIGNUP.filter((q) => G.answers[q.dim]?.length).map((q) => {
-        const a = G.answers[q.dim];
-        return { dim: q.dim, prompt: q.prompt, data: { choice: a.join(', '), choices: a } };
-      }),
-      { dim: 'interests', prompt: 'What are your interests?', data: { choices: G.interests } }
-    ]);
-    me = await API.saveProfile(uid, { interests: G.interests, onboarded: true });
+    await API.signupAnswers(uid, SIGNUP.map((q) => ({ dim: q.dim, prompt: q.prompt, data: { text: String(G.answers[q.dim] || '').trim() } })));
+    me = await API.saveProfile(uid, { onboarded: true });
   } catch (e) { fail(e); gateOnboard(); return; }
   try { await API.api('match'); } catch (e) { console.error(e); }
   me = await API.myProfile(uid);
@@ -1620,7 +1642,7 @@ async function finishOnboarding() {
     () => { $('#go').onclick = () => afterOnboarding(); });
 }
 function afterOnboarding() {
-  if (needsMembership()) gatePaywall(); else startApp();
+  if (needsMembership()) gatePaywall(); else { startApp(); updateLocks(); loadCloud(); }
 }
 const needsMembership = () => config.paywall && !me.paid_at;
 
@@ -1670,7 +1692,11 @@ async function enter(user) {
   }
   const billing = new URLSearchParams(location.search).get('billing');
   if (billing) history.replaceState(null, '', location.pathname);
-  if (!me.onboarded) { G = { email: G.email, step: me.name && me.gender && me.city ? 1 : 0, answers: {}, interests: [...(me.interests || [])] }; gateOnboard(); return; }
+  if (!me.onboarded) {
+    // Past the first page: straight into the Agenda; the rest of setup waits for the Cloud and chats
+    if (me.name && me.gender && me.city) { startApp(); return; }
+    G = { email: G.email, step: 0, answers: {}, interests: [] }; gateOnboard(); return;
+  }
   if (needsMembership()) { if (billing === 'success') confirmMembership(); else gatePaywall(billing === 'cancelled' ? 'Checkout was cancelled. You can try again whenever you like.' : ''); return; }
   startApp();
 }

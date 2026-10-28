@@ -106,7 +106,8 @@ npm run build
 
 1. Page 1: first name, age (18+), email, gender, who they're looking for, and a city from a fixed list. A **Log in** link (shown first on a device that was signed in before) takes just the email. For now there is no email check: entering an email signs you straight in (`api/auth/email.ts`), and a returning member only needs their email. Their country is taken from Vercel's location header and can be changed in the profile. To limit who can get in, set `TESTER_EMAILS` to a comma-separated list. Bring back email verification before a public launch, since anyone who knows a member's email can sign in as them.
 2. Page 2: photo (with reframing) and a status (optional, 20 characters).
-3. Aura quick test, four questions: what matters in a partner, interests (at least 3), how friends describe them, and what they're looking for. Claude reads it and shows their aura.
+3. Aura writing: two open questions, written or dictated (microphone button where the browser supports it), with ideas listed above each box: **Tell us about yourself** and **Who are you looking for?** Claude reads both to shape the aura and to match people: it weighs how well each person fits who the other is looking for, in both directions.
+   From page 2 on, **Finish later, start today's practice** goes straight to the Agenda and meditation; the Cloud and chats stay locked until the photo and both answers are done.
 4. Pay $5 once in Stripe Checkout.
 5. The app: Agenda (today's three: meditate 10 minutes, a clear-mind reflection, take a first step; plus upcoming days and what's done), Cloud and Chats. Their profile opens from the bubble in the top-right corner.
 

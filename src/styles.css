@@ -415,3 +415,13 @@ select.field{font:inherit;font-size:16px;color:var(--ink);-webkit-appearance:non
 @keyframes capfade{0%,70%{opacity:1}100%{opacity:0}}
 .fxring{position:absolute;z-index:121;border-radius:50%;border:1.25px solid rgba(17,17,20,.22);pointer-events:none}
 .fxdrop{position:absolute;z-index:121;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff,rgba(17,17,20,.18));box-shadow:0 0 0 .5px rgba(17,17,20,.2);pointer-events:none}
+
+/* Aura writing */
+.hints{background:var(--fill);border-radius:var(--r);padding:12px 14px}
+.hints ul{margin:6px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:4px;font-size:14.5px;line-height:1.4;color:var(--ink2)}
+.writebox{position:relative}
+.writebox textarea{min-height:190px;padding-bottom:52px}
+.mic{position:absolute;right:10px;bottom:10px;width:40px;height:40px;border-radius:50%;border:0;background:var(--fill);color:var(--ink);display:grid;place-items:center;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.mic svg{width:22px;height:22px}
+.mic[aria-pressed="true"]{background:#F5A6D8;animation:micpulse 1.4s ease-in-out infinite}
+@keyframes micpulse{50%{box-shadow:0 0 0 8px rgba(245,166,216,.25)}}
