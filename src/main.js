@@ -1574,9 +1574,11 @@ function gateBasics(msg) {
     (signedIn ? stepsBar(0) : '<div style="display:flex;justify-content:center;padding:10px 0 2px">' + bubbleHTML({ w: [1, 1, 1, 1, 1, 1], clear: true }, 120) + '</div>') +
     '<h1 class="largetitle">' + (signedIn ? 'Hello. Who are you?' : 'Bump into your perfect bubble.') + '</h1>' +
     '<form id="f" style="display:flex;flex-direction:column;gap:14px" novalidate>' +
-      field('obName', 'First name', p.name, 'Your first name', 24, 'given-name') +
+      // Only the name and email are needed to create an account; the rest can come later
+      '<label class="lbl" for="obName"><span>First name <span class="req" aria-hidden="true">*</span></span><input class="field" id="obName" maxlength="24" required aria-required="true" autocomplete="given-name" value="' + esc(p.name ?? '') + '" placeholder="Your first name"></label>' +
+      (signedIn ? '' : '<label class="lbl" for="email"><span>Email <span class="req" aria-hidden="true">*</span></span><input class="field" id="email" type="email" required aria-required="true" autocomplete="email" inputmode="email" value="' + esc(G.email) + '" placeholder="you@example.com"></label>') +
+      '<p class="fine" style="margin:2px 0 -4px"><span class="req">*</span> Required. Everything below is optional and can be added later.</p>' +
       field('obAge', 'Age', p.age ?? ageOf(p.birthdate) ?? '', 'Your age', 2, 'off', 'numeric') +
-      (signedIn ? '' : '<label class="lbl" for="email">Email<input class="field" id="email" type="email" autocomplete="email" inputmode="email" value="' + esc(G.email) + '" placeholder="you@example.com"></label>') +
       '<div class="lbl">I am<div class="chips" style="margin-top:2px">' + GENDERS.map(([v, l]) => '<button type="button" class="chip' + (p.gender === v ? ' on' : '') + '" data-g="' + v + '">' + l + '</button>').join('') + '</div></div>' +
       '<div class="lbl">Looking for<div class="chips" style="margin-top:2px">' + SHOW.map(([v, l]) => '<button type="button" class="chip' + ((p.show_me || 'everyone') === v ? ' on' : '') + '" data-s="' + v + '">' + l + '</button>').join('') + '</div></div>' +
       '<label class="lbl" for="obCity">City<select class="field" id="obCity">' + cityOptions(p.city) + '</select></label>' +
@@ -1597,8 +1599,7 @@ function gateBasics(msg) {
         const say = (m) => { err.textContent = m; err.hidden = false; };
         const email = signedIn ? '' : $('#email').value.trim().toLowerCase();
         G.basics = { name, age: age || '', gender, show_me: show, city };
-        const missing = () => (!name ? 'Add your first name.' : !age ? 'Add your age.' : age < 18 ? 'Ora is for people 18 and over.' : age > 99 ? 'Check your age.'
-          : !gender ? 'Choose how you identify.' : !city ? 'Choose your city.' : '');
+        const missing = () => (!name ? 'Add your first name.' : age && age < 18 ? 'Ora is for people 18 and over.' : age > 99 ? 'Check your age.' : '');
         if (!signedIn) {
           G.email = email;
           if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return say('Enter a valid email address.');
@@ -1618,7 +1619,7 @@ function gateBasics(msg) {
             country = me.country || out.country;
           }
           // Your Cloud shows people from your country; it can be changed later in your profile
-          me = await API.saveProfile(uid, { name, birthdate: birthFromAge(age), gender, show_me: show, city, country: country || guessCountry() || null });
+          me = await API.saveProfile(uid, { name, ...(age ? { birthdate: birthFromAge(age) } : {}), ...(gender ? { gender } : {}), show_me: show, ...(city ? { city } : {}), country: country || guessCountry() || null });
           G.step = 1; gateOnboard();
         } catch (x) { console.error(x); busy(go, false, 'Continue'); say(x?.message || 'That didn’t work. Try again.'); }
       };
@@ -1807,7 +1808,7 @@ async function enter(user) {
   if (billing) history.replaceState(null, '', location.pathname);
   if (!me.onboarded) {
     // Past the first page: straight into the Agenda; the rest of setup waits for the Cloud and chats
-    if (me.name && me.gender && me.city) { startApp(); return; }
+    if (me.name) { startApp(); return; }
     G = { email: G.email, step: 0, answers: {}, interests: [] }; gateOnboard(); return;
   }
   if (needsMembership()) { if (billing === 'success') confirmMembership(); else gatePaywall(billing === 'cancelled' ? 'Checkout was cancelled. You can try again whenever you like.' : ''); return; }

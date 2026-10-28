@@ -427,3 +427,5 @@ select.field{font:inherit;font-size:16px;color:var(--ink);-webkit-appearance:non
 .mic svg{width:22px;height:22px}
 .mic[aria-pressed="true"]{background:#F5A6D8;animation:micpulse 1.4s ease-in-out infinite}
 @keyframes micpulse{50%{box-shadow:0 0 0 8px rgba(245,166,216,.25)}}
+
+.req{color:#c2185b;font-weight:500}
