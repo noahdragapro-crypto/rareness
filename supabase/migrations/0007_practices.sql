@@ -13,9 +13,13 @@ create table if not exists public.practices (
 );
 create index if not exists practices_user_day on public.practices (user_id, day);
 alter table public.practices enable row level security;
+drop policy if exists "practices: read own" on public.practices;
 create policy "practices: read own" on public.practices for select to authenticated using (user_id = auth.uid());
+drop policy if exists "practices: insert own" on public.practices;
 create policy "practices: insert own" on public.practices for insert to authenticated with check (user_id = auth.uid());
+drop policy if exists "practices: update own" on public.practices;
 create policy "practices: update own" on public.practices for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
+drop policy if exists "practices: delete own" on public.practices;
 create policy "practices: delete own" on public.practices for delete to authenticated using (user_id = auth.uid());
 
 -- What someone practises most: for yourself, or for someone you share a chat with
