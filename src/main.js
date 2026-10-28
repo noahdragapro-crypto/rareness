@@ -728,7 +728,15 @@ function openTemple(opts = {}) {
   const hum = startHum();
   const music = startMusic(soundOn);
   const sb = el.querySelector('.temple-sound');
-  sb.onclick = () => { const on = sb.getAttribute('aria-pressed') !== 'true'; sb.setAttribute('aria-pressed', on); sb.textContent = on ? 'Sound on' : 'Sound off'; store.set('ora.templeSound', on ? 'on' : 'off'); music.mute(!on); };
+  let blocked = false;
+  sb.onclick = () => {
+    wakeAudio();
+    if (blocked) { blocked = false; sb.textContent = 'Sound on'; sb.setAttribute('aria-pressed', 'true'); store.set('ora.templeSound', 'on'); music.mute(false); return; }
+    const on = sb.getAttribute('aria-pressed') !== 'true'; sb.setAttribute('aria-pressed', on); sb.textContent = on ? 'Sound on' : 'Sound off'; store.set('ora.templeSound', on ? 'on' : 'off'); music.mute(!on);
+  };
+  el.addEventListener('pointerdown', wakeAudio);
+  // Still paused a moment later (the phone blocked it): ask for one tap
+  if (soundOn) setTimeout(() => { if (!music.running()) { blocked = true; sb.textContent = 'Tap for sound'; } }, 1200);
   // The guidance: each cue for its own number of seconds, round and round
   const note = el.querySelector('.temple-note');
   const say = (txt) => { note.style.opacity = 0; setTimeout(() => { note.textContent = txt; note.style.opacity = 1; }, 400); };
@@ -764,12 +772,12 @@ function openTemple(opts = {}) {
 // Soft meditation music, made live in the browser: a warm drone that swells with the breath, a little
 // reverb, and now and then a singing bowl. It plays even with an iPhone's silent switch on (Safari 17+).
 function startMusic(on) {
-  let ctx;
-  try { ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return { stop() {}, mute() {}, pause() {}, resume() {} }; }
-  try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
+  const ctx = audio();
+  const none = { stop() {}, mute() {}, pause() {}, resume() {}, running: () => false };
+  if (!ctx) return none;
   const now = ctx.currentTime, master = ctx.createGain(), vol = .2;
-  master.gain.setValueAtTime(0, now); if (on) master.gain.linearRampToValueAtTime(vol, now + 5);
-  master.connect(ctx.destination);
+  master.gain.setValueAtTime(0, now); if (on) master.gain.linearRampToValueAtTime(vol, now + 3);
+  master.connect(audioOut);
   // Reverb: a few seconds of fading noise as the room
   const rev = ctx.createConvolver(), len = ctx.sampleRate * 4, ir = ctx.createBuffer(2, len, ctx.sampleRate);
   for (let c = 0; c < 2; c++) { const d = ir.getChannelData(c); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.5); }
@@ -789,6 +797,7 @@ function startMusic(on) {
   const lfo = ctx.createOscillator(), lg = ctx.createGain(); lfo.frequency.value = 1 / 8; lg.gain.value = .22; lfo.connect(lg).connect(pad.gain); lfo.start(); nodes.push(lfo);
   // Singing bowls: an inharmonic ring that fades over several seconds
   const bowl = () => {
+    if (ctx.state !== 'running') return;
     const t = ctx.currentTime + .05, base = [293.66, 369.99, 440, 587.33][Math.floor(Math.random() * 4)], g = ctx.createGain();
     g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.06, t + .02); g.gain.exponentialRampToValueAtTime(.0001, t + 9);
     g.connect(master); g.connect(rev);
@@ -798,13 +807,20 @@ function startMusic(on) {
     }));
   };
   let bowlT = setTimeout(function next() { bowl(); bowlT = setTimeout(next, 7000 + Math.random() * 7000); }, 2500);
+  // If a call, another app or the lock screen pauses the sound, wake it again as soon as we can
+  let stopped = false;
+  const onState = () => { if (!stopped && !document.hidden && ctx.state !== 'running') ctx.resume().catch(() => {}); };
+  ctx.addEventListener('statechange', onState);
   return {
+    running: () => ctx.state === 'running',
     mute(off) { const t = ctx.currentTime; master.gain.cancelScheduledValues(t); master.gain.setValueAtTime(master.gain.value, t); master.gain.linearRampToValueAtTime(off ? 0 : vol, t + 1.5); },
-    pause() { ctx.suspend(); }, resume() { ctx.resume(); },
+    pause() {}, // the shared context keeps running; the page being hidden is handled by the phone
+    resume() { wakeAudio(); },
     stop() {
-      clearTimeout(bowlT); const t = ctx.currentTime;
+      stopped = true; clearTimeout(bowlT); ctx.removeEventListener('statechange', onState);
+      const t = ctx.currentTime;
       master.gain.cancelScheduledValues(t); master.gain.setValueAtTime(master.gain.value, t); master.gain.linearRampToValueAtTime(0, t + 1.5);
-      setTimeout(() => { nodes.forEach((o) => { try { o.stop(); } catch (e) {} }); ctx.close(); }, 1700);
+      setTimeout(() => { nodes.forEach((o) => { try { o.stop(); } catch (e) {} }); try { master.disconnect(); } catch (e) {} }, 1700);
     }
   };
 }
@@ -1546,11 +1562,33 @@ async function openThread(chatId) {
 // with real momentum, float up and sway like soap bubbles, then pop one by one ----------------
 // ---------------- Bubble sounds (made in the browser, no files) ----------------
 // Browsers only allow sound after the first touch, so the very first fill may be silent.
-let actx = null;
+// One audio context for the whole app. Phones limit how many can exist, and each new one may start
+// paused, so it's created once, woken inside a tap, and woken again after calls or other apps' audio.
+let actx = null, audioOut = null;
+const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 function audio() {
-  try { actx ||= new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return null; }
-  if (actx.state === 'suspended') actx.resume().catch(() => {});
+  if (!actx) {
+    // Play as media, so the iPhone silent switch doesn't mute it (Safari 17+); set before the context exists
+    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
+    try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return null; }
+    audioOut = actx.destination;
+    // Older iPhones: route through an <audio> element, which plays even with the silent switch on
+    if (isIOS && !navigator.audioSession && actx.createMediaStreamDestination) {
+      try {
+        const dest = actx.createMediaStreamDestination(), el = new Audio();
+        el.srcObject = dest.stream; el.setAttribute('playsinline', '');
+        el.play().then(() => { audioOut = dest; }).catch(() => {});
+      } catch (e) {}
+    }
+  }
+  wakeAudio();
   return actx;
+}
+// Must run inside a tap to work on iPhones: resume, and play a moment of silence to unlock output
+function wakeAudio() {
+  if (!actx) return;
+  if (actx.state !== 'running') actx.resume().catch(() => {});
+  try { const b = actx.createBuffer(1, 1, 22050), src = actx.createBufferSource(); src.buffer = b; src.connect(actx.destination); src.start(0); } catch (e) {}
 }
 // The main bubble filling up: a soft rising tone with a watery wobble
 function fillSound(dur = 1.6) {
@@ -1560,13 +1598,13 @@ function fillSound(dur = 1.6) {
   o.type = 'sine'; o.frequency.setValueAtTime(160, t); o.frequency.exponentialRampToValueAtTime(520, t + dur);
   lfo.frequency.value = 11; lg.gain.value = 18; lfo.connect(lg).connect(o.frequency);
   g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.05, t + .25); g.gain.setValueAtTime(.05, t + dur - .2); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
-  o.connect(g).connect(c.destination); o.start(t); lfo.start(t); o.stop(t + dur + .05); lfo.stop(t + dur + .05);
+  o.connect(g).connect(audioOut); o.start(t); lfo.start(t); o.stop(t + dur + .05); lfo.stop(t + dur + .05);
   // a few little bubbles rising inside it
   for (let k = 0; k < 6; k++) {
     const tt = t + .15 + k * dur / 7 + Math.random() * .08, b = c.createOscillator(), bg = c.createGain(), f = 500 + Math.random() * 500;
     b.type = 'sine'; b.frequency.setValueAtTime(f, tt); b.frequency.exponentialRampToValueAtTime(f * 1.9, tt + .06);
     bg.gain.setValueAtTime(.0001, tt); bg.gain.exponentialRampToValueAtTime(.035, tt + .01); bg.gain.exponentialRampToValueAtTime(.0001, tt + .08);
-    b.connect(bg).connect(c.destination); b.start(tt); b.stop(tt + .1);
+    b.connect(bg).connect(audioOut); b.start(tt); b.stop(tt + .1);
   }
 }
 
