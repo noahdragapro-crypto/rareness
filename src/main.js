@@ -124,7 +124,9 @@ const fail = (e) => { console.error(e); toast(e?.message && e.message.length < 1
 // ---------------- Tabs: screens slide, the glass lens slides between icons ----------------
 // Tab order: Agenda, Tasks, Cloud, Chats, Profile
 // Tab order: Agenda, Cloud, Chats. Your profile opens from the button in the top-right corner.
-const views = ['#v0', '#v2', '#v3'].map((id) => $(id));
+// Tabs, in tab-bar order
+const TAB = { agenda: 0, meditation: 1, cloud: 2, chats: 3 };
+const views = ['#v0', '#v1', '#v2', '#v3'].map((id) => $(id));
 let cur = 0;
 const pages = [];
 let lensX = 0;
@@ -168,7 +170,7 @@ document.querySelectorAll('.tab').forEach((b) => b.addEventListener('click', () 
 
 function updateLocks() {
   const locked = !todayDone() || !setupDone();
-  document.querySelectorAll('.tab[data-tab="1"],.tab[data-tab="2"]').forEach((b) => b.classList.toggle('locked', locked));
+  document.querySelectorAll('.tab[data-tab="' + TAB.cloud + '"],.tab[data-tab="' + TAB.chats + '"]').forEach((b) => b.classList.toggle('locked', locked));
   [['#cloudLock', 'Cloud'], ['#chatsLock', 'chats']].forEach(([sel, what]) => {
     const el = $(sel); el.hidden = !locked;
     if (locked && !setupDone()) {
@@ -194,7 +196,7 @@ function syncMeBtn() {
   const nb = views[cur] && views[cur].querySelector('.navbar');
   $('#meBtn').classList.toggle('compact', Boolean(nb && nb.classList.contains('on')));
   // On the Cloud your own bubble in the middle opens your profile, so the corner button steps aside
-  $('#meBtn').classList.toggle('oncloud', cur === 1);
+  $('#meBtn').classList.toggle('oncloud', cur === TAB.cloud);
 }
 
 
@@ -257,7 +259,7 @@ function swipeable(view, edgeOnly) {
   };
   view.addEventListener('touchend', end, { capture: true }); view.addEventListener('touchcancel', end, { capture: true });
 }
-views.forEach((v, i) => swipeable(v, i === 1)); // the Cloud pans with one finger, so there you swipe from the screen edge
+views.forEach((v, i) => swipeable(v, i === TAB.cloud)); // the Cloud pans with one finger, so there you swipe from the screen edge
 
 // Slide a finger along the tab bar: the glass lens follows and the tab under it opens on release
 (() => {
@@ -342,13 +344,34 @@ function edgeSwipe(pg, under) {
 }
 
 // ---------------- Agenda ----------------
-// The same three things to do every day, in order
-const MIND_Q = 'What comes to your mind when it’s clear?';
-function todayTasks() {
+// Every day: a meditation (done in the Meditation tab, 7 to 15 minutes depending on the day),
+// a reflection and an action, both of which change daily.
+const REFLECT = [
+  ['What comes to your mind when it’s clear?', 'values'], ['What are you grateful for today?', 'values'],
+  ['What did your body tell you this morning?', 'routine'], ['Where did you feel most at peace this week?', 'lifestyle'],
+  ['What would you like to let go of today?', 'personality'], ['What made you smile in the last day?', 'personality'],
+  ['Who would you like to thank, and why?', 'values'], ['What does your peace temple look like today?', 'lifestyle'],
+  ['What are you learning about yourself lately?', 'goals'], ['What does a good day feel like to you?', 'lifestyle'],
+  ['Which thought keeps coming back to you?', 'personality'], ['When did you last feel fully present?', 'routine'],
+  ['What do you want more of in your life?', 'goals'], ['Which fear would you like to make smaller?', 'goals']
+];
+const ACTIONS = [
+  'Go do the first step of something you’ve been putting off.', 'Send a kind message to someone you miss.',
+  'Walk for ten minutes without your phone.', 'Drink a glass of water slowly, eyes closed.',
+  'Tidy one small corner of your space.', 'Read ten pages of your book.', 'Stretch for five minutes, slowly.',
+  'Cook or eat one meal with your full attention.', 'Say thank you to someone today, out loud.',
+  'Step outside and look at the sky for one minute.', 'Turn off notifications for one hour.',
+  'Write three lines about today.', 'Listen to one song with your eyes closed.', 'Do one kind thing nobody will notice.'
+];
+const dayNum = (off = 0) => Math.floor((Date.now() - new Date().getTimezoneOffset() * 60000) / 86400000) + off;
+// Today's meditation length, 7 to 15 minutes, the same all day for everyone
+const medMinutes = (off = 0) => 7 + ((dayNum(off) * 7 + 3) % 9);
+function todayTasks(off = 0) {
+  const n = dayNum(off), q = REFLECT[n % REFLECT.length], act = ACTIONS[(n * 5 + 2) % ACTIONS.length], mins = medMinutes(off);
   return [
-    { k: 'm', title: 'Meditate', sub: '10 minutes of meditation practice.', dim: 'routine', icon: ICON.m },
-    { k: 'q', title: 'A clear mind', sub: MIND_Q, dim: 'values', icon: ICON.q },
-    { k: 't', title: 'Take an action', sub: 'Go do the first step.', dim: 'goals', icon: ICON.t }
+    { k: 'm', title: 'Meditate', sub: mins + ' minutes in the temple, in the Meditation tab.', dim: 'routine', icon: ICON.m, mins },
+    { k: 'q', title: 'Reflect', sub: q[0], dim: q[1], icon: ICON.q },
+    { k: 't', title: 'Take an action', sub: act, dim: 'goals', icon: ICON.t }
   ];
 }
 const dimLabel = (k) => DIMS[dimIndex(k)]?.label || '';
@@ -377,11 +400,11 @@ function renderAgenda() {
     '</div></section>';
   document.querySelectorAll('[data-task]').forEach((b) => b.onclick = () => {
     const t = tasks.find((x) => x.k === b.dataset.task);
-    if (t.k === 'm') { openMeditation(); return; } // the temple is open any time, even after today's session
+    if (t.k === 'm') { goTab(TAB.meditation); return; } // the temple is open any time, even after today's session
     if (rec()[t.k]) { toast('Already done today'); return; }
     openSheet(t);
   });
-  const oc = $('#openCloud'); if (oc) oc.onclick = () => goTab(1);
+  const oc = $('#openCloud'); if (oc) oc.onclick = () => goTab(TAB.cloud);
 }
 
 // ---------------- Exercise sheet ----------------
@@ -398,9 +421,9 @@ function openSheet(t) {
     ta.oninput = () => { bt.disabled = ta.value.trim().length < 3; };
     bt.onclick = () => complete(t, { text: ta.value.trim() }, 'Saved. Only you can see it.', bt);
   } else if (t.k === 't') {
-    body.innerHTML = head(t.sub) + '<label for="tAns" class="label" style="display:block;margin-bottom:6px">Your first step</label><textarea id="tAns" maxlength="200" placeholder="The one thing you’ll do now"></textarea><p class="fine" style="margin:6px 0 10px">Only you see this.</p><button class="primary" id="tSave">I took the first step</button>';
+    body.innerHTML = head(t.sub) + '<label for="tAns" class="label" style="display:block;margin-bottom:6px">How did it go? (optional)</label><textarea id="tAns" maxlength="200" placeholder="A few words, if you like"></textarea><p class="fine" style="margin:6px 0 10px">Only you see this.</p><button class="primary" id="tSave">Done</button>';
     const bt = $('#tSave', body);
-    bt.onclick = () => complete(t, { text: $('#tAns', body).value.trim() }, 'Step taken. Keep going.', bt);
+    bt.onclick = () => complete(t, { text: $('#tAns', body).value.trim() }, 'Done. Keep going.', bt);
   }
   $('#sheetBack').classList.add('on'); sh.classList.add('on');
   const f = sh.querySelector('textarea'); if (f) setTimeout(() => f.focus({ preventScroll: true }), 450);
@@ -412,10 +435,10 @@ async function complete(t, data, msg, btn) {
   if (btn) btn.disabled = true;
   const was = todayDone();
   try {
-    const row = await API.saveAnswer(uid, { day: today(), kind: t.k, dim: t.dim, prompt: t.k === 'q' ? t.sub : t.title, data });
+    const row = await API.saveAnswer(uid, { day: today(), kind: t.k, dim: t.dim, prompt: t.k === 'm' ? t.title : t.sub, data });
     myAnswers = myAnswers.filter((a) => !(a.day === row.day && a.kind === row.kind)).concat(row);
   } catch (e) { if (btn) btn.disabled = false; fail(e); return; }
-  closeSheet(); renderAgenda(); updateLocks();
+  closeSheet(); renderAgenda(); renderMeditation(); updateLocks();
   if (!was && todayDone()) {
     toast('All done. The Cloud is open.');
     // New answers: refresh the aura and matches in the background, then reload the Cloud
@@ -427,35 +450,34 @@ async function complete(t, data, msg, btn) {
 }
 
 // ---------------- Meditation: the page, the temple, and present bubbles ----------------
-const PRESENT_MEAN = 600; // seconds between present bubbles, on average
-function openMeditation() {
-  const t = todayTasks().find((x) => x.k === 'm'), done = Boolean(rec().m);
-  const body =
-    '<div class="stack">' +
-    '<header style="display:flex;flex-direction:column;gap:6px"><span class="label">Meditation</span><h1 class="largetitle">Be here, now.</h1></header>' +
+// Focus bubbles: the first within 45 seconds of opening the app, then one every 10 to 12 minutes
+const FOCUS_FIRST = [20, 45], FOCUS_EVERY = [600, 720];
+function renderMeditation() {
+  const box = $('#medBody'); if (!box) return;
+  const t = todayTasks().find((x) => x.k === 'm'), done = Boolean(rec().m), mins = t.mins;
+  box.innerHTML =
+    '<header style="display:flex;flex-direction:column;gap:6px"><span class="brand">Ora</span><h1 class="largetitle">Meditation</h1><span class="label">Be here, now.</span></header>' +
     '<section class="temple-card" aria-label="The temple">' +
       '<div class="temple-mini" aria-hidden="true">' + crackSVG() + '</div>' +
       '<div style="display:flex;flex-direction:column;gap:6px"><h2 class="h2" style="color:#fff">The temple</h2>' +
-      '<p style="margin:0;color:rgba(255,255,255,.7);font-size:14.5px;line-height:1.45">A dark, quiet room. Your phone hums softly the whole time you stay. Ten minutes count as today’s meditation.</p></div>' +
+      '<p style="margin:0;color:rgba(255,255,255,.7);font-size:14.5px;line-height:1.45">A dark, quiet room. Your phone hums softly the whole time you stay. Today’s session is <b style="color:#fff;font-weight:500">' + mins + ' minutes</b>.</p></div>' +
       '<button class="primary light" id="enterTemple">Enter the temple</button>' +
     '</section>' +
     (done ? '<p class="label" style="text-align:center;margin:0">Today’s meditation is done. The temple stays open whenever you need it.</p>'
       : '<button class="link" id="logMed" style="align-self:center">I already meditated today, log it</button>') +
     '<section class="section" aria-label="How meditation works"><h2 class="h2">How meditation works here</h2>' +
-      '<p class="explain">Each day starts with ten minutes of stillness. Sit comfortably, close your eyes, and follow your breath in the temple. When your mind wanders, notice it, and come back to the breath. That’s the whole practice.</p>' +
-      '<p class="explain">Meditating is the first of your three daily steps. Doing all three keeps your streak and opens the Cloud and your chats for the day.</p></section>' +
-    '<section class="section" aria-label="Present bubbles"><h2 class="h2">Present bubbles</h2>' +
+      '<p class="explain">Every day there’s one meditation session, between 7 and 15 minutes depending on the day. Sit comfortably, close your eyes, and follow your breath in the temple. When your mind wanders, notice it, and come back to the breath. That’s the whole practice.</p>' +
+      '<p class="explain">When your session ends, it counts as one of today’s three tasks on your Agenda. Doing all three keeps your streak and opens the Cloud and your chats for the day.</p></section>' +
+    '<section class="section" aria-label="Focus bubbles"><h2 class="h2">Focus bubbles</h2>' +
       '<div style="display:flex;gap:14px;align-items:center"><div style="flex:none">' + bubbleHTML({ w: [1, 1, 1, 1, 1, 1], clear: true }, 64) + '</div>' +
-      '<p class="explain" style="margin:0">About every ten minutes, a bubble floats up over whatever you’re doing. Pop it. It’s a small reminder that you’re here, in the present. It’s part of the practice.</p></div></section>' +
+      '<p class="explain" style="margin:0">Soon after you open Ora, and then every ten minutes or so, a bubble floats up over whatever you’re doing. Pop it. It’s a small reminder that you’re here, in the present. It’s part of the practice.</p></div></section>' +
     '<section class="section" aria-label="How your aura works"><h2 class="h2">How your aura works</h2>' +
       '<p class="explain">Your aura is six colours: ' + DIMS.map((d) => d.label.toLowerCase()).join(', ') + '. Our AI reads your sign-up answers and your daily steps, and shows how strongly each one runs through you.</p>' +
       '<p class="explain">The same colours ring everyone in the Cloud. On someone else’s bubble they show what you share, and the more you share, the closer and bigger they float.</p>' +
-      '<p class="explain">Your daily answers are private. Nobody else ever sees them; they only shape your aura.</p></section>' +
-    '</div>';
-  const pg = pushPage('Meditation', body);
-  pg.querySelector('#enterTemple').onclick = () => openTemple();
-  const lg = pg.querySelector('#logMed');
-  if (lg) lg.onclick = async () => { await complete(t, { minutes: 10, timed: false }, 'Logged. Well done.', lg); popPage(); };
+      '<p class="explain">Your daily answers are private. Nobody else ever sees them; they only shape your aura.</p></section>';
+  box.querySelector('#enterTemple').onclick = () => openTemple();
+  const lg = box.querySelector('#logMed');
+  if (lg) lg.onclick = async () => { await complete(t, { minutes: mins, timed: false }, 'Logged. Well done.', lg); renderMeditation(); };
 }
 
 // A crack of light down the middle of a dark wall: jagged, widest in the middle, light glowing through it
@@ -481,17 +503,17 @@ function openTemple() {
     '<p class="temple-time" aria-live="polite">00:00</p><p class="temple-note">Close your eyes. Breathe with the light.</p>';
   $('#app').appendChild(el);
   requestAnimationFrame(() => el.classList.add('in'));
-  const t0 = Date.now();
+  const t0 = Date.now(), med = todayTasks().find((x) => x.k === 'm');
   let counted = Boolean(rec().m), lock = null;
   try { navigator.wakeLock?.request('screen').then((l) => { lock = l; }).catch(() => {}); } catch (e) {}
   const hum = startHum();
   const tick = setInterval(() => {
     const sec = Math.floor((Date.now() - t0) / 1000);
     el.querySelector('.temple-time').textContent = String(Math.floor(sec / 60)).padStart(2, '0') + ':' + String(sec % 60).padStart(2, '0');
-    if (!counted && sec >= 600) {
+    if (!counted && sec >= med.mins * 60) {
       counted = true;
-      el.querySelector('.temple-note').textContent = 'Ten minutes. Today’s meditation is counted.';
-      complete(todayTasks().find((x) => x.k === 'm'), { minutes: 10, timed: true, temple: true }, 'Ten calm minutes. Well done.');
+      el.querySelector('.temple-note').textContent = med.mins + ' minutes. Today’s meditation is done.';
+      complete(med, { minutes: med.mins, timed: true, temple: true }, med.mins + ' calm minutes. Well done.');
     }
   }, 1000);
   const leave = () => {
@@ -526,23 +548,23 @@ function startHum() {
   return { start, stop: () => { stop(); }, remove: () => { stop(); sw?.remove(); } };
 }
 
-// Present bubbles: about every ten minutes, a bubble drifts over whatever's on screen until it's popped
+// Focus bubbles: a bubble drifts over whatever's on screen until it's popped
 let presentT = null, presentEl = null;
+let focusShown = 0;
 function schedulePresent() {
   clearTimeout(presentT);
-  const mean = Number(store.get('ora.presentEvery')) || PRESENT_MEAN;
-  // Random gaps that average out to the mean, never back-to-back
-  const wait = Math.min(mean * 2.5, Math.max(mean * .3, -Math.log(1 - Math.random()) * mean));
-  presentT = setTimeout(showPresent, wait * 1000);
+  const test = Number(store.get('ora.presentEvery')); // testing only: seconds between bubbles
+  const [lo, hi] = test ? [test, test] : focusShown ? FOCUS_EVERY : FOCUS_FIRST;
+  presentT = setTimeout(showPresent, (lo + Math.random() * (hi - lo)) * 1000);
 }
 function showPresent() {
   const busy = presentEl || document.hidden || !gate.hidden || $('.temple') || $('#splash');
   if (busy) { schedulePresent(); return; }
   const app = $('#app'), W = app.clientWidth, H = app.clientHeight, size = 92, r = size / 2;
   const el = document.createElement('button');
-  el.className = 'present'; el.setAttribute('aria-label', 'A present bubble. Pop it.');
+  el.className = 'present'; el.setAttribute('aria-label', 'A focus bubble. Pop it.');
   el.innerHTML = bubbleHTML({ w: [1, 1, 1, 1, 1, 1], clear: true }, size) + '<span class="present-cap">Here, now</span>';
-  app.appendChild(el); presentEl = el;
+  app.appendChild(el); presentEl = el; focusShown++;
   let x = r + Math.random() * (W - size), y = H + r, vx = 0, vy = -40, t = 0, last = performance.now(), raf = 0, alive = true;
   const ph = Math.random() * 6.28;
   const step = (now) => {
@@ -981,7 +1003,7 @@ function paint() {
 }
 function loop(now) {
   const dt = Math.min(.05, (now - last) / 1000); last = now;
-  if (cur === 1 || B.some((b) => b.bumpUntil)) { step(dt); paint(); }
+  if (cur === TAB.cloud || B.some((b) => b.bumpUntil)) { step(dt); paint(); }
   if (pendingMatch) { const b = pendingMatch; pendingMatch = null; showMatch(b); }
   requestAnimationFrame(loop);
 }
@@ -1057,7 +1079,7 @@ function bumpZone(b) {
 }
 function wireBump(pg, b, opts = {}) {
   const bz = pg.querySelector('#bumpZone'), bt = bz.querySelector('[data-bump]'), ch = bz.querySelector('[data-chat]');
-  if (ch) ch.onclick = () => { if (opts.fromChat) { popPage(); return; } popPage(true); goTab(2, () => openThread(b.chatId)); };
+  if (ch) ch.onclick = () => { if (opts.fromChat) { popPage(); return; } popPage(true); goTab(TAB.chats, () => openThread(b.chatId)); };
   if (!bt) return;
   bt.onclick = async () => {
     bt.disabled = true;
@@ -1079,7 +1101,7 @@ function showMatch(b) {
     '<div style="width:100%;max-width:320px;display:flex;flex-direction:column;gap:4px;margin-top:8px"><button class="primary" id="mChat">Say hi' + (b.name ? ' to ' + esc(b.name) : '') + '</button><button class="link" id="mKeep">Keep exploring</button></div>';
   void m.offsetWidth; m.classList.add('on');
   $('#mKeep').onclick = () => m.classList.remove('on');
-  $('#mChat').onclick = () => { m.classList.remove('on'); goTab(2, () => openThread(b.chatId)); };
+  $('#mChat').onclick = () => { m.classList.remove('on'); goTab(TAB.chats, () => openThread(b.chatId)); };
 }
 async function blockPerson(b, btn) {
   if (!btn.dataset.arm) { btn.dataset.arm = '1'; btn.textContent = 'Tap again to block'; return; }
@@ -1114,7 +1136,7 @@ async function loadChats() {
 function renderChats() {
   const unread = chatList.filter((c) => c.unread).length, badge = $('#chatBadge');
   badge.hidden = !unread; badge.textContent = unread > 9 ? '9+' : unread;
-  $('.tab[data-tab="2"]').setAttribute('aria-label', unread ? 'Chats, ' + unread + ' unread' : 'Chats');
+  $('.tab[data-tab="' + TAB.chats + '"]').setAttribute('aria-label', unread ? 'Chats, ' + unread + ' unread' : 'Chats');
   $('#chatsBody').innerHTML = '<header style="display:flex;flex-direction:column;gap:6px"><span class="brand">Ora</span><h1 class="largetitle">Chats</h1><p class="label" style="font-size:14px;line-height:1.45">A chat opens only when you both bump each other. Nobody sees who bumped them.</p></header>' +
     (chatList.length ? '<section aria-label="Conversations" class="hair">' + chatList.map((c) => {
       const p = c.other, last = c.last;
@@ -1125,7 +1147,7 @@ function renderChats() {
     : '<div class="empty">' + bubbleHTML({ w: [1, 1, 1, 1, 1, 1], plain: true }, 110) + '<h2 class="h2">No chats yet</h2><p class="label" style="font-size:14.5px;line-height:1.45;max-width:280px">Bump people in the Cloud. If they bump you back, you’ll both land here.</p>' +
       '<button class="secondary" style="max-width:220px" id="toCloud">Go to the Cloud</button></div>');
   document.querySelectorAll('[data-thread]').forEach((b) => b.onclick = () => openThread(b.dataset.thread));
-  const tc = $('#toCloud'); if (tc) tc.onclick = () => goTab(1);
+  const tc = $('#toCloud'); if (tc) tc.onclick = () => goTab(TAB.cloud);
 }
 let openChat = null; // { id, draw(message) }
 // ---------------- Emoji, stickers and GIFs ----------------
@@ -1676,11 +1698,12 @@ async function confirmMembership() {
 // ---------------- Boot ----------------
 let appStarted = false, unsubscribeMessages = null;
 function onEnter(i) {
-  if (i === 0) renderAgenda();
-  if (i === 2) { renderChats(); loadChats(); }
-  if (i === 1) { last = performance.now(); refreshBadges(); if (!cloudLoaded) loadCloud(); }
+  if (i === TAB.agenda) renderAgenda();
+  if (i === TAB.meditation) renderMeditation();
+  if (i === TAB.chats) { renderChats(); loadChats(); }
+  if (i === TAB.cloud) { last = performance.now(); refreshBadges(); if (!cloudLoaded) loadCloud(); }
 }
-function renderAll() { renderAgenda(); renderChats(); refreshYou(); refreshMeBtn(); refreshBadges(); updateLocks(); }
+function renderAll() { renderAgenda(); renderMeditation(); renderChats(); refreshYou(); refreshMeBtn(); refreshBadges(); updateLocks(); }
 
 async function enter(user) {
   uid = user.id;

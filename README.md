@@ -77,9 +77,9 @@ The Cloud fills in as more people sign up. Each new member is scored against eve
 
 ## Meditation
 
-The first daily step opens the **Meditation** page: how meditation, present bubbles and the aura work, and the door to **the temple**. The temple is a black screen with a crack of light that breathes; while it's open the phone gives a soft double pulse every four seconds (Vibration API on Android; on iPhone, iOS 18+ gives a light haptic tick instead, older iPhones stay silent). Ten minutes there count as the day's meditation.
+**Meditation** is its own tab. Each day has one session of 7 to 15 minutes (depending on the day); finishing it in the temple checks off the day's meditation on the Agenda. The other two daily tasks, a reflection and an action, change every day. The tab explains how meditation, focus bubbles and the aura work, and opens **the temple**. The temple is a black screen with a crack of light that breathes; while it's open the phone gives a soft double pulse every four seconds (Vibration API on Android; on iPhone, iOS 18+ gives a light haptic tick instead, older iPhones stay silent). 
 
-**Present bubbles**: about every ten minutes (random gaps, `PRESENT_MEAN` in `src/main.js`) a bubble drifts over whatever page is open until it's popped.
+**Focus bubbles**: the first within 45 seconds of opening the app, then every 10 to 12 minutes (`FOCUS_FIRST`, `FOCUS_EVERY` in `src/main.js`), a bubble drifts over whatever page is open until it's popped.
 
 Daily answers are private (`supabase/migrations/0006_private_answers.sql`); only the AI reads them on the server.
 
