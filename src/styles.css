@@ -469,3 +469,22 @@ select.field{font:inherit;font-size:16px;color:var(--ink);-webkit-appearance:non
 .ci-actions .primary{width:auto;padding:0 28px}
 .prow.done .tx b{text-decoration:none}
 .prow.done{opacity:1}
+
+/* Ora Master's picture: three glass bubbles */
+.masterava{position:relative;display:inline-block;flex:none}
+.masterava>span{position:absolute;display:block}
+.masterava .bubble{width:100%!important;height:100%!important}
+/* Chat: shared practices, GIF topics, the practice list in the tray */
+.msg.practicecard{display:flex;flex-direction:column;gap:4px;max-width:82%;padding:14px;border-radius:18px;background:linear-gradient(135deg,rgba(143,232,227,.25),rgba(184,156,255,.2) 55%,rgba(245,166,216,.22))!important;color:var(--ink)!important}
+.msg.practicecard b{font-family:var(--serif);font-weight:400;font-size:22px}
+.msg.practicecard p{margin:0;font-size:14px;line-height:1.4;color:var(--ink2)}
+.msg.practicecard .label{font-size:12px}
+.gifchips{display:flex;gap:6px;overflow-x:auto;flex:none;scrollbar-width:none}
+.gifchips::-webkit-scrollbar{display:none}
+.gifchips button{flex:none;height:30px;padding:0 11px;border-radius:15px;border:.5px solid rgba(17,17,20,.14);background:#fff;font:inherit;font-size:13px;cursor:pointer}
+.gifchips button[aria-pressed="true"]{background:var(--ink);color:#fff;border-color:var(--ink)}
+.sharelist{display:flex;flex-direction:column;gap:4px}
+.sharelist button{display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:9px 12px;border:0;border-radius:12px;background:var(--fill);font:inherit;text-align:left;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.sharelist b{font-family:var(--serif);font-weight:400;font-size:19px}
+.sharelist span{font-size:12.5px;color:var(--ink2)}
+.traytabs button{font-size:13.5px}

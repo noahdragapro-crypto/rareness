@@ -33,7 +33,7 @@ const ICON = {
   x: sv('<path d="M6 6l12 12M18 6L6 18"></path>'),
   more: sv('<circle cx="5" cy="12" r="1"></circle><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle>'),
   smile: sv('<circle cx="12" cy="12" r="9.5"></circle><path d="M8.5 14.2c.9 1.2 2.1 1.8 3.5 1.8s2.6-.6 3.5-1.8"></path><circle cx="9.2" cy="10" r=".6"></circle><circle cx="14.8" cy="10" r=".6"></circle>'),
-  guide: sv('<path d="M12 3.5c5 0 9 3.2 9 7.3s-4 7.3-9 7.3c-.9 0-1.8-.1-2.6-.3L5 20l1-3.5C4.2 15.2 3 13.1 3 10.8 3 6.7 7 3.5 12 3.5z"></path><circle cx="12" cy="10.8" r="2.6"></circle>'),
+  guide: sv('<circle cx="9.5" cy="10" r="5.5"></circle><circle cx="17.3" cy="14.8" r="3.4"></circle><circle cx="11.6" cy="19.2" r="1.9"></circle><path d="M6.9 7.6c.6-.9 1.4-1.5 2.4-1.8" stroke-linecap="round"></path>'),
   mic: sv('<rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"></path>'),
   send: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"></path></svg>',
   lock: sv('<rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path>'),
@@ -600,9 +600,15 @@ function checkIn(x, row, answer) {
   };
 }
 
-// ---------------- Today's suggestion and the Ora guide chat ----------------
+// ---------------- Today's suggestion and the Ora Master chat ----------------
 let suggestion = null;
-const guideButton = () => '<button class="guidebtn glass" data-guide aria-label="Ask the Ora guide">' + ICON.guide + '<span>Ask Ora</span></button>';
+const MASTER = 'Ora Master';
+const guideButton = () => '<button class="guidebtn glass" data-guide aria-label="Ask ' + MASTER + '">' + ICON.guide + '<span>' + MASTER + '</span></button>';
+// Ora Master's picture: three glass bubbles
+const masterAva = (size) => '<span class="masterava" style="width:' + size + 'px;height:' + size + 'px" aria-hidden="true">' +
+  '<span style="left:0;top:4%;width:62%;height:62%">' + bubbleHTML({ w: [1, 1, 1, 1, 1, 1], clear: true }, Math.round(size * .62)) + '</span>' +
+  '<span style="right:0;top:34%;width:44%;height:44%">' + bubbleHTML({ w: [0, 1, 0, 1, 0, 1], clear: true }, Math.round(size * .44)) + '</span>' +
+  '<span style="left:30%;bottom:0;width:30%;height:30%">' + bubbleHTML({ w: [1, 0, 1, 0, 1, 0], clear: true }, Math.round(size * .3)) + '</span></span>';
 function suggestionCard() {
   const s = suggestion && PRACTICE[suggestion.exercise];
   if (!s) return '';
@@ -623,7 +629,7 @@ async function loadSuggestion() {
     suggestion = { day: today(), exercise: x.id, reason: x.about };
   }
   store.set(key, JSON.stringify(suggestion));
-  // The guide also sends it in the chat, once a day
+  // Ora Master also sends it in the chat, once a day
   const msgs = guideMsgs();
   if (!msgs.some((m) => m.day === today() && m.suggest)) {
     msgs.push({ role: 'assistant', day: today(), suggest: suggestion.exercise, content: 'For today, I’d suggest ' + PRACTICE[suggestion.exercise].name + '. ' + suggestion.reason });
@@ -635,11 +641,11 @@ const guideKey = () => 'ora.guide.' + uid;
 function guideMsgs() { try { return JSON.parse(store.get(guideKey()) || '[]'); } catch (e) { return []; } }
 function saveGuide(m) { store.set(guideKey(), JSON.stringify(m.slice(-60))); }
 function openGuide() {
-  const pg = pushPage('Ora guide', '<div class="threadhead" style="cursor:default"><span class="guideava">' + ICON.guide + '</span><b style="font-family:var(--serif);font-size:24px;font-weight:400">Ora guide</b><span class="label">Ask about meditation, your practice, your aura</span></div><div class="thread" id="gThread"></div><div style="height:80px"></div>',
-    { footer: '<form class="composer glass" id="gComposer"><label for="gIn" class="hide">Message the guide</label><input id="gIn" autocomplete="off" placeholder="Ask the guide" maxlength="1000"><button class="send" id="gSend" aria-label="Send" disabled>' + ICON.send + '</button></form>' });
+  const pg = pushPage(MASTER, '<div class="threadhead" style="cursor:default">' + masterAva(84) + '<b style="font-family:var(--serif);font-size:24px;font-weight:400">' + MASTER + '</b><span class="label">Ask about meditation, your practice, your aura</span></div><div class="thread" id="gThread"></div><div style="height:80px"></div>',
+    { footer: '<form class="composer glass" id="gComposer"><label for="gIn" class="hide">Message Ora Master</label><input id="gIn" autocomplete="off" placeholder="Ask Ora Master" maxlength="1000"><button class="send" id="gSend" aria-label="Send" disabled>' + ICON.send + '</button></form>' });
   const th = pg.querySelector('#gThread'), sc = pg.querySelector('.scroll'), inp = pg.querySelector('#gIn'), sb = pg.querySelector('#gSend');
   let msgs = guideMsgs();
-  if (!msgs.length) msgs.push({ role: 'assistant', day: today(), content: 'Hello' + (me?.name ? ' ' + me.name : '') + '. I’m your Ora guide. Ask me anything about meditation, the practices, or how your aura and matches work.' });
+  if (!msgs.length) msgs.push({ role: 'assistant', day: today(), content: 'Hello' + (me?.name ? ' ' + me.name : '') + '. I’m Ora Master. Ask me anything about meditation, the practices, or how your aura and the people around you are found.' });
   const draw = (typing) => {
     th.innerHTML = msgs.map((m) => '<div class="msg ' + (m.role === 'user' ? 'me' : 'them') + '">' + esc(m.content) +
       (m.suggest && PRACTICE[m.suggest] ? '<button class="primary small" data-practice="' + m.suggest + '">Start ' + esc(PRACTICE[m.suggest].name) + '</button>' : '') + '</div>').join('') +
@@ -1029,9 +1035,9 @@ async function renderProfile() {
       field('pJob', 'Work', me.job, 'What you do', 40) + '<label class="lbl" for="pCity">City<select class="field" id="pCity">' + cityOptions(me.city) + '</select></label>' +
       field('pHeight', 'Height (cm)', me.height_cm, '172', 3, '', 'numeric') + field('pLang', 'Languages', me.languages, 'French, English', 60) +
     '</div>' +
-    '<p class="label">Your Cloud shows people from the same country.</p></section>' +
+    '</section>' +
 
-    '<section class="section" aria-label="Show me"><h2 class="h2">Show me</h2><div class="chips">' +
+    '<section class="section" aria-label="I’d like to meet"><h2 class="h2">I’d like to meet</h2><div class="chips">' +
       [['women', 'Women'], ['men', 'Men'], ['everyone', 'Everyone']].map(([v, l]) => '<button class="chip' + (me.show_me === v ? ' on' : '') + '" data-show="' + v + '" aria-pressed="' + (me.show_me === v) + '">' + l + '</button>').join('') + '</div></section>' +
 
     '<section class="section" aria-label="Interests"><div class="head"><h2 class="h2">Interests</h2><span class="counter" id="iCount">' + (me.interests || []).length + '</span></div><div class="chips">' +
@@ -1458,27 +1464,33 @@ function renderChats() {
   wirePracticeLinks($('#chatsBody'));
   const tc = $('#toCloud'); if (tc) tc.onclick = () => goTab(TAB.cloud);
 }
-// The guide sits at the top of Chats, always there
+// Ora Master sits at the top of Chats, always there
 function guideRow() {
   const last = uid ? guideMsgs().slice(-1)[0] : null;
-  return '<section aria-label="Ora guide" class="hair"><button class="crow" data-guide><span class="guideava big">' + ICON.guide + '</span>' +
-    '<span class="tx"><div><b>Ora guide</b><time>' + (last?.day === today() ? 'today' : '') + '</time></div><p>' + esc(last ? last.content : 'Ask about meditation, your practice and your aura') + '</p></span></button></section>';
+  return '<section aria-label="' + MASTER + '" class="hair"><button class="crow" data-guide>' + masterAva(58) +
+    '<span class="tx"><div><b>' + MASTER + '</b><time>' + (last?.day === today() ? 'today' : '') + '</time></div><p>' + esc(last ? last.content : 'Ask about meditation, your practice and your aura') + '</p></span></button></section>';
 }
 let openChat = null; // { id, draw(message) }
 // ---------------- Emoji, stickers and GIFs ----------------
 // Stickers and GIFs travel as ordinary messages with a marker, e.g. [[sticker:🫧]] or [[gif:https://…]]
-const EMOJI = '😀 😂 🥹 😊 😍 🥰 😘 😉 😎 🤔 🙃 😴 🥲 😅 😭 🤯 🫶 🙌 👏 👋 🤝 🙏 💪 👀 ❤️ 🧡 💛 💚 💙 💜 🤍 ✨ 🔥 🌊 🌙 ☀️ 🌿 🌸 🍷 ☕️ 🎶 🎉 🫧 💫 😌 🤗 😏 🙈'.split(' ');
-const STICKERS = ['🫧', '💛', '✨', '🌙', '🔥', '🌊', '🌿', '☕️', '🥂', '😘', '🙈', '🤍', '🫶', '🌸', '😴', '🎉'];
-const RICH = /^\[\[(sticker|gif):(.+)\]\]$/;
+const EMOJI = ('😀 😂 🥹 😊 😍 🥰 😘 😉 😎 🤔 🙃 😴 🥲 😅 😭 🤯 🫶 🙌 👏 👋 🤝 🙏 💪 👀 🫂 🤗 😌 😏 🙈 🤲 ' +
+  '❤️ 🧡 💛 💚 💙 💜 🤍 ✨ 💫 🔥 🫧 🌊 🌙 🌕 ☀️ 🌅 🌄 🏔️ 🌲 🌿 🍃 🌱 🌸 🌻 🦋 🕊️ 🌈 🪐 💧 ❄️ ' +
+  '🧘 🧘‍♀️ 🧘‍♂️ 🪷 🕯️ 📿 🍵 ☕️ 🍷 🎶 🎧 📚 ✍️ 🚶 🤸 ☮️ ♾️ 🎉 🥳').split(' ');
+// Stickers: the first ones stay so older messages still show; the rest follow Ora's calm, natural theme
+const STICKERS = ['🫧', '💛', '✨', '🌙', '🔥', '🌊', '🌿', '☕️', '🥂', '😘', '🙈', '🤍', '🫶', '🌸', '😴', '🎉',
+  '🧘', '🪷', '🕯️', '📿', '🍵', '🕊️', '🦋', '🌱', '🍃', '🌕', '🌅', '🏔️', '🪐', '🌈', '💫', '🙏', '☮️', '🫂', '💜', '♾️'];
+const RICH = /^\[\[(sticker|gif|practice):(.+)\]\]$/;
 const GIF_URL = /^https:\/\/(media\d*|i)\.giphy\.com\/[\w./?=&%-]+$/;
 function rich(body) {
   const m = RICH.exec(body || '');
   if (!m) return null;
   if (m[1] === 'sticker' && STICKERS.includes(m[2])) return { kind: 'sticker', value: m[2] };
   if (m[1] === 'gif' && GIF_URL.test(m[2])) return { kind: 'gif', value: m[2] };
+  if (m[1] === 'practice' && PRACTICE[m[2]]) return { kind: 'practice', value: m[2] };
   return null;
 }
-const msgPreview = (body) => { const r = rich(body); return r ? (r.kind === 'gif' ? 'GIF' : 'Sticker ' + r.value) : body; };
+const GIF_TOPICS = ['Meditate', 'Breathe', 'Calm', 'Namaste', 'Good vibes', 'Hug', 'Thank you', 'Sunrise', 'Nature', 'Yoga', 'Bubbles', 'Proud of you'];
+const msgPreview = (body) => { const r = rich(body); return r ? (r.kind === 'gif' ? 'GIF' : r.kind === 'practice' ? 'Practice: ' + PRACTICE[r.value].name : 'Sticker ' + r.value) : body; };
 
 async function openThread(chatId) {
   let c = chatList.find((x) => x.id === chatId);
@@ -1487,7 +1499,7 @@ async function openThread(chatId) {
   const p = c.other;
   const head = '<button class="threadhead" id="threadHead" aria-label="See ' + esc(p.name || 'their') + '’s profile">' + bubbleHTML({ w: dimsToW(c.match?.dims), photo: API.photoUrl(p.photo_path) }, 84) + '<b style="font-family:var(--serif);font-size:24px;font-weight:400">' + esc(p.name || 'Someone') + '</b>' + '<span class="label">' + (c.match ? c.match.score + '% in common · ' : '') + 'See profile</span></button>';
   const pg = pushPage(p.name || 'Chat', head + '<div class="thread" id="thread"><div class="spinner" style="align-self:center"></div></div><div style="height:80px"></div>',
-    { footer: '<div class="tray glass" id="tray" hidden><div class="traytabs" role="tablist">' + ['Emoji', 'Stickers', 'GIFs'].map((x, i) => '<button type="button" role="tab" data-tt="' + i + '" aria-selected="' + (i === 0) + '">' + x + '</button>').join('') + '</div><div class="traybody" id="trayBody"></div></div>' +
+    { footer: '<div class="tray glass" id="tray" hidden><div class="traytabs" role="tablist">' + ['Emoji', 'Stickers', 'GIFs', 'Practices'].map((x, i) => '<button type="button" role="tab" data-tt="' + i + '" aria-selected="' + (i === 0) + '">' + x + '</button>').join('') + '</div><div class="traybody" id="trayBody"></div></div>' +
       '<form class="composer glass" id="composer"><button type="button" class="traybtn" id="trayBtn" aria-label="Emoji, stickers and GIFs" aria-expanded="false">' + ICON.smile + '</button><label for="msgIn" class="hide">Message</label><input id="msgIn" autocomplete="off" placeholder="Message ' + esc(p.name || '') + '" maxlength="1000"><button class="send" id="sendBtn" aria-label="Send" disabled>' + ICON.send + '</button></form>' });
   const th = pg.querySelector('#thread'), sc = pg.querySelector('.scroll'), inp = pg.querySelector('#msgIn'), sb = pg.querySelector('#sendBtn');
   pg.querySelector('#threadHead').onclick = () => {
@@ -1502,6 +1514,11 @@ async function openThread(chatId) {
   const one = (m) => {
     const who = m.sender_id === uid ? 'me' : m.sender_id ? 'them' : 'sys', r = m.sender_id ? rich(m.body) : null;
     if (r?.kind === 'sticker') return '<div class="msg sticker ' + who + '" role="img" aria-label="Sticker ' + r.value + '">' + r.value + '</div>';
+    if (r?.kind === 'practice') {
+      const x = PRACTICE[r.value];
+      return '<div class="msg practicecard ' + who + '"><span class="label">' + (who === 'me' ? 'You shared a practice' : 'A practice for you') + ' · ' + esc(x.cat) + '</span><b>' + esc(x.name) + '</b><p>' + esc(x.about) + '</p>' +
+        '<button class="primary small" data-practice="' + x.id + '">' + (who === 'me' ? 'Open' : 'Try it together') + '</button></div>';
+    }
     if (r?.kind === 'gif') return '<div class="msg gif ' + who + '"><img src="' + esc(r.value) + '" alt="GIF" loading="lazy"></div>';
     return '<div class="msg ' + who + '">' + esc(m.body) + '</div>';
   };
@@ -1511,7 +1528,7 @@ async function openThread(chatId) {
     if (!mine || msgs[msgs.length - 1] !== mine) return '';
     return '<div class="receipt">' + (readAt && readAt >= mine.created_at ? 'Read' : 'Sent') + '</div>';
   };
-  const draw = () => { th.innerHTML = msgs.map(one).join('') + receipt(); sc.scrollTop = sc.scrollHeight; };
+  const draw = () => { th.innerHTML = msgs.map(one).join('') + receipt(); sc.scrollTop = sc.scrollHeight; wirePracticeLinks(th); };
   const checkRead = () => API.theirRead(chatId, p.id).then((r) => { if (r !== readAt) { readAt = r; draw(); } }).catch(() => {});
   try { msgs = await API.messages(chatId); draw(); } catch (e) { fail(e); }
   checkRead();
@@ -1536,7 +1553,7 @@ async function openThread(chatId) {
     const grid = tb.querySelector('#gifGrid'); if (!grid) return;
     grid.innerHTML = '<div class="spinner" style="grid-column:1/-1;justify-self:center"></div>';
     try {
-      const list = await API.gifs(gifQ);
+      const list = await API.gifs(gifQ || 'meditation calm');
       grid.innerHTML = list.length ? list.map((g) => '<button type="button" class="gifpick" data-gif="' + esc(g.url) + '"><img src="' + esc(g.preview) + '" alt="GIF" loading="lazy"></button>').join('') : '<p class="label" style="grid-column:1/-1">No GIFs found.</p>';
       grid.querySelectorAll('[data-gif]').forEach((b) => b.onclick = async () => { if (await sendBody('[[gif:' + b.dataset.gif + ']]')) openTray(false); });
     } catch (e) { grid.innerHTML = '<p class="label" style="grid-column:1/-1">' + esc(e.message) + '</p>'; }
@@ -1548,10 +1565,18 @@ async function openThread(chatId) {
     } else if (tab === 1) {
       tb.innerHTML = '<div class="stickergrid">' + STICKERS.map((x) => '<button type="button" data-st="' + x + '" aria-label="Send sticker ' + x + '">' + x + '</button>').join('') + '</div>';
       tb.querySelectorAll('[data-st]').forEach((b) => b.onclick = async () => { if (await sendBody('[[sticker:' + b.dataset.st + ']]')) openTray(false); });
-    } else {
-      tb.innerHTML = '<input class="field gifsearch" id="gifQ" placeholder="Search GIFs" value="' + esc(gifQ) + '" autocomplete="off"><div class="gifgrid" id="gifGrid"></div>';
+    } else if (tab === 2) {
+      // GIFs: quick searches in Ora's spirit, or anything you type
+      tb.innerHTML = '<input class="field gifsearch" id="gifQ" placeholder="Search GIFs" value="' + esc(gifQ) + '" autocomplete="off">' +
+        '<div class="gifchips">' + GIF_TOPICS.map((g) => '<button type="button" data-gq="' + esc(g) + '" aria-pressed="' + (g === gifQ) + '">' + esc(g) + '</button>').join('') + '</div><div class="gifgrid" id="gifGrid"></div>';
       tb.querySelector('#gifQ').oninput = (e) => { gifQ = e.target.value; clearTimeout(gifT); gifT = setTimeout(loadGifs, 350); };
+      tb.querySelectorAll('[data-gq]').forEach((b) => b.onclick = () => { gifQ = b.dataset.gq; tb.querySelector('#gifQ').value = gifQ; tb.querySelectorAll('[data-gq]').forEach((x) => x.setAttribute('aria-pressed', x === b)); loadGifs(); });
       loadGifs();
+    } else {
+      // Share a practice: your friend gets a card they can start right away
+      tb.innerHTML = '<p class="label" style="margin:2px 2px 0">Send a practice to do together</p><div class="sharelist">' +
+        PR.map((x) => '<button type="button" data-share="' + x.id + '"><b>' + esc(x.name) + '</b><span>' + esc(x.cat) + ' · ' + typeLabel(x) + '</span></button>').join('') + '</div>';
+      tb.querySelectorAll('[data-share]').forEach((b) => b.onclick = async () => { if (await sendBody('[[practice:' + b.dataset.share + ']]')) openTray(false); });
     }
   }
   pg._onPop = () => { openChat = null; clearInterval(readTimer); loadChats(); };
@@ -1765,8 +1790,9 @@ const SIGNUP = [
   { dim: 'personality', prompt: 'Tell us about yourself', title: 'Tell us about yourself',
     hints: ['Who are you, in a few honest lines?', 'What does your meditation practice look like?', 'What book are you reading right now?', 'What’s your peace temple, the place or moment where you feel calm?', 'What lights you up lately?'],
     ph: 'Write freely, or tap the microphone and just talk.' },
-  { dim: 'goals', prompt: 'Who are you looking for?', title: 'Who are you looking for?',
-    hints: ['Who is the person you hope to meet?', 'What do they care about, and how do they live?', 'Do they meditate? What’s their peace temple?', 'What would you love to share with them?', 'What can’t you do without in someone?'],
+  // The stored prompt stays the same so earlier answers keep matching; only what people see changed
+  { dim: 'goals', prompt: 'Who are you looking for?', title: 'Who would you love to meet?',
+    hints: ['What kind of friends or community are you hoping to find?', 'What do they care about, and how do they live?', 'Do they meditate? What’s their peace temple?', 'What would you love to do or share together?', 'What makes a friendship feel right to you?'],
     ph: 'Describe them in your own words.' }
 ];
 const TEST = SIGNUP;
@@ -1827,7 +1853,7 @@ function gateBasics(msg) {
       '<p class="fine" style="margin:2px 0 -4px"><span class="req">*</span> Required. Everything below is optional and can be added later.</p>' +
       field('obAge', 'Age', p.age ?? ageOf(p.birthdate) ?? '', 'Your age', 2, 'off', 'numeric') +
       '<div class="lbl">I am<div class="chips" style="margin-top:2px">' + GENDERS.map(([v, l]) => '<button type="button" class="chip' + (p.gender === v ? ' on' : '') + '" data-g="' + v + '">' + l + '</button>').join('') + '</div></div>' +
-      '<div class="lbl">Looking for<div class="chips" style="margin-top:2px">' + SHOW.map(([v, l]) => '<button type="button" class="chip' + ((p.show_me || 'everyone') === v ? ' on' : '') + '" data-s="' + v + '">' + l + '</button>').join('') + '</div></div>' +
+      '<div class="lbl">I’d like to meet<div class="chips" style="margin-top:2px">' + SHOW.map(([v, l]) => '<button type="button" class="chip' + ((p.show_me || 'everyone') === v ? ' on' : '') + '" data-s="' + v + '">' + l + '</button>').join('') + '</div></div>' +
       '<label class="lbl" for="obCity">City<select class="field" id="obCity">' + cityOptions(p.city) + '</select></label>' +
       '<p class="err" id="err" role="alert"' + (msg ? '' : ' hidden') + '>' + esc(msg || '') + '</p>' +
       '<div class="grow"></div><button class="primary" id="go">Continue</button>' +

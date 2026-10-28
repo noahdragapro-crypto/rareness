@@ -1,6 +1,6 @@
 # Ora
 
-A dating web app built around daily rituals. New members register their profile, take a one-minute **aura quick test**, and pay a one-time **$5** to unlock the app. Then they do three things a day (meditate for 10 minutes, write what comes to mind when it's clear, take a first step), Claude reads their answers to shape an **aura**, and the **Cloud** shows other members as glass bubbles: the more two people share, the closer and bigger the bubble, and the coloured ring shows why. Nobody knows who bumped them until both people bump each other, which opens a chat.
+A mindful community app for making friends, built around daily rituals. New members register their profile, take a one-minute **aura quick test**, and pay a one-time **$5** to unlock the app. Then they do three things a day (meditate for 10 minutes, write what comes to mind when it's clear, take a first step), Claude reads their answers to shape an **aura**, and the **Cloud** shows other members as glass bubbles: the more two people share, the closer and bigger the bubble, and the coloured ring shows why. Nobody knows who bumped them until both people bump each other, which opens a chat.
 
 It runs as a website that members add to their phone's home screen, where it opens full screen like an app.
 
@@ -31,7 +31,7 @@ Values, Lifestyle, Interests, Personality, Goals and Routine. Each has a colour 
 - Blocking hides both people from each other's Cloud and stops messages. Reports are stored for review in the `reports` table.
 - Members must be 18 or older at sign-up.
 - Members can delete their account and photos from their profile.
-- Photos are in a public storage bucket with unguessable paths. Anyone with a photo's exact link can open it, which is the usual setup for dating apps but worth knowing.
+- Photos are in a public storage bucket with unguessable paths. Anyone with a photo's exact link can open it, which is the usual setup for social apps but worth knowing.
 
 ## Setting it up
 
@@ -83,7 +83,7 @@ The **Meditation** tab is a library of 27 practices (`shared/practices.json`) in
 - After each one, a short **check-in** (writing, cards or a selection) slides up from the bottom. Answers are private and go to the AI with the session, so practice shapes the aura: more sessions and higher levels count as stronger evidence, and shared practices count in matching.
 - A day counts when **three** things are done: the daily tasks (meditate, reflect, take an action) and library practices, in any mix. The temple counts as the Meditate task.
 - People who share a chat can see what the other practises most and **join** it (`practice_summary`, never the answers).
-- The **Ora guide** (`api/guide.ts`) suggests one practice a day for what the person needs (shown on the Agenda and the Meditation tab, and sent in the guide chat) and answers questions about meditation, practice and the aura. It's pinned at the top of Chats. It uses Claude when `ANTHROPIC_API_KEY` is set, simple rules otherwise.
+- **Ora Master** (`api/guide.ts`, three bubbles as its picture) suggests one practice a day for what the person needs (shown on the Agenda and the Meditation tab, and sent in the guide chat) and answers questions about meditation, practice and the aura. It's pinned at the top of Chats. It uses Claude when `ANTHROPIC_API_KEY` is set, simple rules otherwise.
 - Database: `supabase/migrations/0007_practices.sql`.
 
 The temple's soft vibration uses the Vibration API (Android); iPhones don't allow web pages to vibrate. **Focus bubbles**: the first within 45 seconds of opening the app, then every 10 to 12 minutes, a bubble drifts over any page until it's popped.
@@ -92,7 +92,7 @@ Daily answers are private (`supabase/migrations/0006_private_answers.sql`); only
 
 ## Chats
 
-Text, emoji, stickers and GIFs. GIFs need a free GIPHY key in `GIPHY_API_KEY` (developers.giphy.com → Create an app → API). Under your latest message the other person sees nothing new, and you see **Sent** or **Read**; "Read" needs `supabase/migrations/0005_read_receipts.sql`.
+Text, emoji, Ora-themed stickers, GIFs (with quick topics like Meditate, Breathe, Namaste) and shared practices: a card your friend can start with one tap. GIFs need a free GIPHY key in `GIPHY_API_KEY` (developers.giphy.com → Create an app → API). Under your latest message the other person sees nothing new, and you see **Sent** or **Read**; "Read" needs `supabase/migrations/0005_read_receipts.sql`.
 
 ## Team dashboard
 
