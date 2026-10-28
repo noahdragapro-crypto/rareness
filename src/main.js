@@ -769,7 +769,7 @@ async function loadSuggestion() {
   // Ora Master also sends it in the chat, once a day
   const msgs = guideMsgs();
   if (!msgs.some((m) => m.day === today() && m.suggest)) {
-    msgs.push({ role: 'assistant', day: today(), suggest: suggestion.exercise, content: 'For today, I’d suggest ' + PRACTICE[suggestion.exercise].name + '. ' + suggestion.reason });
+    msgs.push({ role: 'assistant', day: today(), at: Date.now(), suggest: suggestion.exercise, content: 'For today, I’d suggest ' + PRACTICE[suggestion.exercise].name + '. ' + suggestion.reason });
     saveGuide(msgs);
   }
   renderAgenda(); renderMeditation(); renderChats();
@@ -777,6 +777,14 @@ async function loadSuggestion() {
 const guideKey = () => 'ora.guide.' + uid;
 function guideMsgs() { try { return JSON.parse(store.get(guideKey()) || '[]'); } catch (e) { return []; } }
 function saveGuide(m) { store.set(guideKey(), JSON.stringify(m.slice(-60))); }
+// A new message from Ora Master shows on the Chats tab until the conversation is opened
+const guideSeenKey = () => 'ora.guideSeen.' + uid;
+function guideUnread() {
+  if (!uid) return false;
+  const last = guideMsgs().slice(-1)[0];
+  return !!last && last.role === 'assistant' && (last.at || 0) > Number(store.get(guideSeenKey()) || 0);
+}
+function markGuideSeen() { store.set(guideSeenKey(), String(Date.now())); renderChats(); }
 function openGuide() {
   const pg = pushPage(MASTER, '<div class="threadhead" style="cursor:default">' + masterAva(84) + '<b style="font-family:var(--serif);font-size:24px;font-weight:400">' + MASTER + '</b><span class="label">Ask about meditation, your practice, your aura</span></div><div class="thread" id="gThread"></div><div style="height:80px"></div>',
     { footer: '<form class="composer glass" id="gComposer"><label for="gIn" class="hide">Message Ora Master</label><input id="gIn" autocomplete="off" placeholder="Ask Ora Master" maxlength="1000"><button class="send" id="gSend" aria-label="Send" disabled>' + ICON.send + '</button></form>' });
@@ -789,7 +797,7 @@ function openGuide() {
       (typing ? '<div class="msg them typing"><i></i><i></i><i></i></div>' : '');
     sc.scrollTop = sc.scrollHeight; wirePracticeLinks(th);
   };
-  draw();
+  draw(); markGuideSeen();
   inp.oninput = () => { sb.disabled = !inp.value.trim(); };
   pg.querySelector('#gComposer').onsubmit = async (e) => {
     e.preventDefault();
@@ -798,9 +806,9 @@ function openGuide() {
     msgs.push({ role: 'user', day: today(), content: x }); saveGuide(msgs); draw(true);
     try {
       const r = await API.guideChat(msgs.map((m) => ({ role: m.role, content: m.content })));
-      msgs.push({ role: 'assistant', day: today(), content: r.reply });
-    } catch (err) { msgs.push({ role: 'assistant', day: today(), content: err.message || 'I couldn’t answer just now. Try again in a moment.' }); }
-    saveGuide(msgs); draw();
+      msgs.push({ role: 'assistant', day: today(), at: Date.now(), content: r.reply });
+    } catch (err) { msgs.push({ role: 'assistant', day: today(), at: Date.now(), content: err.message || 'I couldn’t answer just now. Try again in a moment.' }); }
+    saveGuide(msgs); draw(); markGuideSeen();
   };
 }
 
@@ -1671,7 +1679,7 @@ async function loadChats() {
   try { chatList = await API.chats(uid); chatList.forEach((c) => { if (c.other) c.other.name = low(c.other.name); }); renderChats(); } catch (e) { console.error(e); }
 }
 function renderChats() {
-  const unread = chatList.filter((c) => c.unread).length, badge = $('#chatBadge');
+  const unread = chatList.filter((c) => c.unread).length + (guideUnread() ? 1 : 0), badge = $('#chatBadge');
   badge.hidden = !unread; badge.textContent = unread > 9 ? '9+' : unread;
   $('.tab[data-tab="' + TAB.chats + '"]').setAttribute('aria-label', unread ? 'Chats, ' + unread + ' unread' : 'Chats');
   $('#chatsBody').innerHTML = '<header style="display:flex;flex-direction:column;gap:6px"><span class="brand">Ora</span><h1 class="largetitle">Chats</h1><p class="label" style="font-size:14px;line-height:1.45">A chat opens only when you both bump each other. Nobody sees who bumped them.</p></header>' +
@@ -1690,9 +1698,10 @@ function renderChats() {
 }
 // Ora Master sits at the top of Chats, always there
 function guideRow() {
-  const last = uid ? guideMsgs().slice(-1)[0] : null;
-  return '<section aria-label="' + MASTER + '" class="hair"><button class="crow" data-guide>' + masterAva(58) +
-    '<span class="tx"><div><b>' + MASTER + '</b><time>' + (last?.day === today() ? 'today' : '') + '</time></div><p>' + esc(last ? last.content : 'Ask about meditation, your practice and your aura') + '</p></span></button></section>';
+  const last = uid ? guideMsgs().slice(-1)[0] : null, unread = guideUnread();
+  return '<section aria-label="' + MASTER + '" class="hair"><button class="crow' + (unread ? ' unread' : '') + '" data-guide>' + masterAva(58) +
+    '<span class="tx"><div><b>' + MASTER + '</b><time>' + (last?.day === today() ? 'today' : '') + '</time></div><p>' + esc(last ? last.content : 'Ask about meditation, your practice and your aura') + '</p></span>' +
+    (unread ? '<span class="udot" aria-label="Unread"></span>' : '') + '</button></section>';
 }
 let openChat = null; // { id, draw(message) }
 // ---------------- Emoji, stickers and GIFs ----------------
