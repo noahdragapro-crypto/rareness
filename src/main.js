@@ -1157,15 +1157,18 @@ async function renderProfile() {
   const aura = dimsToW(me.aura), age = ageOf(me.birthdate), mine = me.interests || [], E = profileEdit;
   const meetLabel = { women: 'Women', men: 'Men', everyone: 'Everyone' }[me.show_me || 'everyone'];
   const sub = [age, me.city].filter(Boolean).join(' · ');
-  const extra = [me.pronouns, me.languages].filter(Boolean).join(' · ');
-  const view = (title, body) => '<section class="section psec"><h2 class="h2">' + title + '</h2>' + body + '</section>';
+  // Your practice: what you return to most, with levels, and this week's sessions
+  const counts = {}; myPractices.forEach((p) => { counts[p.exercise] = (counts[p.exercise] || 0) + 1; });
+  const top = Object.entries(counts).filter(([id]) => PRACTICE[id]).sort((a, b) => b[1] - a[1]).slice(0, 3);
+  const weekAgo = API.dayKey(new Date(Date.now() - 6 * 864e5)), thisWeek = myPractices.filter((p) => p.day >= weekAgo).length;
+  const card = (title, body, right = '') => '<section class="pcard"><div class="head"><h2 class="h2">' + title + '</h2>' + right + '</div>' + body + '</section>';
   $('#profileBody').innerHTML =
-    '<header style="display:flex;flex-direction:column;gap:6px"><span class="brand">Ora</span><div class="head"><h1 class="largetitle">Profile</h1>' +
-      '<button class="editbtn' + (E ? ' on' : '') + '" id="editBtn">' + (E ? 'Done' : 'Edit') + '</button></div></header>' +
-    '<div class="me"><div class="wrap" id="meBubble" style="position:relative;margin-top:30px">' + noteHTML(me.status || 'Add a status') + bubbleHTML(youObj(), 176) +
+    '<header class="phead"><span class="brand">Ora</span><button class="editbtn' + (E ? ' on' : '') + '" id="editBtn">' + (E ? 'Done' : 'Edit profile') + '</button></header>' +
+    '<div class="me phero"><div class="wrap" id="meBubble" style="position:relative">' + noteHTML(me.status || 'Add a status') + bubbleHTML(youObj(), 168) +
       '<button class="gbtn glass cam" id="camBtn" aria-label="' + (me.photo_path ? 'Change your photo' : 'Add your photo') + '">' + ICON.cam + '</button></div>' +
-      (E ? '' : '<h2 class="h2" id="meName" style="font-size:32px;margin-top:6px">' + esc(me.name ? low(me.name) : 'your name') + '</h2>' +
-        (sub ? '<p class="label" style="margin:0">' + esc(sub) + '</p>' : '') + (extra ? '<p class="label" style="margin:0">' + esc(extra) + '</p>' : '')) +
+      (E ? '' : '<h1 class="pname" id="meName">' + esc(me.name ? low(me.name) : 'your name') + '</h1>' +
+        (sub ? '<p class="label" style="margin:0">' + esc(sub) + '</p>' : '') +
+        (me.pronouns || me.languages ? '<div class="facts" style="justify-content:center;margin-top:6px">' + [me.pronouns, me.languages].filter(Boolean).map((f) => '<span class="fact">' + esc(f) + '</span>').join('') + '</div>' : '')) +
     '</div>' +
 
     (E
@@ -1176,18 +1179,22 @@ async function renderProfile() {
         '<section class="section psec"><div class="head"><h2 class="h2">About</h2><span class="counter" id="bCount"></span></div><label class="hide" for="pBio">About you</label><textarea id="pBio" maxlength="160" placeholder="Who you are, what you love">' + esc(me.bio) + '</textarea></section>' +
         '<section class="section psec"><h2 class="h2">I’d like to meet</h2><div class="chips">' + [['women', 'Women'], ['men', 'Men'], ['everyone', 'Everyone']].map(([v, l]) => '<button class="chip' + ((me.show_me || 'everyone') === v ? ' on' : '') + '" data-show="' + v + '" aria-pressed="' + ((me.show_me || 'everyone') === v) + '">' + l + '</button>').join('') + '</div></section>' +
         '<section class="section psec"><h2 class="h2">Interests</h2><div class="chips">' + [...INTERESTS, ...mine.filter((l) => !INTERESTS.includes(l))].map((l) => '<button class="chip' + (mine.includes(l) ? ' on' : '') + '" data-int="' + esc(l) + '" aria-pressed="' + mine.includes(l) + '">' + esc(l) + '</button>').join('') + '</div></section>'
-      : view('About', me.bio ? '<p class="bio">' + esc(me.bio) + '</p>' : '<p class="label" style="margin:0">Nothing yet.</p>') +
-        view('Interests', mine.length ? '<div class="facts">' + mine.map((l) => '<span class="fact">' + esc(l) + '</span>').join('') + '</div>' : '<p class="label" style="margin:0">Nothing yet.</p>') +
-        view('I’d like to meet', '<p class="bio" style="margin:0">' + meetLabel + '</p>') +
-        '<section class="section psec" aria-label="Your aura"><h2 class="h2">Your aura</h2>' +
-          (me.aura_summary ? '<p class="reason-line">' + esc(me.aura_summary) + '</p>' : '') +
-          '<div style="display:flex;flex-direction:column;gap:10px">' + auraLines(aura, false) + '</div>' +
-          '<button class="link" data-how style="align-self:flex-start;padding-left:0">How we build your aura</button></section>' +
-        '<section class="stats" aria-label="Stats"><div><b>' + streak() + '</b><span>Streak</span></div><div><b>' + Math.max(bestStreak(), streak()) + '</b><span>Best</span></div><div><b>' + totalDone() + '</b><span>Practices</span></div></section>' +
-        (config.paywall && me.paid_at ? view('Access', '<p class="label" style="margin:0">Unlocked on ' + new Date(me.paid_at).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' }) + '. One-time payment.</p>') : '') +
-        '<section class="section psec" aria-label="More"><button class="task" id="faqBtn"><span class="tx"><b>Questions and answers</b></span><span class="chev" aria-hidden="true">›</span></button>' +
-          '<div style="display:flex;flex-direction:column;gap:6px;margin-top:14px"><button class="secondary" id="signOutBtn">Sign out</button>' +
-          '<button class="link danger" id="deleteBtn" style="align-self:center">Delete my account</button></div></section>');
+      : '<section class="stats" aria-label="Stats"><div><b>' + streak() + '</b><span>Day streak</span></div><div><b>' + Math.max(bestStreak(), streak()) + '</b><span>Best</span></div><div><b>' + totalDone() + '</b><span>Practices</span></div></section>' +
+        card('Your aura', (me.aura_summary ? '<p class="reason-line">' + esc(me.aura_summary) + '</p>' : '<p class="label" style="margin:0">Your aura sharpens with every practice.</p>') +
+          '<div style="display:flex;flex-direction:column;gap:10px">' + auraLines(aura, false) + '</div>', '<button class="link small" data-how>How it’s built</button>') +
+        card('Your practice', top.length
+          ? '<div class="ptop">' + top.map(([id, n]) => { const x = PRACTICE[id], l = levelFor(n); return '<button data-practice="' + id + '"><span><b>' + esc(x.name) + '</b><span class="plevel">' + levelDots(l) + levelName(l) + '</span></span><span class="label">' + n + ' session' + (n === 1 ? '' : 's') + '</span></button>'; }).join('') + '</div>'
+          : '<p class="label" style="margin:0">Nothing yet. Your favourite practices will show here.</p>',
+          '<span class="label">' + thisWeek + ' this week</span>') +
+        card('About you',
+          (me.bio ? '<p class="bio">' + esc(me.bio) + '</p>' : '<p class="label" style="margin:0">Add a few words about you with Edit profile.</p>') +
+          (mine.length ? '<div class="facts">' + mine.map((l) => '<span class="fact">' + esc(l) + '</span>').join('') + '</div>' : '') +
+          '<p class="label" style="margin:0">I’d like to meet: <span style="color:var(--ink)">' + meetLabel.toLowerCase() + '</span></p>') +
+        (config.paywall && me.paid_at ? '<p class="label" style="margin:0;text-align:center">Unlocked on ' + new Date(me.paid_at).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' }) + '. One-time payment.</p>' : '') +
+        '<section class="plinks"><button class="task" data-guide><span class="tx"><b>Ora Master</b><span>Ask about meditation, your practice, your aura</span></span><span class="chev" aria-hidden="true">›</span></button>' +
+          '<button class="task" id="faqBtn"><span class="tx"><b>Questions and answers</b><span>Everything people usually ask</span></span><span class="chev" aria-hidden="true">›</span></button></section>' +
+        '<section class="section" aria-label="Account" style="gap:6px"><button class="secondary" id="signOutBtn">Sign out</button>' +
+          '<button class="link danger" id="deleteBtn" style="align-self:center">Delete my account</button></section>');
 
   $('#editBtn').onclick = () => { profileEdit = !profileEdit; renderProfile(); if (!profileEdit) { refreshYou(); refreshMeBtn(); setTimeout(loadCloud, 900); } };
   $('#camBtn').onclick = () => pickPhoto(async (blob) => { await savePhoto(blob); renderProfile(); refreshYou(); toast('Photo updated'); });

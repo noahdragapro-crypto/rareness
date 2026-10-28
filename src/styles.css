@@ -574,3 +574,18 @@ select.field{font:inherit;font-size:16px;color:var(--ink);-webkit-appearance:non
 .howday>div{display:flex;flex-direction:column;gap:2px}
 .howday b{font-family:var(--serif);font-weight:400;font-size:19px}
 .howday span{font-size:14.5px;color:var(--ink2)}
+
+/* Profile: compact top, then soft cards */
+.phead{display:flex;align-items:center;justify-content:space-between;margin-top:-6px}
+.phero{margin-top:0;padding-top:0!important;gap:4px!important}
+.phero .wrap{margin-top:34px}
+.pcard .fact{background:#fff}
+.pname{font-family:var(--serif);font-weight:400;font-size:36px;line-height:1.05;margin:8px 0 0;letter-spacing:-.01em}
+.pcard{display:flex;flex-direction:column;gap:12px;padding:18px;border-radius:var(--r);background:var(--fill)}
+.pcard .head{align-items:baseline}
+.link.small{font-size:13.5px;padding:0}
+.ptop{display:flex;flex-direction:column;gap:6px}
+.ptop button{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:0;border-radius:12px;background:#fff;font:inherit;text-align:left;cursor:pointer}
+.ptop button>span:first-child{display:flex;flex-direction:column;gap:3px}
+.ptop b{font-family:var(--serif);font-weight:400;font-size:19px}
+.plinks{display:flex;flex-direction:column;gap:6px}
