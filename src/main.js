@@ -482,29 +482,25 @@ function renderAgenda() {
 const paras = (t) => String(t || '').split(/\n+/).map((x) => x.trim()).filter(Boolean).map((x) => '<p>' + esc(x) + '</p>').join('');
 const clock = (ts) => new Date(ts).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
 function journalDays(answers, entries) {
+  // Only writing: answers with words in them, practice writing, written check-ins and journal entries
   const days = new Map(), add = (day, item) => { if (!days.has(day)) days.set(day, []); days.get(day).push(item); };
-  const templeDays = new Set(myPractices.filter((p) => p.exercise === 'temple').map((p) => p.day));
+  const LABEL = { signup: 'Where it began', q: 'Reflection', t: 'Action' };
   for (const a of answers) {
-    const text = a.data?.text;
-    if (a.kind === 'signup' && text) add(a.day, { at: a.created_at, label: 'Where it began', prompt: a.prompt, body: text });
-    else if (a.kind === 'q' && text) add(a.day, { at: a.created_at, label: 'Reflection', prompt: a.prompt, body: text });
-    else if (a.kind === 't') add(a.day, { at: a.created_at, label: 'Action', prompt: a.prompt, body: text || '' });
-    else if (a.kind === 'm' && !templeDays.has(a.day)) add(a.day, { at: a.created_at, label: 'The temple', line: (a.data?.minutes || '') + ' quiet minutes' });
+    const text = String(a.data?.text || '').trim();
+    if (text && LABEL[a.kind]) add(a.day, { at: a.created_at, label: LABEL[a.kind], prompt: a.prompt, body: text });
   }
   for (const p of myPractices) {
-    const x = PRACTICE[p.exercise]; if (!x) continue;
-    const a = p.answer || {}, check = a.q ? { q: a.q, a: a.text || a.choice || (a.choices || []).join(', ') } : null;
-    add(p.day, { at: p.created_at, label: x.name, line: p.minutes ? p.minutes + ' minutes' : '', body: a.entry || '', check: check && check.a ? check : null });
+    const x = PRACTICE[p.exercise], a = p.answer || {}; if (!x) continue;
+    if (String(a.entry || '').trim()) add(p.day, { at: p.created_at, label: x.name, body: a.entry });
+    if (a.q && String(a.text || '').trim()) add(p.day, { at: p.created_at, label: x.name, prompt: a.q, body: a.text });
   }
-  for (const e of entries) add(e.day, { at: e.created_at, label: 'Journal', body: e.body, own: true });
+  for (const e of entries) add(e.day, { at: e.created_at, label: 'Journal', body: e.body });
   if (!days.has(today())) days.set(today(), []);
   return [...days].sort((a, b) => b[0].localeCompare(a[0])).map(([day, items]) => [day, items.sort((a, b) => a.at.localeCompare(b.at))]);
 }
 function journalItem(it) {
-  return '<article class="jitem' + (it.own ? ' own' : '') + '"><div class="jmeta"><span>' + esc(it.label) + '</span><time>' + clock(it.at) + '</time></div>' +
-    (it.prompt ? '<p class="jprompt">' + esc(it.prompt) + '</p>' : '') + (it.line ? '<p class="jline">' + esc(it.line) + '</p>' : '') +
-    (it.body ? '<div class="jtext">' + paras(it.body) + '</div>' : '') +
-    (it.check ? '<p class="jcheck"><em>' + esc(it.check.q) + '</em> ' + esc(it.check.a) + '</p>' : '') + '</article>';
+  return '<article class="jitem"><p class="jmeta">' + clock(it.at) + ' · ' + esc(it.label) + '</p>' +
+    (it.prompt ? '<p class="jprompt">' + esc(it.prompt) + '</p>' : '') + '<div class="jtext">' + paras(it.body) + '</div></article>';
 }
 async function openJournal() {
   const pg = pushPage('Journal', '<div class="journal" id="jBody"><div class="spinner" style="margin:60px auto"></div></div>');
@@ -519,13 +515,13 @@ async function openJournal() {
     const pageNo = (day) => Math.round((new Date(day + 'T12:00') - new Date(first + 'T12:00')) / 864e5) + 1;
     const written = days.reduce((n, [, items]) => n + items.length, 0);
     body.innerHTML = '<header class="jcover"><span class="label">Your journal</span><h1 class="largetitle">' + esc(me?.name ? low(me.name) + '’s pages' : 'Your pages') + '</h1>' +
-      '<p class="label">' + written + ' entr' + (written === 1 ? 'y' : 'ies') + ' · only you can read it · pages can’t be changed once written</p></header>' +
+      '<p class="label">' + written + ' entr' + (written === 1 ? 'y' : 'ies') + ' · only you can read it</p></header>' +
       days.map(([day, items]) => {
         const d = new Date(day + 'T12:00'), isToday = day === today();
         return '<section class="jpage' + (isToday ? ' today' : '') + '" aria-label="' + esc(d.toDateString()) + '">' + (isToday ? '<span class="jribbon" aria-hidden="true"></span>' : '') +
           '<div class="jdate"><span>' + (isToday ? 'Today' : d.toLocaleDateString(undefined, { weekday: 'long' })) + '</span><h2>' + d.toLocaleDateString(undefined, { day: 'numeric', month: 'long' }) +
           (d.getFullYear() !== new Date().getFullYear() ? ' ' + d.getFullYear() : '') + '</h2></div>' +
-          (items.length ? items.map(journalItem).join('') : (isToday ? '' : '<p class="jline">A quiet day.</p>')) +
+          items.map(journalItem).join('') +
           (isToday ? '<div class="jcompose">' + (ready
             ? '<div class="writebox"><label class="hide" for="jWrite">Write in today’s page</label><textarea id="jWrite" maxlength="4000" placeholder="' + (items.length ? 'Keep writing…' : 'Dear journal…') + '"></textarea>' + micButton('jMic') + '</div>' +
               '<button class="primary" id="jAdd" disabled>Add to today’s page</button><p class="fine">Journal entries are just for you. They don’t count toward your three a day.</p>'
