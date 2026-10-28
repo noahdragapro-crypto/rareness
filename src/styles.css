@@ -543,3 +543,27 @@ select.field{font:inherit;font-size:16px;color:var(--ink);-webkit-appearance:non
 .howcloud .bubble{width:100%!important;height:100%!important}
 .howbump{display:flex;align-items:center;justify-content:center;gap:2px}
 .bumpic{width:30px;height:30px;color:var(--ink2);display:block}
+
+/* Profile */
+.editbtn{height:34px;padding:0 16px;border-radius:17px;border:.5px solid rgba(17,17,20,.18);background:#fff;font:inherit;font-size:14.5px;color:var(--ink);cursor:pointer}
+.editbtn.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.psec{gap:10px}
+.note.editable{cursor:pointer}
+.note .nb input{width:150px;border:0;background:transparent;font:inherit;color:inherit;text-align:center;outline:none;padding:0}
+
+.note.editable{pointer-events:auto}
+/* How we build your aura: room to breathe */
+.how{display:flex;flex-direction:column;gap:44px;padding-bottom:30px}
+.howtop{display:flex;flex-direction:column;gap:8px}
+.how .howhero{margin-top:-14px;padding:26px 20px 24px;gap:16px}
+.howsec{display:flex;flex-direction:column;gap:16px}
+.howsec .explain{line-height:1.6}
+.howsec .box{padding:18px}
+.howlines{gap:14px!important}
+.howtemple{gap:12px;padding:16px}
+.howtemple p{margin:0;color:rgba(255,255,255,.75);font-size:14.5px;line-height:1.5}
+.howkinds{gap:10px}
+.howkinds .box{gap:6px;padding:14px 12px}
+.howlevels{gap:12px!important}
+.howrow{display:flex;gap:16px;align-items:center}
+.howcloud{height:200px}

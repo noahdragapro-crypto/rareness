@@ -140,10 +140,10 @@ const swatch = (i, size = 24) => bubbleHTML({ w: oneHot(i), plain: true }, size)
 const youObj = () => ({ you: true, w: dimsToW(me?.aura), photo: API.photoUrl(me?.photo_path), initial: me?.name ? Array.from(low(me.name))[0] : 'you' });
 const noteHTML = (text) => '<div class="note"><div class="nb">' + esc(text) + '</div><i></i><i></i></div>';
 // The six lines of an aura, each with an (i) that explains it
-function auraLines(w) {
+function auraLines(w, info = true) {
   const tot = w.reduce((a, b) => a + b, 0) || 1;
   return DIMS.map((d, i) => '<div class="reason-wrap"><div class="reason">' + swatch(i, 24) + '<div class="rt"><div><span class="rlab">' + d.label +
-    '<button type="button" class="info" data-dinfo aria-label="What ' + d.label.toLowerCase() + ' means" aria-expanded="false">i</button></span><span>' + Math.round(w[i] / tot * 100) + '%</span></div>' + glassBar(w[i], i) + '</div></div>' +
+    (info ? '<button type="button" class="info" data-dinfo aria-label="What ' + d.label.toLowerCase() + ' means" aria-expanded="false">i</button>' : '') + '</span><span>' + Math.round(w[i] / tot * 100) + '%</span></div>' + glassBar(w[i], i) + '</div></div>' +
     '<p class="rinfo" hidden>' + DIM_INFO[d.key] + '</p></div>').join('');
 }
 document.addEventListener('click', (e) => {
@@ -541,54 +541,41 @@ const howButton = () => '<button class="howbtn" data-how aria-label="How we buil
 // ---------------- How we build your aura (from the Agenda and Meditation) ----------------
 function openHowItWorks() {
   const clear = (sz, w = [1, 1, 1, 1, 1, 1]) => bubbleHTML({ w, clear: true }, sz);
-  const head = (n, title) => '<div class="howhead"><span class="hownum">' + n + '</span><h2 class="h2">' + title + '</h2></div>';
+  const sec = (title, inner) => '<section class="howsec"><h2 class="h2">' + title + '</h2>' + inner + '</section>';
   const p = (t) => '<p class="explain">' + t + '</p>';
   const aura = me?.aura ? dimsToW(me.aura) : DIMS.map(() => 1);
-  const kinds = [[ICON.m, 'Guided', 'In the temple room, with gentle cues like “Breathe in · 4”.'], [ICON.pen, 'Writing', 'A prompt and a private page, just for you.'], [ICON.t, 'Do it', 'Small real-life actions: an offline hour, a kind act.']];
-  // A little Cloud: you in the middle, people and empty spots floating around
+  // A little Cloud of glass bubbles, larger near the middle
   const cloud = '<div class="howcloud" aria-hidden="true">' +
-    [[50, 50, 64, null, 1], [18, 30, 52, [1, 0, 1, 0, 1, 0]], [80, 26, 42, [0, 1, 0, 1, 0, 1]], [84, 72, 34, [1, 1, 0, 0, 1, 1]], [22, 76, 30, [0, 0, 1, 1, 1, 0]], [50, 12, 22], [62, 86, 18], [36, 92, 14]]
-      .map(([x, y, sz, w, you]) => '<span style="left:' + x + '%;top:' + y + '%;width:' + sz + 'px;height:' + sz + 'px">' + (you ? bubbleHTML(youObj(), sz) : clear(sz, w || undefined)) + '</span>').join('') + '</div>';
-  const html = '<div class="stack how">' +
-    '<header style="display:flex;flex-direction:column;gap:6px"><span class="label">How Ora works</span><h1 class="largetitle">How we build your aura</h1></header>' +
-    '<section class="howhero"><div>' + bubbleHTML(youObj(), 132) + '</div><p class="reason-line">Your aura is the ring of colours around your bubble. It grows with everything you practise.</p></section>' +
+    [[50, 50, 60], [20, 32, 46, [1, 0, 1, 0, 1, 0]], [80, 28, 38, [0, 1, 0, 1, 0, 1]], [83, 74, 30, [1, 1, 0, 0, 1, 1]], [22, 76, 26, [0, 0, 1, 1, 1, 0]], [52, 12, 18], [60, 88, 14]]
+      .map(([x, y, sz, w]) => '<span style="left:' + x + '%;top:' + y + '%;width:' + sz + 'px;height:' + sz + 'px">' + clear(sz, w) + '</span>').join('') + '</div>';
+  const html = '<div class="how">' +
+    '<header class="howtop"><span class="label">How Ora works</span><h1 class="largetitle">How we build your aura</h1></header>' +
+    '<section class="howhero">' + bubbleHTML(youObj(), 128) + '<p class="reason-line">The ring of colours around your bubble is your aura.</p></section>' +
 
-    '<section class="section">' + head(1, 'Your aura') +
-      p('Six colours describe who you are and what you bring to others. It starts with your two answers at sign-up, about yourself and about who you’d love to meet, then grows with your practice. Our AI reads it all and updates your colours.') +
-      '<div class="box howlines">' + auraLines(aura) + '<p class="fine" style="margin:4px 0 0">Tap <span class="info static">i</span> on a line to see what it means and what shapes it. The percentage is how much of your aura that colour takes.</p></div></section>' +
+    sec('Your aura', p('Six colours describe who you are and what you bring to others. It begins with your two answers at sign-up, then grows with everything you practise. Our AI reads it all and updates the colours.') +
+      '<div class="box howlines">' + auraLines(aura) + '<p class="fine" style="margin:0">Tap <span class="info static">i</span> to see what a line means. The percentage is that colour’s share of your aura.</p></div>') +
 
-    '<section class="section">' + head(2, 'Three a day') +
-      '<div class="howthree">' + [['Daily tasks', 'Meditate, reflect, take an action'], ['Practices', 'Anything from the library'], ['Any mix', 'Three opens your Cloud and chats']].map(([t, d], i) => '<div><span class="ring3">' + (i + 1) + '</span><b>' + t + '</b><span>' + d + '</span></div>').join('') + '</div>' +
-      '<div class="temple-card" style="gap:10px"><div class="temple-mini" style="height:90px" aria-hidden="true">' + crackSVG() + '</div><p style="margin:0;color:rgba(255,255,255,.75);font-size:14.5px;line-height:1.45">Today’s meditation happens in the temple: a dark room, a crack of light that breathes, soft music, and 7 to 15 minutes depending on the day.</p></div></section>' +
+    sec('Three a day', p('Do three things each day: the tasks on your Agenda, practices from the library, or a mix. That opens the Cloud and your chats, and keeps your streak.') +
+      '<div class="temple-card howtemple"><div class="temple-mini" style="height:84px" aria-hidden="true">' + crackSVG() + '</div><p>Meditation happens in the temple: a dark room, a crack of light that breathes, soft music, for 7 to 15 minutes depending on the day.</p></div>') +
 
-    '<section class="section">' + head(3, 'How the practices are built') +
-      p(PR.length + ' practices in ' + LIB.categories.length + ' groups: ' + LIB.categories.join(', ').toLowerCase() + '. Each one is one of three kinds:') +
-      '<div class="howkinds">' + kinds.map(([ic, t, d]) => '<div class="box"><span class="kic">' + ic + '</span><b>' + t + '</b><span>' + d + '</span></div>').join('') + '</div>' +
-      p('Every practice has four levels. Come back to it and you move up; each level goes a little deeper. Practices you do often, at higher levels, weigh more in your aura.') +
-      '<div class="box howlevels">' + LIB.levels.map((l, i) => '<div><span class="plevel">' + levelDots(i + 1) + '<b>' + l.name + '</b></span><span class="label">' + (l.from ? 'after ' + l.from + ' sessions' : 'to begin') + '</span></div>').join('') + '</div></section>' +
+    sec('The practices', p(PR.length + ' practices in ' + LIB.categories.length + ' groups, from breath work to journaling and manifestation. Each is one of three kinds:') +
+      '<div class="howkinds">' + [['Guided', 'In the temple room, with gentle cues.'], ['Writing', 'A prompt and a private page.'], ['Do it', 'A small act in real life.']].map(([t, d]) => '<div class="box"><b>' + t + '</b><span>' + d + '</span></div>').join('') + '</div>' +
+      p('Each has four levels. Return to it and you go deeper: longer sessions, more writing. What you do often weighs more in your aura.') +
+      '<div class="box howlevels">' + LIB.levels.map((l, i) => '<div><span class="plevel">' + levelDots(i + 1) + '<b>' + l.name + '</b></span><span class="label">' + (l.from ? 'after ' + l.from + ' sessions' : 'to begin') + '</span></div>').join('') + '</div>') +
 
-    '<section class="section">' + head(4, 'One question after each practice') +
-      p('When you finish, one short question slides up. A few words, a choice of cards, or some options to pick. Seconds, and you can skip it.') +
+    sec('A question after each one', p('When you finish, one short question slides up. A few words, a card, or a few options. You can always skip it.') +
       '<div class="howcheck" aria-hidden="true"><span class="label">One question · The temple</span><b>How did your mind feel?</b><div class="cicards">' + ['Still', 'Busy', 'Heavy', 'Light'].map((o, i) => '<span class="cicard' + (i === 0 ? ' on' : '') + '">' + o + '</span>').join('') + '</div></div>' +
-      p('Your answers help us understand what you feel and need, so your aura, your suggestions and the people near you fit you better. Only our AI reads them.') + '</section>' +
+      p('It helps us understand what you feel and need, so your suggestions and the people around you fit you better.')) +
 
-    '<section class="section">' + head(5, 'Focus bubbles') +
-      '<div style="display:flex;gap:14px;align-items:center"><div style="flex:none">' + clear(64) + '</div>' +
-      '<p class="explain" style="margin:0">Soon after you open Ora, and then every ten minutes or so, a bubble floats up over whatever you’re doing. Pop it: you’re here, now. It’s part of the practice.</p></div></section>' +
+    sec('Focus bubbles', '<div class="howrow"><div style="flex:none">' + clear(64) + '</div><p class="explain" style="margin:0">Soon after you open Ora, and every ten minutes or so after, a bubble floats over the screen. Pop it, and come back to the present.</p></div>') +
 
-    '<section class="section">' + head(6, 'Ora Master') +
-      '<div style="display:flex;gap:14px;align-items:center">' + masterAva(64) + '<p class="explain" style="margin:0">Each day it suggests one practice for what you seem to need. Ask it anything about meditation, your practice or your aura. It’s at the top of your Chats.</p></div></section>' +
+    sec('Ora Master', p('Your guide. Each day it suggests one practice for what you seem to need, and it answers your questions about meditation and your aura. You’ll find it at the top of your Chats.')) +
 
-    '<section class="section">' + head(7, 'The Cloud') + cloud +
-      p('The community floats around you as glass bubbles. The more you share, the bigger and closer someone is, and the colours around their bubble show what you share. Empty bubbles are spots waiting for new people.') + '</section>' +
+    sec('The Cloud', cloud + p('The community floats around you. The more you share with someone, the bigger and closer they appear, and the colours around their bubble show what you have in common. Empty bubbles are spots waiting for new people.')) +
 
-    '<section class="section">' + head(8, 'Bumping into people') +
-      '<div class="howbump" aria-hidden="true">' + clear(58, [1, 0, 1, 0, 1, 0]) + '<span class="bumpic">' + ICON.bump + '</span>' + clear(58, [0, 1, 0, 1, 0, 1]) + '</div>' +
-      p('See someone you’d like to know? Bump them. Nobody knows who bumped them, unless they bump you back. Then you’ve bumped into each other, and a chat opens.') +
-      p('In a chat: messages, emoji, stickers, GIFs, and practices to do together. You can also see what they practise most, and join them.') + '</section>' +
+    sec('Bumping into people', p('Bump someone you’d like to know. They won’t find out unless they bump you back. When you both do, a chat opens, where you can talk, send stickers and GIFs, and share practices to do together.')) +
 
-    '<section class="section">' + head(9, 'What stays private') +
-      '<div class="box" style="display:flex;gap:12px;align-items:flex-start"><span style="width:22px;height:22px;flex:none;display:block">' + ICON.lock + '</span><p class="explain" style="margin:0">Your answers, your writing and your check-ins are read only by our AI. Others see your photo, name, age if you gave it, status, about and interests, and, once you’ve bumped into each other, which practices you do most.</p></div></section>' +
+    sec('What stays private', p('Your answers, your writing and your check-ins are read only by our AI. Others see your photo, name, age if you gave it, status, about and interests and, after a mutual bump, the practices you do most.')) +
     '</div>';
   pushPage('How we build your aura', html);
 }
@@ -1133,111 +1120,87 @@ function saveSoon(patch) {
   }, 600);
 }
 async function refreshMe() { me = await API.myProfile(uid); refreshYou(); refreshMeBtn(); if ($('#profileBody')) renderProfile(); }
-function completeness() {
-  const checks = [me.photo_path, me.name, me.birthdate, me.city, me.country, me.job, me.bio && me.bio.length > 20, (me.interests || []).length >= 3, me.status];
-  return Math.round(checks.filter(Boolean).length / checks.length * 100);
-}
 function field(id, label, val, ph, max, ac, im) {
   return '<label class="lbl" for="' + id + '">' + label + '<input class="field" id="' + id + '" maxlength="' + max + '" value="' + esc(val ?? '') + '" placeholder="' + esc(ph) + '"' + (ac ? ' autocomplete="' + ac + '"' : '') + (im ? ' inputmode="' + im + '"' : '') + '></label>';
 }
-// Interests: only the ones you chose, until you tap Edit
-let editInterests = false;
-function interestsHTML() {
-  const mine = me.interests || [];
-  const all = [...INTERESTS, ...mine.filter((l) => !INTERESTS.includes(l))];
-  return '<div class="head"><h2 class="h2">Interests</h2><button class="link" id="intEdit">' + (editInterests ? 'Done' : 'Edit') + '</button></div>' +
-    (editInterests
-      ? '<div class="chips">' + all.map((l) => '<button class="chip' + (mine.includes(l) ? ' on' : '') + '" data-int="' + esc(l) + '" aria-pressed="' + mine.includes(l) + '">' + esc(l) + '</button>').join('') + '</div>'
-      : mine.length ? '<div class="facts">' + mine.map((l) => '<span class="fact">' + esc(l) + '</span>').join('') + '</div>'
-        : '<p class="label" style="font-size:14px;margin:0">None yet. Tap Edit to add a few.</p>');
-}
-function wireInterests() {
-  const box = $('#intBox'); if (!box) return;
-  box.querySelector('#intEdit').onclick = () => { editInterests = !editInterests; box.innerHTML = interestsHTML(); wireInterests(); };
-  box.querySelectorAll('[data-int]').forEach((b) => b.onclick = () => {
-    const v = b.dataset.int, list = [...(me.interests || [])], i = list.indexOf(v);
-    if (i >= 0) list.splice(i, 1); else list.push(v);
-    me.interests = list; saveSoon({ interests: list });
-    b.classList.toggle('on', list.includes(v)); b.setAttribute('aria-pressed', list.includes(v));
-  });
-}
-
+// The profile: everything shown simply, and one Edit button for the whole page.
+// The status is edited right where it shows, above your bubble.
+let profileEdit = false;
 async function renderProfile() {
   if (!$('#profileBody')) return;
-  const aura = dimsToW(me.aura), tot = aura.reduce((a, b) => a + b, 0) || 1;
-  const sub = [ageOf(me.birthdate), me.city].filter(Boolean).join(' · ');
-  const facts = [[ICON.work, me.job], [ICON.pin, me.city], [ICON.ruler, me.height_cm && me.height_cm + ' cm'], [ICON.lang, me.languages]].filter((f) => f[1]);
-  const answers = myAnswers.filter((a) => a.kind === 'q' && a.data?.text).slice(0, 5);
+  const aura = dimsToW(me.aura), age = ageOf(me.birthdate), mine = me.interests || [], E = profileEdit;
+  const meetLabel = { women: 'Women', men: 'Men', everyone: 'Everyone' }[me.show_me || 'everyone'];
+  const sub = [age, me.city].filter(Boolean).join(' · ');
+  const extra = [me.pronouns, me.languages].filter(Boolean).join(' · ');
+  const view = (title, body) => '<section class="section psec"><h2 class="h2">' + title + '</h2>' + body + '</section>';
   $('#profileBody').innerHTML =
-    '<header style="display:flex;flex-direction:column;gap:6px"><div class="head"><span class="brand">Ora</span><span class="label">Profile ' + completeness() + '% complete</span></div><h1 class="largetitle">Profile</h1></header>' +
-    '<div class="me"><div class="wrap" id="meBubble" style="position:relative;margin-top:24px">' + noteHTML(me.status || 'Write a status') + bubbleHTML(youObj(), 176) +
+    '<header style="display:flex;flex-direction:column;gap:6px"><span class="brand">Ora</span><div class="head"><h1 class="largetitle">Profile</h1>' +
+      '<button class="editbtn' + (E ? ' on' : '') + '" id="editBtn">' + (E ? 'Done' : 'Edit') + '</button></div></header>' +
+    '<div class="me"><div class="wrap" id="meBubble" style="position:relative;margin-top:30px">' + noteHTML(me.status || 'Add a status') + bubbleHTML(youObj(), 176) +
       '<button class="gbtn glass cam" id="camBtn" aria-label="' + (me.photo_path ? 'Change your photo' : 'Add your photo') + '">' + ICON.cam + '</button></div>' +
-      '<h2 class="h2" id="meName" style="font-size:32px;margin-top:6px">' + esc(me.name ? low(me.name) : 'your name') + '</h2><p class="label" id="meSub">' + esc(sub || 'Add your city') + '</p>' +
-      (facts.length ? '<div class="facts" style="justify-content:center;margin-top:4px">' + facts.map((f) => '<span class="fact">' + f[0] + esc(f[1]) + '</span>').join('') + '</div>' : '') +
+      (E ? '' : '<h2 class="h2" id="meName" style="font-size:32px;margin-top:6px">' + esc(me.name ? low(me.name) : 'your name') + '</h2>' +
+        (sub ? '<p class="label" style="margin:0">' + esc(sub) + '</p>' : '') + (extra ? '<p class="label" style="margin:0">' + esc(extra) + '</p>' : '')) +
     '</div>' +
 
-    '<section class="section" aria-label="Your aura"><div class="head"><h2 class="h2">Your aura</h2><span class="label">Updated by AI from your answers</span></div>' +
-      (me.aura_summary ? '<p class="reason-line">' + esc(me.aura_summary) + '</p>' : '<p class="label" style="font-size:14px">Your aura appears after your first answers are read.</p>') +
-      auraLines(aura) +
-    '</section>' +
+    (E
+      ? '<section class="section psec"><h2 class="h2">You</h2><div class="grid2">' +
+          field('pName', 'Name', me.name, 'First name', 24, 'given-name') + field('pAge', 'Age', age ?? '', 'Your age', 2, 'off', 'numeric') +
+          '<label class="lbl" for="pCity">City<select class="field" id="pCity">' + cityOptions(me.city) + '</select></label>' + field('pPron', 'Pronouns', me.pronouns, 'she/her', 16) +
+        '</div>' + field('pLang', 'Languages', me.languages, 'French, English', 60) + '</section>' +
+        '<section class="section psec"><div class="head"><h2 class="h2">About</h2><span class="counter" id="bCount"></span></div><label class="hide" for="pBio">About you</label><textarea id="pBio" maxlength="160" placeholder="Who you are, what you love">' + esc(me.bio) + '</textarea></section>' +
+        '<section class="section psec"><h2 class="h2">I’d like to meet</h2><div class="chips">' + [['women', 'Women'], ['men', 'Men'], ['everyone', 'Everyone']].map(([v, l]) => '<button class="chip' + ((me.show_me || 'everyone') === v ? ' on' : '') + '" data-show="' + v + '" aria-pressed="' + ((me.show_me || 'everyone') === v) + '">' + l + '</button>').join('') + '</div></section>' +
+        '<section class="section psec"><h2 class="h2">Interests</h2><div class="chips">' + [...INTERESTS, ...mine.filter((l) => !INTERESTS.includes(l))].map((l) => '<button class="chip' + (mine.includes(l) ? ' on' : '') + '" data-int="' + esc(l) + '" aria-pressed="' + mine.includes(l) + '">' + esc(l) + '</button>').join('') + '</div></section>'
+      : view('About', me.bio ? '<p class="bio">' + esc(me.bio) + '</p>' : '<p class="label" style="margin:0">Nothing yet.</p>') +
+        view('Interests', mine.length ? '<div class="facts">' + mine.map((l) => '<span class="fact">' + esc(l) + '</span>').join('') + '</div>' : '<p class="label" style="margin:0">Nothing yet.</p>') +
+        view('I’d like to meet', '<p class="bio" style="margin:0">' + meetLabel + '</p>') +
+        '<section class="section psec" aria-label="Your aura"><h2 class="h2">Your aura</h2>' +
+          (me.aura_summary ? '<p class="reason-line">' + esc(me.aura_summary) + '</p>' : '') +
+          '<div style="display:flex;flex-direction:column;gap:10px">' + auraLines(aura, false) + '</div>' +
+          '<button class="link" data-how style="align-self:flex-start;padding-left:0">How we build your aura</button></section>' +
+        '<section class="stats" aria-label="Stats"><div><b>' + streak() + '</b><span>Streak</span></div><div><b>' + Math.max(bestStreak(), streak()) + '</b><span>Best</span></div><div><b>' + totalDone() + '</b><span>Practices</span></div></section>' +
+        (config.paywall && me.paid_at ? view('Access', '<p class="label" style="margin:0">Unlocked on ' + new Date(me.paid_at).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' }) + '. One-time payment.</p>') : '') +
+        '<section class="section psec" aria-label="More"><button class="task" id="faqBtn"><span class="tx"><b>Questions and answers</b></span><span class="chev" aria-hidden="true">›</span></button>' +
+          '<div style="display:flex;flex-direction:column;gap:6px;margin-top:14px"><button class="secondary" id="signOutBtn">Sign out</button>' +
+          '<button class="link danger" id="deleteBtn" style="align-self:center">Delete my account</button></div></section>');
 
-    '<section class="section" aria-label="Status"><div class="head"><h2 class="h2">Status</h2><span class="counter" id="pCount"></span></div>' +
-      '<label class="hide" for="pStatus">Status</label><input class="field" id="pStatus" maxlength="20" value="' + esc(me.status) + '" placeholder="What’s on your mind">' +
-      '<p class="label">Shown above your bubble in other people’s Cloud. Text only, 20 characters.</p></section>' +
-
-    '<section class="section" aria-label="About"><div class="head"><h2 class="h2">About</h2><span class="counter" id="bCount"></span></div>' +
-      '<p class="label" style="margin:0">Shown on your profile page to everyone in the Cloud and in your chats.</p><label class="hide" for="pBio">About you</label><textarea id="pBio" maxlength="160" placeholder="Who you are, what you love, what you’re looking for">' + esc(me.bio) + '</textarea></section>' +
-
-    '<section class="section" aria-label="Basics"><h2 class="h2">Basics</h2><div class="grid2">' +
-      field('pName', 'Name', me.name, 'First name', 24, 'given-name') + field('pPron', 'Pronouns', me.pronouns, 'she/her', 16) +
-      field('pJob', 'Work', me.job, 'What you do', 40) + '<label class="lbl" for="pCity">City<select class="field" id="pCity">' + cityOptions(me.city) + '</select></label>' +
-      field('pHeight', 'Height (cm)', me.height_cm, '172', 3, '', 'numeric') + field('pLang', 'Languages', me.languages, 'French, English', 60) +
-    '</div>' +
-    '</section>' +
-
-    '<section class="section" aria-label="I’d like to meet"><h2 class="h2">I’d like to meet</h2><div class="chips">' +
-      [['women', 'Women'], ['men', 'Men'], ['everyone', 'Everyone']].map(([v, l]) => '<button class="chip' + (me.show_me === v ? ' on' : '') + '" data-show="' + v + '" aria-pressed="' + (me.show_me === v) + '">' + l + '</button>').join('') + '</div></section>' +
-
-    '<section class="section" aria-label="Interests" id="intBox">' + interestsHTML() + '</section>' +
-
-    '<section class="section" aria-label="Your answers"><div class="head"><h2 class="h2">Your answers</h2><span class="label">Only you see these</span></div>' +
-      (answers.length ? answers.map((o) => '<div class="answer"><small>' + new Date(o.day + 'T12:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) + '</small><q>' + esc(o.prompt) + '</q><p>' + esc(o.data.text) + '</p></div>').join('')
-        : '<p class="label" style="font-size:14px">Your daily reflections appear here. Only you can see them.</p>') + '</section>' +
-
-    '<section class="stats" aria-label="Stats"><div><b>' + streak() + '</b><span>Streak</span></div><div><b>' + Math.max(bestStreak(), streak()) + '</b><span>Best</span></div><div><b>' + totalDone() + '</b><span>Exercises</span></div></section>' +
-
-    (config.paywall && me.paid_at ? '<section class="section" aria-label="Access"><h2 class="h2">Access</h2><div class="box" style="font-size:14.5px">Unlocked on ' + new Date(me.paid_at).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' }) + '. One-time payment, nothing more to pay.</div></section>' : '') +
-
-    '<section class="section" aria-label="Help"><h2 class="h2">Help</h2><div style="display:flex;flex-direction:column;gap:4px">' +
-      '<button class="task" id="howBtn"><span class="tx"><b>How we build your aura</b><span>Practices, focus bubbles, questions, the Cloud and bumping</span></span><span class="chev" aria-hidden="true">›</span></button>' +
-      '<button class="task" id="faqBtn"><span class="tx"><b>Questions and answers</b><span>Everything people usually ask</span></span><span class="chev" aria-hidden="true">›</span></button></div></section>' +
-
-    '<section class="section" aria-label="Account"><h2 class="h2">Account</h2><div style="display:flex;flex-direction:column;gap:6px">' +
-      '<button class="secondary" id="signOutBtn">Sign out</button>' +
-      '<button class="link danger" id="deleteBtn" style="align-self:center">Delete my account</button></div></section>';
-
-  const cnt = () => { $('#pCount').textContent = Array.from($('#pStatus').value).length + '/20'; $('#bCount').textContent = Array.from($('#pBio').value).length + '/160'; };
-  cnt();
-  const head = () => { $('#meName').textContent = me.name ? low(me.name) : 'your name'; $('#meSub').textContent = [ageOf(me.birthdate), me.city].filter(Boolean).join(' · ') || 'Add your city'; };
-  const bind = (id, key, after, num) => { $('#' + id).oninput = (e) => { let v = e.target.value; if (num) { v = v.replace(/\D/g, ''); e.target.value = v; } saveSoon({ [key]: num ? (v ? Number(v) : null) : v.trim() }); if (after) after(); }; };
-  bind('pName', 'name', () => { head(); refreshYou(); }); $('#pCity').onchange = (e) => { if (!e.target.value) return; saveSoon({ city: e.target.value }); head(); };
-  bind('pPron', 'pronouns'); bind('pHeight', 'height_cm', null, true); bind('pJob', 'job'); bind('pLang', 'languages');
-  $('#pBio').oninput = (e) => { saveSoon({ bio: e.target.value }); cnt(); };
-  $('#pStatus').oninput = (e) => {
-    const v = clip(e.target.value, 20); if (v !== e.target.value) e.target.value = v;
-    saveSoon({ status: v }); cnt(); refreshYou();
-    const nb = $('#meBubble .nb'); if (nb) nb.textContent = v || 'Write a status';
-  };
-  document.querySelectorAll('[data-show]').forEach((b) => b.onclick = () => {
-    saveSoon({ show_me: b.dataset.show });
-    document.querySelectorAll('[data-show]').forEach((x) => { const on = x.dataset.show === me.show_me; x.classList.toggle('on', on); x.setAttribute('aria-pressed', on); });
-    setTimeout(loadCloud, 900);
-  });
-  wireInterests();
-  $('#howBtn').onclick = () => openHowItWorks();
-  $('#faqBtn').onclick = () => openFAQ();
+  $('#editBtn').onclick = () => { profileEdit = !profileEdit; renderProfile(); if (!profileEdit) { refreshYou(); refreshMeBtn(); setTimeout(loadCloud, 900); } };
   $('#camBtn').onclick = () => pickPhoto(async (blob) => { await savePhoto(blob); renderProfile(); refreshYou(); toast('Photo updated'); });
-  $('#signOutBtn').onclick = async () => { await API.signOut(); location.reload(); };
+  // Tap the status above your bubble to change it
+  const note = $('#meBubble .note');
+  note.classList.add('editable'); note.setAttribute('role', 'button'); note.setAttribute('aria-label', 'Edit your status'); note.tabIndex = 0;
+  const editStatus = () => {
+    const nb = note.querySelector('.nb'); if (nb.querySelector('input')) return;
+    nb.innerHTML = '<input id="pStatus" maxlength="20" value="' + esc(me.status || '') + '" placeholder="What’s on your mind" aria-label="Your status">';
+    const inp = nb.querySelector('input'); inp.focus(); inp.select();
+    const done = () => { const v = clip(inp.value.trim(), 20); if (v !== (me.status || '')) { saveSoon({ status: v }); me.status = v; refreshYou(); } nb.textContent = v || 'Add a status'; };
+    inp.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); inp.blur(); } if (e.key === 'Escape') { inp.value = me.status || ''; inp.blur(); } };
+    inp.onblur = done;
+  };
+  note.onclick = editStatus; note.onkeydown = (e) => { if (e.key === 'Enter') editStatus(); };
+  wirePracticeLinks($('#profileBody'));
+  if (!E) {
+    $('#faqBtn').onclick = () => openFAQ();
+    $('#signOutBtn').onclick = async () => { await API.signOut(); location.reload(); };
+  } else {
+    const cnt = () => { $('#bCount').textContent = Array.from($('#pBio').value).length + '/160'; };
+    cnt();
+    const bind = (id, key) => { $('#' + id).oninput = (e) => saveSoon({ [key]: e.target.value.trim() }); };
+    bind('pName', 'name'); bind('pPron', 'pronouns'); bind('pLang', 'languages');
+    $('#pAge').oninput = (e) => { const v = e.target.value.replace(/\D/g, '').slice(0, 2); e.target.value = v; const n = parseInt(v, 10); if (n >= 18 && n <= 99) saveSoon({ birthdate: birthFromAge(n) }); };
+    $('#pCity').onchange = (e) => { if (e.target.value) saveSoon({ city: e.target.value }); };
+    $('#pBio').oninput = (e) => { saveSoon({ bio: e.target.value }); cnt(); };
+    document.querySelectorAll('#profileBody [data-show]').forEach((b) => b.onclick = () => {
+      saveSoon({ show_me: b.dataset.show }); me.show_me = b.dataset.show;
+      document.querySelectorAll('#profileBody [data-show]').forEach((x) => { const on = x === b; x.classList.toggle('on', on); x.setAttribute('aria-pressed', on); });
+    });
+    document.querySelectorAll('#profileBody [data-int]').forEach((b) => b.onclick = () => {
+      const v = b.dataset.int, list = [...(me.interests || [])], i = list.indexOf(v);
+      if (i >= 0) list.splice(i, 1); else list.push(v);
+      me.interests = list; saveSoon({ interests: list });
+      b.classList.toggle('on', list.includes(v)); b.setAttribute('aria-pressed', list.includes(v));
+    });
+    return;
+  }
   $('#deleteBtn').onclick = async (e) => {
     const b = e.currentTarget;
     if (!b.dataset.arm) {
