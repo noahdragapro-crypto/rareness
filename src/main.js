@@ -2,6 +2,7 @@
 // onboarding and payment screens in the gate layer above them.
 import * as API from './api.js';
 import LIB from '../shared/practices.json';
+import CITY_DATA from '../shared/cities.json';
 
 const $ = (s, r = document) => r.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -1294,7 +1295,7 @@ async function renderProfile() {
     cnt();
     $('#pName').oninput = (e) => saveSoon({ name: e.target.value.trim() });
     $('#pBirth').onchange = (e) => { const v = e.target.value; if (!v) return; const a = ageOf(v); if (a < 18) { toast('Ora is for people 18 and over'); return; } saveSoon({ birthdate: v }); };
-    $('#pCity').onchange = (e) => { if (e.target.value) saveSoon({ city: e.target.value }); };
+    $('#pCity').onchange = (e) => { if (e.target.value) saveSoon({ city: e.target.value, ...cityCountry(e.target.value) }); };
     $('#pBio').oninput = (e) => { saveSoon({ bio: e.target.value }); cnt(); };
     const toggleOn = (sel, b, on) => { root.querySelectorAll(sel).forEach((x) => { const o = on(x); x.classList.toggle('on', o); x.setAttribute('aria-pressed', o); }); };
     // Languages: tap order is kept, so the first picked is the main one
@@ -2053,14 +2054,19 @@ const STEPS = Q0 + TEST.length;
 const WRITE_MIN = 40;
 const gate = $('#gate');
 const COUNTRIES = 'AD AE AF AG AL AM AO AR AT AU AZ BA BB BD BE BF BG BH BI BJ BN BO BR BS BT BW BY BZ CA CD CF CG CH CI CL CM CN CO CR CU CV CY CZ DE DJ DK DM DO DZ EC EE EG ER ES ET FI FJ FM FR GA GB GD GE GH GM GN GQ GR GT GW GY HK HN HR HT HU ID IE IL IN IQ IR IS IT JM JO JP KE KG KH KI KM KN KR KW KZ LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME MG MH MK ML MM MN MO MR MT MU MV MW MX MY MZ NA NE NG NI NL NO NP NR NZ OM PA PE PG PH PK PL PR PS PT PW PY QA RE RO RS RU RW SA SB SC SD SE SG SI SK SL SM SN SO SR SS ST SV SY SZ TD TG TH TJ TL TM TN TO TR TT TV TW TZ UA UG US UY UZ VA VC VE VN VU WS XK YE ZA ZM ZW'.split(' ');
-// Fixed city list, so everyone's city is spelled the same in our data
-const CITIES = ['Amsterdam', 'Athens', 'Barcelona', 'Berlin', 'Brussels', 'Buenos Aires', 'Copenhagen', 'Dubai', 'Dublin', 'Geneva',
-  'Hong Kong', 'Istanbul', 'Lisbon', 'London', 'Los Angeles', 'Lyon', 'Madrid', 'Marseille', 'Melbourne', 'Mexico City', 'Miami',
-  'Milan', 'Montreal', 'New York', 'Paris', 'Prague', 'Rome', 'San Francisco', 'São Paulo', 'Seoul', 'Singapore', 'Stockholm',
-  'Sydney', 'Tel Aviv', 'Tokyo', 'Toronto', 'Vienna', 'Zurich', 'Other'];
+// Fixed city list, so everyone's city is spelled the same in our data. Each city knows its country,
+// which sets the member's country (more reliable than guessing it from their connection).
+const CITY_LIST = CITY_DATA;
+const CITY_CC = Object.fromEntries(Object.entries(CITY_LIST).flatMap(([cc, list]) => list.map((c) => [c, cc])));
+// Your city's country, for saving with the city ('Other' keeps the country we already have)
+const cityCountry = (city) => (CITY_CC[city] ? { country: CITY_CC[city] } : {});
 function cityOptions(sel, first = 'Choose your city') {
-  const list = sel && !CITIES.includes(sel) ? [sel, ...CITIES] : CITIES; // keep a city typed before the list existed
-  return '<option value="">' + first + '</option>' + list.map((c) => '<option' + (c === sel ? ' selected' : '') + '>' + esc(c) + '</option>').join('');
+  let names; try { names = new Intl.DisplayNames([navigator.language || 'en'], { type: 'region' }); } catch (e) { names = { of: (c) => c }; }
+  const opt = (c) => '<option' + (c === sel ? ' selected' : '') + '>' + esc(c) + '</option>';
+  // Grouped by country, so the long list is easy to scan
+  const groups = Object.entries(CITY_LIST).map(([cc, list]) => [names.of(cc) || cc, list]).sort((a, b) => a[0].localeCompare(b[0]));
+  return '<option value="">' + first + '</option>' + (sel && !CITY_CC[sel] && sel !== 'Other' ? opt(sel) : '') + // keep a city typed before the list existed
+    groups.map(([country, list]) => '<optgroup label="' + esc(country) + '">' + list.map(opt).join('') + '</optgroup>').join('') + opt('Other');
 }
 function countryOptions(sel) {
   let names; try { names = new Intl.DisplayNames([navigator.language || 'en'], { type: 'region' }); } catch (e) { names = { of: (c) => c }; }
@@ -2144,7 +2150,7 @@ function gateBasics(msg) {
             country = me.country || out.country;
           }
           // Your Cloud shows people from your country; it can be changed later in your profile
-          me = await API.saveProfile(uid, { name, ...(birth ? { birthdate: birth } : {}), ...(gender ? { gender } : {}), show_me: show, ...(city ? { city } : {}), country: country || guessCountry() || null });
+          me = await API.saveProfile(uid, { name, ...(birth ? { birthdate: birth } : {}), ...(gender ? { gender } : {}), show_me: show, ...(city ? { city } : {}), country: CITY_CC[city] || country || guessCountry() || null });
           G.step = 1; gateOnboard();
         } catch (x) { console.error(x); busy(go, false, 'Continue'); say(x?.message || 'That didn’t work. Try again.'); }
       };

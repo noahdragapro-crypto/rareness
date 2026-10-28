@@ -1,0 +1,263 @@
+{
+"AE": [
+"Abu Dhabi",
+"Dubai"
+],
+"AR": [
+"Buenos Aires"
+],
+"AT": [
+"Salzburg",
+"Vienna"
+],
+"AU": [
+"Adelaide",
+"Brisbane",
+"Melbourne",
+"Perth",
+"Sydney"
+],
+"BE": [
+"Antwerp",
+"Brussels",
+"Ghent"
+],
+"BR": [
+"Rio de Janeiro",
+"São Paulo"
+],
+"CA": [
+"Calgary",
+"Montreal",
+"Ottawa",
+"Quebec City",
+"Toronto",
+"Vancouver"
+],
+"CH": [
+"Basel",
+"Geneva",
+"Lausanne",
+"Zurich"
+],
+"CL": [
+"Santiago"
+],
+"CN": [
+"Beijing",
+"Shanghai",
+"Shenzhen"
+],
+"CO": [
+"Bogotá",
+"Medellín"
+],
+"CZ": [
+"Prague"
+],
+"DE": [
+"Berlin",
+"Cologne",
+"Düsseldorf",
+"Frankfurt",
+"Hamburg",
+"Munich",
+"Stuttgart"
+],
+"DK": [
+"Aarhus",
+"Copenhagen"
+],
+"EG": [
+"Cairo"
+],
+"ES": [
+"Barcelona",
+"Bilbao",
+"Ibiza",
+"Madrid",
+"Málaga",
+"Palma",
+"Seville",
+"Valencia"
+],
+"FI": [
+"Helsinki"
+],
+"FR": [
+"Biarritz",
+"Bordeaux",
+"Lille",
+"Lyon",
+"Marseille",
+"Montpellier",
+"Nantes",
+"Nice",
+"Paris",
+"Rennes",
+"Strasbourg",
+"Toulouse"
+],
+"GB": [
+"Birmingham",
+"Brighton",
+"Bristol",
+"Edinburgh",
+"Glasgow",
+"London",
+"Manchester"
+],
+"GR": [
+"Athens",
+"Thessaloniki"
+],
+"HK": [
+"Hong Kong"
+],
+"HU": [
+"Budapest"
+],
+"ID": [
+"Bali",
+"Jakarta"
+],
+"IE": [
+"Dublin"
+],
+"IL": [
+"Jerusalem",
+"Tel Aviv"
+],
+"IN": [
+"Bangalore",
+"Delhi",
+"Mumbai"
+],
+"IS": [
+"Reykjavik"
+],
+"IT": [
+"Bologna",
+"Florence",
+"Milan",
+"Naples",
+"Rome",
+"Turin",
+"Venice"
+],
+"JP": [
+"Kyoto",
+"Osaka",
+"Tokyo"
+],
+"KE": [
+"Nairobi"
+],
+"KR": [
+"Busan",
+"Seoul"
+],
+"LB": [
+"Beirut"
+],
+"LU": [
+"Luxembourg"
+],
+"MA": [
+"Casablanca",
+"Marrakesh"
+],
+"MC": [
+"Monaco"
+],
+"MX": [
+"Mexico City",
+"Tulum"
+],
+"MY": [
+"Kuala Lumpur"
+],
+"NG": [
+"Lagos"
+],
+"NL": [
+"Amsterdam",
+"Rotterdam",
+"The Hague",
+"Utrecht"
+],
+"NO": [
+"Oslo"
+],
+"NZ": [
+"Auckland",
+"Wellington"
+],
+"PE": [
+"Lima"
+],
+"PH": [
+"Manila"
+],
+"PL": [
+"Kraków",
+"Warsaw"
+],
+"PT": [
+"Lisbon",
+"Porto"
+],
+"QA": [
+"Doha"
+],
+"RO": [
+"Bucharest"
+],
+"SA": [
+"Riyadh"
+],
+"SE": [
+"Gothenburg",
+"Stockholm"
+],
+"SG": [
+"Singapore"
+],
+"TH": [
+"Bangkok",
+"Chiang Mai"
+],
+"TN": [
+"Tunis"
+],
+"TR": [
+"Istanbul"
+],
+"TW": [
+"Taipei"
+],
+"US": [
+"Atlanta",
+"Austin",
+"Boston",
+"Chicago",
+"Denver",
+"Honolulu",
+"Los Angeles",
+"Miami",
+"New York",
+"Portland",
+"San Diego",
+"San Francisco",
+"Seattle",
+"Washington"
+],
+"VN": [
+"Ho Chi Minh City",
+"Hanoi"
+],
+"ZA": [
+"Cape Town",
+"Johannesburg"
+]
+}

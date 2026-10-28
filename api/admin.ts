@@ -1,5 +1,7 @@
 // GET /api/admin: numbers, segments, feature use and the member list for the dashboard (/admin).
 // Only for the emails listed in ADMIN_EMAILS (comma-separated).
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { catalog } from "./_lib/ai.js";
 import { db, handle, HttpError, json, requireUser } from "./_lib/server.js";
 
@@ -30,6 +32,16 @@ const LANG: Record<string, string> = { en: "English", fr: "French", es: "Spanish
   he: "Hebrew", ru: "Russian", tr: "Turkish", zh: "Chinese", ja: "Japanese", ko: "Korean", hi: "Hindi", sv: "Swedish", pl: "Polish", el: "Greek" };
 const REGION = new Intl.DisplayNames(["en"], { type: "region" });
 const countryName = (code: string) => { try { return REGION.of(code) || code; } catch { return code; } };
+// Each city on the app's list knows its country (shared/cities.json); it beats the sign-up guess from the connection
+let cityCache: Record<string, string> | null = null;
+const cityCountry = (): Record<string, string> => {
+  if (cityCache) return cityCache;
+  let raw: string;
+  try { raw = readFileSync(join(process.cwd(), "shared/cities.json"), "utf8"); }
+  catch { raw = readFileSync(new URL("../shared/cities.json", import.meta.url), "utf8"); }
+  const list = JSON.parse(raw) as Record<string, string[]>;
+  return (cityCache = Object.fromEntries(Object.entries(list).flatMap(([cc, cities]) => cities.map((c) => [c, cc]))));
+};
 const ageBand = (a: number | null) => (a == null ? "Not given" : a < 25 ? "18–24" : a < 35 ? "25–34" : a < 45 ? "35–44" : a < 55 ? "45–54" : "55+");
 
 type Profile = { id: string; name: string; gender: string | null; show_me: string; city: string; country: string | null; status: string; photo_path: string | null;
@@ -91,7 +103,7 @@ export const GET = handle(async (request) => {
     return {
       id: u.id, email: u.email, joined: u.created_at, lastSignIn: u.last_sign_in_at,
       name: p?.name || "", age: age(v?.birthdate), gender: p?.gender || "", lookingFor: p?.show_me || "",
-      city: p?.city || "", country: p?.country || "", status: p?.status || "", hasPhoto: Boolean(p?.photo_path), hasBio: Boolean(p?.bio),
+      city: p?.city || "", country: cityCountry()[p?.city || ""] || p?.country || "", status: p?.status || "", hasPhoto: Boolean(p?.photo_path), hasBio: Boolean(p?.bio),
       language: LANG[(p?.languages || "").split(",")[0]?.trim()] || "", here: Array.isArray(det.here) ? (det.here as string[]) : [],
       experience: typeof det.experience === "string" ? det.experience : "",
       interests: p?.interests ?? [], finishedSignup: Boolean(p?.onboarded), paid: Boolean(v?.paid_at),
@@ -111,6 +123,7 @@ export const GET = handle(async (request) => {
     gender: tally(users.map((u) => GENDER[u.gender] || "Not given")),
     age: tally(users.map((u) => ageBand(u.age))),
     country: tally(users.map((u) => (u.country ? countryName(u.country) : "Not given"))),
+    countryCodes: tally(users.map((u) => u.country).filter(Boolean)),
     city: tally(users.map((u) => u.city || "Not given")),
     lookingFor: tally(users.map((u) => MEET[u.lookingFor] || "Everyone")),
     language: tally(users.map((u) => u.language || "Not given")),
