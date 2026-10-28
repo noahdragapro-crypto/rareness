@@ -1181,7 +1181,7 @@ async function renderProfile() {
         '<section class="section psec"><h2 class="h2">Interests</h2><div class="chips">' + [...INTERESTS, ...mine.filter((l) => !INTERESTS.includes(l))].map((l) => '<button class="chip' + (mine.includes(l) ? ' on' : '') + '" data-int="' + esc(l) + '" aria-pressed="' + mine.includes(l) + '">' + esc(l) + '</button>').join('') + '</div></section>'
       : '<section class="stats" aria-label="Stats"><div><b>' + streak() + '</b><span>Day streak</span></div><div><b>' + Math.max(bestStreak(), streak()) + '</b><span>Best</span></div><div><b>' + totalDone() + '</b><span>Practices</span></div></section>' +
         card('Your aura', (me.aura_summary ? '<p class="reason-line">' + esc(me.aura_summary) + '</p>' : '<p class="label" style="margin:0">Your aura sharpens with every practice.</p>') +
-          '<div style="display:flex;flex-direction:column;gap:10px">' + auraLines(aura, false) + '</div>', '<button class="link small" data-how>How it’s built</button>') +
+          '<div style="display:flex;flex-direction:column;gap:10px">' + auraLines(aura, false) + '</div>', howButton()) +
         card('Your practice', top.length
           ? '<div class="ptop">' + top.map(([id, n]) => { const x = PRACTICE[id], l = levelFor(n); return '<button data-practice="' + id + '"><span><b>' + esc(x.name) + '</b><span class="plevel">' + levelDots(l) + levelName(l) + '</span></span><span class="label">' + n + ' session' + (n === 1 ? '' : 's') + '</span></button>'; }).join('') + '</div>'
           : '<p class="label" style="margin:0">Nothing yet. Your favourite practices will show here.</p>',
