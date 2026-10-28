@@ -70,6 +70,8 @@ export const GET = handle(async (request) => {
   for (const r of [reports, blocks]) if (r.error) throw r.error;
   // Profile options from Edit profile (migration 0008); empty if that update hasn't been run
   const details = await db().from("profiles").select("id,details");
+  // Journal entries (migration 0009): only how many, never what they say
+  const journal = await db().from("journal").select("id", { count: "exact", head: true }).gte("created_at", since30ts);
   const detailsOf = new Map<string, Record<string, unknown>>((details.error ? [] : details.data ?? []).map((d) => [d.id, (d.details ?? {}) as Record<string, unknown>]));
 
   const cat = catalog(), defs = new Map(cat.practices.map((x) => [x.id, x]));
@@ -158,6 +160,7 @@ export const GET = handle(async (request) => {
     ["Stickers", recentMsg.filter((m) => m.body.startsWith("[[sticker:")).length],
     ["GIFs", recentMsg.filter((m) => m.body.startsWith("[[gif:")).length],
     ["Shared practices", recentMsg.filter((m) => m.body.startsWith("[[practice:")).length],
+    ["Journal entries", journal.error ? 0 : journal.count ?? 0],
   ].sort((a, b) => (b[1] as number) - (a[1] as number));
   const profileUse = [
     ["Photo", users.filter((u) => u.hasPhoto).length], ["Status", users.filter((u) => u.status).length],

@@ -45,6 +45,7 @@ const ICON = {
   smile: sv('<circle cx="12" cy="12" r="9.5"></circle><path d="M8.5 14.2c.9 1.2 2.1 1.8 3.5 1.8s2.6-.6 3.5-1.8"></path><circle cx="9.2" cy="10" r=".6"></circle><circle cx="14.8" cy="10" r=".6"></circle>'),
   guide: sv('<circle cx="9.5" cy="10" r="5.5"></circle><circle cx="17.3" cy="14.8" r="3.4"></circle><circle cx="11.6" cy="19.2" r="1.9"></circle><path d="M6.9 7.6c.6-.9 1.4-1.5 2.4-1.8" stroke-linecap="round"></path>'),
   pen: sv('<path d="M4 20l1.2-4.4L15.6 5.2a2 2 0 0 1 2.8 0l.4.4a2 2 0 0 1 0 2.8L8.4 18.8z"></path><path d="M13.5 7.3l3.2 3.2"></path>'),
+  book: sv('<path d="M12 6.5C10.2 5 7.6 4.5 4 4.8v13.4c3.6-.3 6.2.2 8 1.7 1.8-1.5 4.4-2 8-1.7V4.8c-3.6-.3-6.2.2-8 1.7zM12 6.5v13.4"></path>'),
   mic: sv('<rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"></path>'),
   send: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"></path></svg>',
   lock: sv('<rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path>'),
@@ -458,7 +459,9 @@ function renderAgenda() {
     '<section class="section" aria-label="Also today"><h2 class="h2">Also today</h2><div style="display:flex;flex-direction:column;gap:4px">' +
       '<button class="task' + (r[other.k] ? ' done' : '') + '" data-task="' + other.k + '"><span class="ic">' + other.icon + '</span><span class="tx"><em>Another task</em><b>' + other.title + '</b><span>' + esc(other.sub) + '</span></span>' +
         '<span class="st">' + (r[other.k] ? ICON.check : '') + '</span></button>' +
-      extra.map((id) => practiceRow(PRACTICE[id])).join('') + '</div></section>';
+      extra.map((id) => practiceRow(PRACTICE[id])).join('') + '</div></section>' +
+    '<section class="section" aria-label="Journal"><h2 class="h2">Journal</h2><button class="jcard" id="openJournal"><span class="jc-spine"></span>' +
+      '<span class="tx"><b>Your journal</b><span>Write as much as you like, and read back your days. Only you can see it.</span></span><span class="chev" aria-hidden="true">›</span></button></section>';
   document.querySelectorAll('#agendaBody [data-task]').forEach((b) => b.onclick = () => {
     const t = all.find((x) => x.k === b.dataset.task);
     if (t.k === 'm') { openTemple(); return; } // the temple is open any time, even after today's session
@@ -466,9 +469,81 @@ function renderAgenda() {
     openSheet(t);
   });
   const oc = $('#openCloud'); if (oc) oc.onclick = () => goTab(TAB.cloud);
+  $('#openJournal').onclick = () => openJournal();
   // Ora Master's pick, once done, stays done for the day
   const pd = $('#agendaBody [data-pickdone]'); if (pd) pd.onclick = () => toast('Already done today');
   wirePracticeLinks($('#agendaBody'));
+}
+
+// ---------------- The journal ----------------
+// Everything you've written, a page per day like a book: your reflections, actions, practice writing,
+// check-ins and free journal entries. Past pages can be read, never changed. Today's page takes as
+// many entries as you like, through the day; they don't count toward the three a day.
+const paras = (t) => String(t || '').split(/\n+/).map((x) => x.trim()).filter(Boolean).map((x) => '<p>' + esc(x) + '</p>').join('');
+const clock = (ts) => new Date(ts).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+function journalDays(answers, entries) {
+  const days = new Map(), add = (day, item) => { if (!days.has(day)) days.set(day, []); days.get(day).push(item); };
+  const templeDays = new Set(myPractices.filter((p) => p.exercise === 'temple').map((p) => p.day));
+  for (const a of answers) {
+    const text = a.data?.text;
+    if (a.kind === 'signup' && text) add(a.day, { at: a.created_at, label: 'Where it began', prompt: a.prompt, body: text });
+    else if (a.kind === 'q' && text) add(a.day, { at: a.created_at, label: 'Reflection', prompt: a.prompt, body: text });
+    else if (a.kind === 't') add(a.day, { at: a.created_at, label: 'Action', prompt: a.prompt, body: text || '' });
+    else if (a.kind === 'm' && !templeDays.has(a.day)) add(a.day, { at: a.created_at, label: 'The temple', line: (a.data?.minutes || '') + ' quiet minutes' });
+  }
+  for (const p of myPractices) {
+    const x = PRACTICE[p.exercise]; if (!x) continue;
+    const a = p.answer || {}, check = a.q ? { q: a.q, a: a.text || a.choice || (a.choices || []).join(', ') } : null;
+    add(p.day, { at: p.created_at, label: x.name, line: p.minutes ? p.minutes + ' minutes' : '', body: a.entry || '', check: check && check.a ? check : null });
+  }
+  for (const e of entries) add(e.day, { at: e.created_at, label: 'Journal', body: e.body, own: true });
+  if (!days.has(today())) days.set(today(), []);
+  return [...days].sort((a, b) => b[0].localeCompare(a[0])).map(([day, items]) => [day, items.sort((a, b) => a.at.localeCompare(b.at))]);
+}
+function journalItem(it) {
+  return '<article class="jitem' + (it.own ? ' own' : '') + '"><div class="jmeta"><span>' + esc(it.label) + '</span><time>' + clock(it.at) + '</time></div>' +
+    (it.prompt ? '<p class="jprompt">' + esc(it.prompt) + '</p>' : '') + (it.line ? '<p class="jline">' + esc(it.line) + '</p>' : '') +
+    (it.body ? '<div class="jtext">' + paras(it.body) + '</div>' : '') +
+    (it.check ? '<p class="jcheck"><em>' + esc(it.check.q) + '</em> ' + esc(it.check.a) + '</p>' : '') + '</article>';
+}
+async function openJournal() {
+  const pg = pushPage('Journal', '<div class="journal" id="jBody"><div class="spinner" style="margin:60px auto"></div></div>');
+  const body = pg.querySelector('#jBody');
+  let answers = [], entries = [], ready = true;
+  try {
+    [answers, entries] = await Promise.all([API.allAnswers(uid),
+      API.journal(uid).catch((e) => { if (/journal/.test(String(e?.message))) { ready = false; return []; } throw e; })]);
+  } catch (e) { fail(e); }
+  const draw = () => {
+    const days = journalDays(answers, entries), first = days[days.length - 1][0];
+    const pageNo = (day) => Math.round((new Date(day + 'T12:00') - new Date(first + 'T12:00')) / 864e5) + 1;
+    const written = days.reduce((n, [, items]) => n + items.length, 0);
+    body.innerHTML = '<header class="jcover"><span class="label">Your journal</span><h1 class="largetitle">' + esc(me?.name ? low(me.name) + '’s pages' : 'Your pages') + '</h1>' +
+      '<p class="label">' + written + ' entr' + (written === 1 ? 'y' : 'ies') + ' · only you can read it · pages can’t be changed once written</p></header>' +
+      days.map(([day, items]) => {
+        const d = new Date(day + 'T12:00'), isToday = day === today();
+        return '<section class="jpage' + (isToday ? ' today' : '') + '" aria-label="' + esc(d.toDateString()) + '">' + (isToday ? '<span class="jribbon" aria-hidden="true"></span>' : '') +
+          '<div class="jdate"><span>' + (isToday ? 'Today' : d.toLocaleDateString(undefined, { weekday: 'long' })) + '</span><h2>' + d.toLocaleDateString(undefined, { day: 'numeric', month: 'long' }) +
+          (d.getFullYear() !== new Date().getFullYear() ? ' ' + d.getFullYear() : '') + '</h2></div>' +
+          (items.length ? items.map(journalItem).join('') : (isToday ? '' : '<p class="jline">A quiet day.</p>')) +
+          (isToday ? '<div class="jcompose">' + (ready
+            ? '<div class="writebox"><label class="hide" for="jWrite">Write in today’s page</label><textarea id="jWrite" maxlength="4000" placeholder="' + (items.length ? 'Keep writing…' : 'Dear journal…') + '"></textarea>' + micButton('jMic') + '</div>' +
+              '<button class="primary" id="jAdd" disabled>Add to today’s page</button><p class="fine">Journal entries are just for you. They don’t count toward your three a day.</p>'
+            : '<p class="fine">Writing in the journal needs database update 0009.</p>') + '</div>' : '') +
+          '<span class="jno">' + pageNo(day) + '</span></section>';
+      }).join('');
+    const ta = body.querySelector('#jWrite'); if (!ta) return;
+    const add = body.querySelector('#jAdd'), ok = () => { add.disabled = !ta.value.trim(); ta.style.height = 'auto'; ta.style.height = Math.max(120, ta.scrollHeight) + 'px'; };
+    ta.oninput = ok;
+    body.querySelector('#jMic').onclick = () => toggleDictation(ta, body.querySelector('#jMic'), ok);
+    add.onclick = async () => {
+      stopDictation(); add.disabled = true;
+      try { entries.unshift(await API.addJournal(uid, ta.value.trim().slice(0, 4000))); draw(); toast('Added to today’s page'); }
+      catch (e) { fail(/journal/.test(String(e?.message)) ? { message: 'Writing in the journal needs database update 0009.' } : e); add.disabled = false; }
+    };
+  };
+  draw();
+  pg._onPop = () => stopDictation();
 }
 
 // ---------------- Exercise sheet ----------------
@@ -626,6 +701,7 @@ function openFAQ() {
       ['There’s no sound in the temple.', 'Check your volume, and tap “Sound on” at the top right. If it says “Tap for sound”, one tap starts it.'],
       ['Why doesn’t my phone vibrate in the temple?', 'iPhones don’t let websites vibrate, so the temple plays soft music instead. Android phones vibrate gently.'],
       ['What are focus bubbles?', 'A bubble that floats over the app soon after you open it, then every ten minutes or so. Pop it: it’s a reminder to come back to the present.'],
+      ['What is the journal?', 'At the bottom of the Agenda. It keeps everything you’ve written, a page per day: your reflections, practice writing and check-ins, plus anything you add. Write as many entries a day as you like. Pages can’t be changed once written, and journal entries don’t count toward your three a day.'],
       ['What is Ora Master?', 'Your guide in the app. It suggests one practice a day and answers questions about meditation, your practice and your aura. It’s at the top of your Chats.']
     ]],
     ['Your aura', 'How it’s made and why it moves', [
@@ -738,7 +814,7 @@ function checkIn(x, row, answer) {
   save.onclick = async () => {
     save.disabled = true;
     const resp = ta ? { text: ta.value.trim() } : multi ? { choices: [...picked] } : { choice: [...picked][0] };
-    try { await API.practiceAnswer(row.id, { ...answer, ...resp, q: q.q }); toast('Thank you. Your aura is listening.'); } catch (e) { fail(e); }
+    try { await API.practiceAnswer(row.id, { ...answer, ...resp, q: q.q }); row.answer = { ...answer, ...resp, q: q.q }; toast('Thank you. Your aura is listening.'); } catch (e) { fail(e); }
     close();
   };
 }
@@ -2218,7 +2294,7 @@ function gateOnboard() {
     showGate(stepsBar(i) + backBtn + '<p class="label">Your aura · ' + (k + 1) + ' of ' + TEST.length + '</p><h1 class="largetitle">' + esc(q.title) + '</h1>' +
       '<div class="hints"><span class="label">Some ideas</span><ul>' + q.hints.map((h) => '<li>' + esc(h) + '</li>').join('') + '</ul></div>' +
       '<div class="writebox"><label class="hide" for="obWrite">' + esc(q.title) + '</label><textarea id="obWrite" maxlength="1500" placeholder="' + esc(q.ph) + '">' + esc(val) + '</textarea>' +
-        (SpeechRec ? '<button type="button" class="mic" id="mic" aria-label="Dictate" aria-pressed="false">' + ICON.mic + '</button>' : '') + '</div>' +
+        micButton() + '</div>' +
       '<p class="fine" id="wcount" style="margin-top:-4px"></p>' +
       '<div class="grow"></div><button class="primary" id="go" disabled>' + (last ? 'Read my aura' : 'Continue') + '</button>' +
       '<button class="link" id="later" style="align-self:center;color:var(--ink2)">Finish later, start today’s practice</button>',
@@ -2232,7 +2308,7 @@ function gateOnboard() {
           wc.textContent = n < WRITE_MIN ? 'A few more words, please (' + (WRITE_MIN - n) + ' more characters).' : 'Only our AI reads this, to shape your aura and find your matches.';
         };
         ta.oninput = ok; ok();
-        if (SpeechRec) $('#mic').onclick = () => toggleDictation(ta, $('#mic'), ok);
+        $('#mic').onclick = () => toggleDictation(ta, $('#mic'), ok);
         go.onclick = () => { stopDictation(); if (last) finishOnboarding(); else { G.step++; gateOnboard(); } };
         $('#later').onclick = () => { stopDictation(); skipSetup(); };
       });
@@ -2240,22 +2316,48 @@ function gateOnboard() {
 }
 
 // Dictation where the browser supports it (Chrome, Safari). Words are added to what's already written.
+// Dictation. The browser's speech recognition where it works; otherwise (iPhone home-screen app,
+// Firefox, dictation turned off) the button points to the keyboard's own microphone, which always works.
 const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+const IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const STANDALONE = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+const micButton = (id = 'mic') => '<button type="button" class="mic" id="' + id + '" aria-label="Dictate" aria-pressed="false">' + ICON.mic + '</button>';
 let rec_ = null;
-function stopDictation() { try { rec_?.stop(); } catch (e) {} rec_ = null; }
+function stopDictation() { const r = rec_; rec_ = null; try { r?.stop(); } catch (e) {} }
 function toggleDictation(ta, btn, onChange) {
   if (rec_) { stopDictation(); btn.setAttribute('aria-pressed', 'false'); return; }
+  const useKeyboard = (why) => { ta.focus(); toast(why || 'Tap the microphone on your keyboard to dictate'); };
+  // Safari blocks speech recognition inside a home-screen app; the keyboard's microphone works there
+  if (!SpeechRec || (IOS && STANDALONE)) return useKeyboard();
   const r = new SpeechRec();
   r.lang = navigator.language || 'en-US'; r.continuous = true; r.interimResults = true;
-  const base = ta.value.trim();
+  let base = ta.value.trim(), said = '', fatal = false;
   r.onresult = (e) => {
-    let text = '';
-    for (let j = 0; j < e.results.length; j++) text += e.results[j][0].transcript;
-    ta.value = (base ? base + ' ' : '') + text.trim(); onChange();
+    let interim = '';
+    for (let j = e.resultIndex; j < e.results.length; j++) {
+      const t = e.results[j][0].transcript.trim();
+      if (!e.results[j].isFinal) { interim += ' ' + t; continue; }
+      // iPhones repeat everything said so far in each final result: keep the longer one instead of adding
+      said = t.toLowerCase().startsWith(said.toLowerCase()) ? t : (said + ' ' + t).trim();
+    }
+    ta.value = [base, said, interim.trim()].filter(Boolean).join(' '); onChange();
   };
-  r.onend = () => { btn.setAttribute('aria-pressed', 'false'); rec_ = null; };
-  r.onerror = (e) => { if (e.error === 'not-allowed') toast('Allow the microphone to dictate'); };
-  try { r.start(); rec_ = r; btn.setAttribute('aria-pressed', 'true'); } catch (e) { toast('Dictation isn’t available here'); }
+  r.onerror = (e) => {
+    if (e.error === 'no-speech' || e.error === 'aborted') return;
+    fatal = true;
+    if (e.error === 'not-allowed') toast('Allow the microphone for this site to dictate');
+    else if (e.error === 'service-not-allowed') useKeyboard('Dictation is off here. Tap the microphone on your keyboard instead');
+    else if (e.error === 'audio-capture') toast('No microphone found');
+    else if (e.error === 'network') toast('Dictation needs an internet connection');
+    else useKeyboard();
+  };
+  // Phones stop listening after a pause: keep going until the button is tapped again
+  r.onend = () => {
+    if (rec_ === r && !fatal) { base = ta.value.trim(); said = ''; try { r.start(); return; } catch (e) {} }
+    if (rec_ === r) rec_ = null;
+    btn.setAttribute('aria-pressed', 'false');
+  };
+  try { r.start(); rec_ = r; btn.setAttribute('aria-pressed', 'true'); } catch (e) { useKeyboard(); }
 }
 
 // Skip the rest of setup for now: the Agenda and meditation open right away; the Cloud and chats

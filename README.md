@@ -90,6 +90,10 @@ The temple's soft vibration uses the Vibration API (Android); iPhones don't allo
 
 Daily answers are private (`supabase/migrations/0006_private_answers.sql`); only the AI reads them on the server.
 
+The **journal** (bottom of the Agenda) shows everything a member has written, a page per day like a book: reflections, actions, practice writing, check-ins and free journal entries. Past pages are read-only; today's page takes as many entries as they like, which don't count as tasks. Entries are private, never editable, and not sent to the AI (`supabase/migrations/0009_journal.sql`).
+
+Dictation uses the browser's speech recognition. Inside the iPhone home-screen app Safari blocks it, so the mic button points to the keyboard's own microphone instead.
+
 The **profile** shows the name with a small line (city · main language · age, from the date of birth), then About you, the aura, all the person's information, streaks and the latest two practices. Other people's profiles use the same layout, opening with why you match. Edit profile adds gender, several languages (the first is the main one), pronouns and a few fun options (here for, meditation, temple, rhythm, food, reading, star sign), stored in `profiles.details` (`supabase/migrations/0008_profile_details.sql`).
 
 ## Chats
