@@ -489,7 +489,7 @@ function renderAgenda() {
   });
   const oc = $('#openCloud'); if (oc) oc.onclick = () => goTab(TAB.cloud);
   $('#openJournal').onclick = () => openJournal();
-  $('#shareStreak').onclick = () => openShareStreak();
+  $('#shareStreak').onclick = () => openShare('streak');
   // Ora Master's pick, once done, stays done for the day
   const pd = $('#agendaBody [data-pickdone]'); if (pd) pd.onclick = () => toast('Already done today');
   wirePracticeLinks($('#agendaBody'));
@@ -623,83 +623,126 @@ function openJournalDay(days, i, pageNo) {
   show(i);
 }
 
-// ---------------- Share your streak (Instagram Story) ----------------
-// A 1080×1920 picture: your bubble with your photo and aura ring, your name, your streak and the week,
-// and the app's name. Nothing else about you. Shared through the phone's share sheet (Instagram → Story).
+// ---------------- Share your bubble or your streak (Instagram Story) ----------------
+// A 1080×1920 picture in the app's own look: white, clear glass bubbles floating like the Cloud, your
+// bubble with your photo and aura ring, your name, and the app's name. The streak version adds the
+// streak box as it looks on the Agenda. Nothing else about you. Shared through the phone's share sheet.
 const loadImg = (src) => new Promise((ok, no) => { const i = new Image(); i.crossOrigin = 'anonymous'; i.onload = () => ok(i); i.onerror = no; i.src = src; });
-async function storyImage() {
-  const W = 1080, H = 1920, c = document.createElement('canvas'); c.width = W; c.height = H;
-  const x = c.getContext('2d');
-  await Promise.all(['italic 84px "Instrument Serif"', '110px "Instrument Serif"', '40px "Instrument Sans"'].map((f) => document.fonts.load(f).catch(() => {})));
-  const photo = me?.photo_path ? await loadImg(API.photoUrl(me.photo_path)).catch(() => null) : null;
-  // Soft iridescent sky
-  const bg = x.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, '#fdfcff'); bg.addColorStop(1, '#f5f2ff'); x.fillStyle = bg; x.fillRect(0, 0, W, H);
-  [['#F5A6D8', 120, 260, 520], ['#8FE8E3', 980, 620, 480], ['#B89CFF', 180, 1300, 560], ['#FFF3A6', 940, 1600, 460], ['#6FB7FF', 560, 1880, 420], ['#9FE5B5', 900, 120, 380]].forEach(([col, cx, cy, r]) => {
-    const g = x.createRadialGradient(cx, cy, 0, cx, cy, r); g.addColorStop(0, col + '88'); g.addColorStop(1, col + '00'); x.fillStyle = g; x.fillRect(0, 0, W, H);
-  });
-  x.textAlign = 'center'; x.fillStyle = '#111114';
-  x.font = 'italic 84px "Instrument Serif"'; x.fillText('Ora', W / 2, 220);
-  // The bubble
-  const cx = W / 2, cy = 800, r = 320, w = dimsToW(me?.aura), tot = w.reduce((a, b) => a + b, 0);
-  x.save(); x.filter = 'blur(28px)'; x.fillStyle = 'rgba(17,17,20,.16)'; x.beginPath(); x.ellipse(cx, cy + r + 30, r * .7, 38, 0, 0, Math.PI * 2); x.fill(); x.restore();
-  x.save(); x.beginPath(); x.arc(cx, cy, r * .968, 0, Math.PI * 2); x.clip();
-  if (photo) { const s = Math.max((r * 2) / photo.width, (r * 2) / photo.height); x.drawImage(photo, cx - photo.width * s / 2, cy - photo.height * s / 2, photo.width * s, photo.height * s); }
-  else {
-    const g = x.createLinearGradient(cx - r, cy - r, cx + r, cy + r); g.addColorStop(0, '#f4f4f5'); g.addColorStop(1, '#d9d9dd'); x.fillStyle = g; x.fillRect(cx - r, cy - r, r * 2, r * 2);
-    x.fillStyle = '#111114'; x.font = 'italic 190px "Instrument Serif"'; x.textBaseline = 'middle'; x.fillText(me?.name ? Array.from(low(me.name))[0] : 'o', cx, cy); x.textBaseline = 'alphabetic';
+// A glass bubble drawn the way the app draws it (.bubble in styles.css): clear like the Cloud's empty ones,
+// or with a photo (or initial) and the aura ring
+function drawBubble(x, cx, cy, r, o = {}) {
+  const rg = (x0, y0, r1, stops) => { const g = x.createRadialGradient(x0, y0, 0, x0, y0, r1); stops.forEach(([at, c]) => g.addColorStop(at, c)); return g; };
+  // Soft shadow underneath
+  x.save(); x.filter = 'blur(' + Math.round(r * .09) + 'px)'; x.fillStyle = 'rgba(17,17,20,.18)'; x.beginPath(); x.ellipse(cx, cy + r * .93, r * .62, r * .1, 0, 0, Math.PI * 2); x.fill(); x.restore();
+  x.save(); x.beginPath(); x.arc(cx, cy, r, 0, Math.PI * 2); x.clip();
+  if (o.clear) {
+    x.fillStyle = rg(cx - .16 * r, cy - .24 * r, 1.7 * r, [[0, 'rgba(255,255,255,.9)'], [.45, 'rgba(236,237,242,.6)'], [1, 'rgba(214,216,226,.55)']]); x.fillRect(cx - r, cy - r, 2 * r, 2 * r);
+    x.fillStyle = rg(cx, cy + .2 * r, 1.562 * r, [[.48, 'rgba(255,255,255,0)'], [.68, 'rgba(205,207,218,.4)'], [.83, 'rgba(120,122,140,.6)'], [.925, 'rgba(45,45,58,.82)'], [.965, 'rgba(90,90,105,.55)'], [1, 'rgba(30,30,40,.7)']]); x.fillRect(cx - r, cy - r, 2 * r, 2 * r);
+    x.save(); x.translate(cx, cy + .7 * r); x.scale(1, .4 / .88); x.fillStyle = rg(0, 0, .88 * r, [[0, 'rgba(255,255,255,.95)'], [1, 'rgba(255,255,255,0)']]); x.fillRect(-r, -2 * r, 2 * r, 4 * r); x.restore();
+  } else {
+    if (o.photo) { const s = Math.max(2 * r / o.photo.width, 2 * r / o.photo.height); x.drawImage(o.photo, cx - o.photo.width * s / 2, cy - o.photo.height * s / 2, o.photo.width * s, o.photo.height * s); }
+    else {
+      const g = x.createLinearGradient(cx - r, cy - r, cx + r, cy + r); g.addColorStop(0, '#f4f4f5'); g.addColorStop(1, '#d9d9dd'); x.fillStyle = g; x.fillRect(cx - r, cy - r, 2 * r, 2 * r);
+      x.fillStyle = '#111114'; x.font = 'italic ' + Math.round(r * .5) + 'px "Instrument Serif"'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(o.initial || 'o', cx, cy); x.textBaseline = 'alphabetic';
+    }
+    x.fillStyle = rg(cx, cy, r, [[.84, 'rgba(255,255,255,0)'], [.89, 'rgba(255,255,255,.3)'], [.95, 'rgba(255,255,255,0)']]); x.fillRect(cx - r, cy - r, 2 * r, 2 * r);
   }
-  const glass = x.createRadialGradient(cx, cy, r * .8, cx, cy, r); glass.addColorStop(0, 'rgba(255,255,255,0)'); glass.addColorStop(.6, 'rgba(255,255,255,.28)'); glass.addColorStop(1, 'rgba(255,255,255,0)');
-  x.fillStyle = glass; x.fillRect(cx - r, cy - r, r * 2, r * 2); x.restore();
-  // Aura ring: one soft arc per colour, the same as in the app
-  const ring = x.createConicGradient ? x.createConicGradient(-Math.PI / 6 - Math.PI / 2, cx, cy) : null;
-  if (ring && tot) {
-    let a = 0, first = null; const stops = [];
-    w.forEach((v, i) => { if (!v) return; const span = v / tot; if (!first) first = DIMS[i].c; stops.push([a + span / 2, DIMS[i].c]); a += span; });
-    ring.addColorStop(0, first); stops.forEach(([o, col]) => ring.addColorStop(o, col)); ring.addColorStop(1, first);
+  x.restore();
+  // Aura ring: one soft arc per colour, the same order and blend as ringGrad
+  if (o.w) {
+    const tot = o.w.reduce((a, b) => a + b, 0);
+    let ring = '#e6e6ea';
+    if (tot && x.createConicGradient) {
+      ring = x.createConicGradient(-Math.PI / 6 - Math.PI / 2, cx, cy);
+      let a = 0, first = null; const stops = [];
+      o.w.forEach((v, i) => { if (!v) return; const span = v / tot; if (!first) first = DIMS[i].c; stops.push([a + span / 2, DIMS[i].c]); a += span; });
+      ring.addColorStop(0, first); stops.forEach(([at, c]) => ring.addColorStop(at, c)); ring.addColorStop(1, first);
+    }
+    x.beginPath(); x.arc(cx, cy, r, 0, Math.PI * 2); x.arc(cx, cy, r * .966, 0, Math.PI * 2, true); x.fillStyle = ring; x.fill();
   }
-  x.beginPath(); x.arc(cx, cy, r, 0, Math.PI * 2); x.arc(cx, cy, r * .962, 0, Math.PI * 2, true); x.fillStyle = ring || '#d9d9e0'; x.fill();
-  x.lineWidth = 3; x.strokeStyle = 'rgba(17,17,20,.2)'; x.beginPath(); x.arc(cx, cy, r, 0, Math.PI * 2); x.stroke();
-  // Glass highlights
+  x.lineWidth = Math.max(1.5, r * .008); x.strokeStyle = 'rgba(17,17,20,.22)'; x.beginPath(); x.arc(cx, cy, r - x.lineWidth / 2, 0, Math.PI * 2); x.stroke();
+  // Highlights, the top glint and the caustic at the bottom
   [[-1, 24], [1, -24]].forEach(([side, deg]) => {
-    x.save(); x.translate(cx + side * r * .7, cy - r * .22); x.rotate(deg * Math.PI / 180); x.filter = 'blur(3px)';
-    const g = x.createLinearGradient(0, -r * .32, 0, r * .32); g.addColorStop(0, 'rgba(255,255,255,.85)'); g.addColorStop(1, 'rgba(255,255,255,.05)');
+    x.save(); x.translate(cx + side * r * .7, cy - r * .62 + r * .32); x.rotate(deg * Math.PI / 180); x.filter = 'blur(' + Math.max(1, r * .012) + 'px)';
+    const g = x.createLinearGradient(0, -r * .32, 0, r * .32); g.addColorStop(0, o.clear ? '#fff' : 'rgba(255,255,255,.9)'); g.addColorStop(1, o.clear ? 'rgba(255,255,255,.15)' : 'rgba(255,255,255,.08)');
     x.fillStyle = g; x.beginPath(); x.ellipse(0, 0, r * .15, r * .32, 0, 0, Math.PI * 2); x.fill(); x.restore();
   });
-  x.save(); x.strokeStyle = 'rgba(255,255,255,.9)'; x.lineWidth = 4; x.beginPath(); x.ellipse(cx, cy + r * .78, r * .38, r * .08, 0, 0, Math.PI * 2); x.stroke(); x.restore();
-  // Name, streak and the week
-  x.fillStyle = '#111114'; x.font = '110px "Instrument Serif"'; x.fillText(me?.name ? low(me.name) : 'me', W / 2, 1290);
-  x.font = '300px "Instrument Serif"'; x.fillText(String(streak()), W / 2, 1600);
-  x.fillStyle = '#5b5b63'; x.font = '40px "Instrument Sans"'; x.fillText('day streak', W / 2, 1670);
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(); d.setDate(d.getDate() - (6 - i));
-    const dx = W / 2 + (i - 3) * 96, dy = 1770, done = isDone(API.dayKey(d));
-    if (done) { const g = x.createLinearGradient(dx - 26, dy - 26, dx + 26, dy + 26); g.addColorStop(0, '#F5A6D8'); g.addColorStop(.5, '#B89CFF'); g.addColorStop(1, '#8FE8E3'); x.fillStyle = g; }
-    else x.fillStyle = 'rgba(255,255,255,.75)';
-    x.beginPath(); x.arc(dx, dy, 26, 0, Math.PI * 2); x.fill();
-    x.lineWidth = 2; x.strokeStyle = done ? 'rgba(255,255,255,.9)' : 'rgba(17,17,20,.14)'; x.stroke();
-    x.fillStyle = done ? '#fff' : '#8d8d95'; x.font = '24px "Instrument Sans"'; x.textBaseline = 'middle'; x.fillText('SMTWTFS'[d.getDay()], dx, dy + 1); x.textBaseline = 'alphabetic';
+  x.save(); x.translate(cx + r * .62, cy + r * .26); x.rotate(-14 * Math.PI / 180); x.filter = 'blur(' + Math.max(1, r * .014) + 'px)'; x.fillStyle = 'rgba(255,255,255,.5)'; x.beginPath(); x.ellipse(0, 0, r * .08, r * .15, 0, 0, Math.PI * 2); x.fill(); x.restore();
+  x.strokeStyle = 'rgba(255,255,255,.8)'; x.lineWidth = Math.max(1.5, r * .015); x.beginPath(); x.ellipse(cx, cy - r * .88, r * .48, r * .08, 0, Math.PI * 1.08, Math.PI * 1.92); x.stroke();
+  x.save(); x.translate(cx, cy + r * .79); x.scale(1, .21);
+  x.fillStyle = rg(0, 0, r * .38, [[0, 'rgba(255,255,255,.75)'], [1, 'rgba(255,255,255,0)']]); x.beginPath(); x.arc(0, 0, r * .38, 0, Math.PI * 2); x.fill(); x.restore();
+  x.strokeStyle = 'rgba(255,255,255,.95)'; x.lineWidth = Math.max(1.5, r * .015); x.beginPath(); x.ellipse(cx, cy + r * .79, r * .38, r * .08, 0, 0, Math.PI * 2); x.stroke();
+}
+async function storyImage(kind) {
+  const W = 1080, H = 1920, c = document.createElement('canvas'); c.width = W; c.height = H;
+  const x = c.getContext('2d'), streakToo = kind === 'streak';
+  await Promise.all(['italic 72px "Instrument Serif"', '110px "Instrument Serif"', '36px "Instrument Sans"'].map((f) => document.fonts.load(f).catch(() => {})));
+  const photo = me?.photo_path ? await loadImg(API.photoUrl(me.photo_path)).catch(() => null) : null;
+  x.fillStyle = '#ffffff'; x.fillRect(0, 0, W, H);
+  // Empty glass bubbles drifting around, like spots in the Cloud
+  const ghosts = streakToo
+    ? [[120, 430, 92], [965, 300, 132], [1010, 860, 64], [70, 1020, 118], [930, 1150, 46], [180, 1830, 70], [990, 1870, 90]]
+    : [[120, 420, 96], [965, 300, 138], [1010, 900, 66], [60, 1080, 124], [930, 1300, 50], [170, 1600, 82], [900, 1690, 120], [520, 1830, 58]];
+  ghosts.forEach(([gx, gy, gr]) => drawBubble(x, gx, gy, gr, { clear: true }));
+  x.textAlign = 'center'; x.fillStyle = '#111114';
+  x.font = 'italic 72px "Instrument Serif"'; x.fillText('Ora', W / 2, 200);
+  const name = me?.name ? low(me.name) : '', initial = name ? Array.from(name)[0] : 'o';
+  const by = streakToo ? 700 : 840, br = streakToo ? 280 : 330;
+  drawBubble(x, W / 2, by, br, { photo, w: dimsToW(me?.aura), initial });
+  x.fillStyle = '#111114'; x.font = (streakToo ? 100 : 120) + 'px "Instrument Serif"'; x.fillText(name, W / 2, by + br + (streakToo ? 140 : 170));
+  if (streakToo) {
+    // The streak box, as on the Agenda: light grey card, big number, the week as squares (done = black with a tick)
+    const bx = 90, bw = W - 180, top = 1250, bh = 470, st = streak();
+    x.fillStyle = '#f5f5f6'; x.beginPath(); x.roundRect(bx, top, bw, bh, 44); x.fill();
+    x.textAlign = 'left'; x.fillStyle = '#111114'; x.font = '200px "Instrument Serif"'; x.fillText(String(st), bx + 60, top + 210);
+    x.fillStyle = '#5f5f69'; x.font = '36px "Instrument Sans"'; x.fillText('day streak', bx + 64, top + 268);
+    const gap = 12, cw = (bw - 120 - gap * 6) / 7;
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(); d.setDate(d.getDate() - (6 - i));
+      const done = isDone(API.dayKey(d)), isToday = i === 6, sx = bx + 60 + i * (cw + gap), sy = top + 345;
+      x.textAlign = 'center'; x.fillStyle = '#5f5f69'; x.font = '28px "Instrument Sans"'; x.fillText('SMTWTFS'[d.getDay()], sx + cw / 2, sy - 18);
+      x.beginPath(); x.roundRect(sx, sy, cw, 74, 18);
+      x.fillStyle = done ? '#111114' : '#ffffff'; x.fill();
+      x.lineWidth = isToday && !done ? 3 : 1.5; x.strokeStyle = done ? '#111114' : isToday ? '#111114' : 'rgba(17,17,20,.12)'; x.stroke();
+      if (done) {
+        x.strokeStyle = '#fff'; x.lineWidth = 5; x.lineCap = 'round'; x.lineJoin = 'round'; x.beginPath();
+        x.moveTo(sx + cw / 2 - 16, sy + 39); x.lineTo(sx + cw / 2 - 5, sy + 50); x.lineTo(sx + cw / 2 + 17, sy + 26); x.stroke();
+      }
+    }
   }
   return new Promise((ok) => c.toBlob(ok, 'image/png'));
 }
-async function openShareStreak() {
+async function openShare(kind = 'bubble') {
   const sh = $('#sheet');
-  sh.setAttribute('aria-label', 'Share your streak');
-  sh.innerHTML = '<div class="grab"></div><p class="label">Share your streak</p><div class="storyprev"><div class="spinner"></div></div>' +
+  sh.setAttribute('aria-label', 'Share');
+  sh.innerHTML = '<div class="grab"></div><p class="label">Share to your story</p>' +
+    '<div class="seg" role="tablist"><button role="tab" data-kind="bubble">My bubble</button><button role="tab" data-kind="streak">My streak</button></div>' +
+    '<div class="storyprev"><div class="spinner"></div></div>' +
     '<div class="sharerow"><button class="secondary" id="storySave" disabled>Save image</button><button class="primary" id="storyShare" disabled>' + ICON.share + 'Share to your story</button></div>' +
-    '<p class="fine" style="margin-top:8px">Only your bubble, your name and your streak. In the share menu, choose Instagram, then Story.</p>';
+    '<p class="fine" style="margin-top:8px">Only your bubble and your name' + '. In the share menu, choose Instagram, then Story.</p>';
   $('#sheetBack').classList.add('on'); sh.classList.add('on');
-  const blob = await storyImage().catch((e) => { console.error(e); return null; });
-  if (!blob) { sh.querySelector('.storyprev').innerHTML = '<p class="label">Couldn’t draw the picture. Try again.</p>'; return; }
-  const url = URL.createObjectURL(blob), file = new File([blob], 'ora-streak.png', { type: 'image/png' });
-  sh.querySelector('.storyprev').innerHTML = '<img src="' + url + '" alt="Your Ora streak picture">';
-  const save = () => { const a = document.createElement('a'); a.href = url; a.download = 'ora-streak.png'; a.click(); toast('Saved. Add it to your story from Instagram'); };
-  const sb = sh.querySelector('#storySave'), sp = sh.querySelector('#storyShare');
-  sb.disabled = sp.disabled = false;
+  const prev = sh.querySelector('.storyprev'), sb = sh.querySelector('#storySave'), sp = sh.querySelector('#storyShare'), note = sh.querySelector('.fine');
+  let url = null, file = null, n = 0;
+  const show = async (k) => {
+    const mine = ++n;
+    sh.querySelectorAll('[data-kind]').forEach((b) => b.setAttribute('aria-selected', b.dataset.kind === k));
+    note.textContent = (k === 'streak' ? 'Only your bubble, your name and your streak' : 'Only your bubble and your name') + '. In the share menu, choose Instagram, then Story.';
+    sb.disabled = sp.disabled = true; prev.innerHTML = '<div class="spinner"></div>';
+    const blob = await storyImage(k).catch((e) => { console.error(e); return null; });
+    if (mine !== n) return;
+    if (!blob) { prev.innerHTML = '<p class="label">Couldn’t draw the picture. Try again.</p>'; return; }
+    if (url) URL.revokeObjectURL(url);
+    url = URL.createObjectURL(blob); file = new File([blob], 'ora-' + k + '.png', { type: 'image/png' });
+    prev.innerHTML = '<img src="' + url + '" alt="Your Ora ' + k + ' picture">'; sb.disabled = sp.disabled = false;
+  };
+  const save = () => { const a = document.createElement('a'); a.href = url; a.download = file.name; a.click(); toast('Saved. Add it to your story from Instagram'); };
   sb.onclick = save;
   sp.onclick = async () => {
     if (navigator.canShare?.({ files: [file] })) { try { await navigator.share({ files: [file] }); closeSheet(); } catch (e) { if (e.name !== 'AbortError') save(); } }
     else save();
   };
+  sh.querySelectorAll('[data-kind]').forEach((b) => b.onclick = () => show(b.dataset.kind));
+  show(kind);
 }
 
 // ---------------- Exercise sheet ----------------
@@ -848,7 +891,7 @@ function openFAQ() {
       ['What counts toward my three a day?', 'Anything: the temple, today’s task, Ora Master’s pick, or any practice from the Meditation library. Each different practice counts once a day.'],
       ['Why can’t I open the Cloud or Chats?', 'They need a finished profile (a photo and your two answers), and one practice in the current part of the day: the morning, the afternoon (from noon) or the evening (from 6 pm). Three practices in a day open them for the rest of the day.'],
       ['Why did the Cloud lock again this afternoon?', 'Each part of the day starts locked. One practice this afternoon opens it until 6 pm, or do three in the day to keep it open all day.'],
-      ['Can I share my streak?', 'Yes: tap Share in the streak box on your Agenda. It makes a picture with your bubble, your name, your streak and the week, nothing else. Choose Instagram, then Story, or save the image.'],
+      ['Can I share my streak?', 'Yes: tap Share in the streak box on your Agenda, or Share my bubble on your profile. It makes a picture with your bubble and your name (and your streak, if you choose it), nothing else. Choose Instagram, then Story, or save the image.'],
       ['What happens if I miss a day?', 'Your streak starts again when a day ends with fewer than three. Your levels and aura stay.']
     ]],
     ['Practice', 'The library, the temple and focus bubbles', [
@@ -1468,7 +1511,8 @@ async function renderProfile() {
       '<button class="editbtn' + (E ? ' on' : '') + '" id="editBtn">' + (E ? 'Done' : 'Edit profile') + '</button></div></header>' +
     '<div class="me phero"><div class="wrap" id="meBubble" style="position:relative">' + noteHTML(me.status || 'Add a status') + bubbleHTML(youObj(), 168) +
       '<button class="gbtn glass cam" id="camBtn" aria-label="' + (me.photo_path ? 'Change your photo' : 'Add your photo') + '">' + ICON.cam + '</button></div>' +
-      (E ? '' : '<p class="pname" id="meName">' + esc(me.name ? low(me.name) : 'your name') + '</p>' + (line ? '<p class="label" style="margin:0">' + esc(line) + '</p>' : '')) +
+      (E ? '' : '<p class="pname" id="meName">' + esc(me.name ? low(me.name) : 'your name') + '</p>' + (line ? '<p class="label" style="margin:0">' + esc(line) + '</p>' : '') +
+        '<button class="sharebtn" id="shareBubble" style="margin-top:10px">' + ICON.share + 'Share my bubble</button>') +
     '</div>' +
 
     (E
@@ -1520,6 +1564,7 @@ async function renderProfile() {
   note.onclick = editStatus; note.onkeydown = (e) => { if (e.key === 'Enter') editStatus(); };
   wirePracticeLinks($('#profileBody'));
   if (!E) {
+    $('#shareBubble').onclick = () => openShare('bubble');
     $('#faqBtn').onclick = () => openFAQ();
     $('#signOutBtn').onclick = async () => { await API.signOut(); location.reload(); };
   } else {
