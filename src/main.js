@@ -86,12 +86,17 @@ const practicedOn = (k) => [...new Set(myPractices.filter((p) => p.day === k && 
 const meditated = (k) => Boolean(rec(k).m) || myPractices.some((p) => p.day === k && p.exercise === 'temple');
 const dayCount = (k = today()) => { const r = rec(k); return (r.q ? 1 : 0) + (r.t ? 1 : 0) + (meditated(k) ? 1 : 0) + practicedOn(k).length; };
 const isDone = (k) => dayCount(k) >= 3;
-// The day has three parts. The Cloud and chats open with one thing done in the morning, two by the
-// afternoon (from noon) and three by the evening (from 6 pm); doing more earlier counts for later.
+// The day has three parts: morning, afternoon (from noon) and evening (from 6 pm). The Cloud and chats
+// are locked at the start of each part and open with one activity done in that part. Three activities
+// in a day open them for the rest of the day (and keep the streak).
 const PERIODS = [{ name: 'Morning', from: 0 }, { name: 'Afternoon', from: 12 }, { name: 'Evening', from: 18 }];
-const periodNow = () => { const h = new Date().getHours(); return h >= 18 ? 2 : h >= 12 ? 1 : 0; };
-const needNow = () => periodNow() + 1;
-const cloudOpen = () => dayCount() >= needNow();
+const periodOf = (date) => { const h = date.getHours(); return h >= 18 ? 2 : h >= 12 ? 1 : 0; };
+const periodNow = () => periodOf(new Date());
+// When each of today's activities was done (the daily tasks and library practices; not the journal)
+const doneTimes = (k = today()) => myAnswers.filter((a) => a.day === k && ['q', 't', 'm'].includes(a.kind)).map((a) => a.created_at)
+  .concat(myPractices.filter((p) => p.day === k).map((p) => p.created_at)).filter(Boolean);
+const doneThisPeriod = () => doneTimes().some((ts) => periodOf(new Date(ts)) === periodNow());
+const cloudOpen = () => dayCount() >= 3 || doneThisPeriod();
 const todayDone = () => isDone(today());
 function streak() {
   const d = new Date(); let n = 0;
@@ -228,7 +233,7 @@ function updateLocks() {
   // Just locked (a new part of the day began): close any chat or profile left open over the Cloud or Chats
   if (locked && wasLocked === false && (cur === TAB.cloud || cur === TAB.chats)) {
     while (pages.length) popPage(true);
-    toast('One more practice opens the Cloud and your chats again');
+    toast('A new part of the day: one practice opens the Cloud and your chats again');
   }
   wasLocked = locked;
   document.querySelectorAll('.tab[data-tab="' + TAB.cloud + '"],.tab[data-tab="' + TAB.chats + '"]').forEach((b) => b.classList.toggle('locked', locked));
@@ -240,8 +245,8 @@ function updateLocks() {
         '<button class="primary" data-finish>Finish my profile</button></div>';
       el.querySelector('[data-finish]').onclick = () => finishSetup();
     } else if (locked) {
-      el.innerHTML = '<div class="lock-card"><span style="width:24px;height:24px;display:block">' + ICON.lock + '</span><h2 class="h2">One more practice opens your ' + what + '</h2>' +
-        '<p class="muted" style="margin:0;font-size:14.5px;line-height:1.45">The temple, today’s task, Ora Master’s pick or anything from the library. ' + Math.min(3, dayCount()) + ' of 3 done today.</p>' +
+      el.innerHTML = '<div class="lock-card"><span style="width:24px;height:24px;display:block">' + ICON.lock + '</span><h2 class="h2">One practice this ' + PERIODS[periodNow()].name.toLowerCase() + ' opens your ' + what + '</h2>' +
+        '<p class="muted" style="margin:0;font-size:14.5px;line-height:1.45">The temple, today’s task, Ora Master’s pick or anything from the library. ' + Math.min(3, dayCount()) + ' of 3 done today; three open everything for the rest of the day.</p>' +
         '<button class="primary" data-go="0">Go to Agenda</button></div>';
       el.querySelector('[data-go]').onclick = () => goTab(0);
     }
@@ -429,7 +434,10 @@ const dayNum = (off = 0) => Math.floor((Date.now() - new Date().getTimezoneOffse
 // Today's meditation length, 7 to 15 minutes, the same all day for everyone
 const medMinutes = (off = 0) => 7 + ((dayNum(off) * 7 + 3) % 9);
 function todayTasks(off = 0) {
-  const n = dayNum(off), q = REFLECT[n % REFLECT.length], act = ACTIONS[(n * 5 + 2) % ACTIONS.length], mins = medMinutes(off);
+  const aura = me?.aura || {}, keys = Object.keys(aura).filter((k) => typeof aura[k] === 'number');
+  const weak = keys.length >= 3 ? keys.sort((a, b) => aura[a] - aura[b]).slice(0, 2) : [];
+  const pool = REFLECT.filter((r) => weak.includes(r[1])), qs = pool.length ? pool : REFLECT;
+  const n = dayNum(off), q = qs[n % qs.length], act = ACTIONS[(n * 5 + 2) % ACTIONS.length], mins = medMinutes(off);
   return [
     { k: 'm', title: 'Meditate', sub: mins + ' minutes in the temple, in the Meditation tab.', dim: 'routine', icon: ICON.m, mins },
     { k: 'q', title: 'Reflect', sub: q[0], dim: q[1], icon: ICON.q },
@@ -457,7 +465,7 @@ function renderAgenda() {
       '<div class="week">' + week + '</div>' +
       '<div style="display:flex;flex-direction:column;gap:6px"><div class="head" style="font-size:13.5px"><span>' + n + ' of 3 today</span><span class="muted">' + (n === 3 ? 'Streak saved' : (3 - n) + ' to go') + '</span></div>' +
       '<div class="prog">' + [0, 1, 2].map((i) => '<span class="' + (i < n ? 'on' : '') + '"></span>').join('') + '</div></div>' +
-      (open ? '<button class="primary" id="openCloud">Open the Cloud</button>' : '<p class="muted" style="margin:0;font-size:13px;line-height:1.45">One more task opens the Cloud and your chats. Three today keeps your streak.</p>') +
+      (open ? '<button class="primary" id="openCloud">Open the Cloud</button>' : '<p class="muted" style="margin:0;font-size:13px;line-height:1.45">One task this ' + PERIODS[periodNow()].name.toLowerCase() + ' opens the Cloud and your chats. Three today keep your streak.</p>') +
     '</section>' +
     '<section class="section" aria-label="Today’s three"><h2 class="h2">Today’s three</h2><div style="display:flex;flex-direction:column;gap:6px">' +
       row('data-task="m"', ICON.m, 'The temple', 'Meditate', temple.mins + ' minutes in the temple', r.m) +
@@ -718,8 +726,8 @@ function openHowItWorks() {
       '<div class="box howlines">' + auraLines(aura) + '<p class="fine" style="margin:0">Tap <span class="info static">i</span> to see what a line means. The percentage is that colour’s share of your aura.</p></div>') +
 
     sec('Three a day', p('Three tasks a day keep your streak. Any task counts, and your Agenda highlights three: the temple, today’s task, and Ora Master’s pick.') +
-      '<div class="box howday">' + [['Morning', 'One task opens the Cloud and your chats.'], ['Afternoon', 'From noon, they ask for a second.'], ['Evening', 'From 6 pm, a third.']].map(([t, d]) => '<div><b>' + t + '</b><span>' + d + '</span></div>').join('') + '</div>' +
-      p('Do more earlier and it counts for later: three in the morning keeps everything open all day.') +
+      '<div class="box howday">' + [['Morning', 'One task opens the Cloud and your chats until noon.'], ['Afternoon', 'From noon they lock again, until one task this afternoon.'], ['Evening', 'From 6 pm, the same: one task this evening.']].map(([t, d]) => '<div><b>' + t + '</b><span>' + d + '</span></div>').join('') + '</div>' +
+      p('Ideally one in the morning, one in the afternoon and one in the evening. Three in a day, at any time, open everything for the rest of the day. Fewer than three and the streak starts again.') +
       '<div class="temple-card howtemple"><div class="temple-mini" style="height:84px" aria-hidden="true">' + crackSVG() + '</div><p>Meditation happens in the temple: a dark room, a crack of light that breathes, soft music, for 7 to 15 minutes depending on the day.</p></div>') +
 
     sec('The practices', p(PR.length + ' practices in ' + LIB.categories.length + ' groups, from breath work to journaling and manifestation. Each is one of three kinds:') +
@@ -756,8 +764,8 @@ function openFAQ() {
     ]],
     ['Your day', 'Three practices, morning to evening', [
       ['What counts toward my three a day?', 'Anything: the temple, today’s task, Ora Master’s pick, or any practice from the Meditation library. Each different practice counts once a day.'],
-      ['Why can’t I open the Cloud or Chats?', 'They need a finished profile (a photo and your two answers), and one practice in each part of the day: one in the morning, a second from noon, a third from 6 pm. Doing more earlier counts for later.'],
-      ['Why did the Cloud lock again this afternoon?', 'From noon it asks for a second practice, and from 6 pm a third. One more opens it again.'],
+      ['Why can’t I open the Cloud or Chats?', 'They need a finished profile (a photo and your two answers), and one practice in the current part of the day: the morning, the afternoon (from noon) or the evening (from 6 pm). Three practices in a day open them for the rest of the day.'],
+      ['Why did the Cloud lock again this afternoon?', 'Each part of the day starts locked. One practice this afternoon opens it until 6 pm, or do three in the day to keep it open all day.'],
       ['What happens if I miss a day?', 'Your streak starts again when a day ends with fewer than three. Your levels and aura stay.']
     ]],
     ['Practice', 'The library, the temple and focus bubbles', [
@@ -2512,7 +2520,7 @@ async function enter(user) {
 }
 // The day and its parts move on while the app stays open (phones keep a home-screen app in memory for
 // days). Checked every 30 seconds and whenever the app comes back to the screen: a new day reloads
-// your activity and today's suggestion and redraws everything; noon and 6 pm redraw and re-lock.
+// your activity and today's suggestion and redraws everything; noon and 6 pm redraw and lock again.
 let clockDay = null, clockPeriod = null;
 async function checkClock() {
   if (!uid || !appStarted) return;
