@@ -48,6 +48,7 @@ const ICON = {
   book: sv('<path d="M12 6.5C10.2 5 7.6 4.5 4 4.8v13.4c3.6-.3 6.2.2 8 1.7 1.8-1.5 4.4-2 8-1.7V4.8c-3.6-.3-6.2.2-8 1.7zM12 6.5v13.4"></path>'),
   mic: sv('<rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"></path>'),
   send: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"></path></svg>',
+  share: sv('<path d="M12 15V4M8 8l4-4 4 4"></path><path d="M6 12v6a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-6"></path>'),
   lock: sv('<rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path>'),
   pin: sv('<path d="M12 21s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12z"></path><circle cx="12" cy="9" r="2.5"></circle>'),
   work: sv('<rect x="3.5" y="7" width="17" height="12" rx="1"></rect><path d="M9 7V5h6v2"></path>'),
@@ -461,7 +462,8 @@ function renderAgenda() {
   $('#agendaBody').innerHTML =
     '<header style="display:flex;flex-direction:column;gap:6px"><span class="brand">Ora</span><h1 class="largetitle">Agenda</h1><div class="subrow"><span class="label">' + new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' }) + '</span>' + howButton() + '</div></header>' +
     '<section class="box" style="display:flex;flex-direction:column;gap:12px" aria-label="Streak">' +
-      '<div class="head"><div><div class="big">' + st + '</div><div class="label" style="margin-top:4px">day streak</div></div><div class="label" style="text-align:right">best ' + Math.max(bestStreak(), st) + '<br>' + totalDone() + ' exercises</div></div>' +
+      '<div class="head"><div><div class="big">' + st + '</div><div class="label" style="margin-top:4px">day streak</div></div>' +
+        '<div class="streakside"><button class="sharebtn" id="shareStreak" aria-label="Share your streak">' + ICON.share + 'Share</button><div class="label" style="text-align:right">best ' + Math.max(bestStreak(), st) + '<br>' + totalDone() + ' exercises</div></div></div>' +
       '<div class="week">' + week + '</div>' +
       '<div style="display:flex;flex-direction:column;gap:6px"><div class="head" style="font-size:13.5px"><span>' + n + ' of 3 today</span><span class="muted">' + (n === 3 ? 'Streak saved' : (3 - n) + ' to go') + '</span></div>' +
       '<div class="prog">' + [0, 1, 2].map((i) => '<span class="' + (i < n ? 'on' : '') + '"></span>').join('') + '</div></div>' +
@@ -487,6 +489,7 @@ function renderAgenda() {
   });
   const oc = $('#openCloud'); if (oc) oc.onclick = () => goTab(TAB.cloud);
   $('#openJournal').onclick = () => openJournal();
+  $('#shareStreak').onclick = () => openShareStreak();
   // Ora Master's pick, once done, stays done for the day
   const pd = $('#agendaBody [data-pickdone]'); if (pd) pd.onclick = () => toast('Already done today');
   wirePracticeLinks($('#agendaBody'));
@@ -618,6 +621,85 @@ function openJournalDay(days, i, pageNo) {
     box.querySelectorAll('[data-to]').forEach((b) => b.onclick = () => { show(+b.dataset.to); pg.querySelector('.scroll').scrollTo(0, 0); });
   };
   show(i);
+}
+
+// ---------------- Share your streak (Instagram Story) ----------------
+// A 1080×1920 picture: your bubble with your photo and aura ring, your name, your streak and the week,
+// and the app's name. Nothing else about you. Shared through the phone's share sheet (Instagram → Story).
+const loadImg = (src) => new Promise((ok, no) => { const i = new Image(); i.crossOrigin = 'anonymous'; i.onload = () => ok(i); i.onerror = no; i.src = src; });
+async function storyImage() {
+  const W = 1080, H = 1920, c = document.createElement('canvas'); c.width = W; c.height = H;
+  const x = c.getContext('2d');
+  await Promise.all(['italic 84px "Instrument Serif"', '110px "Instrument Serif"', '40px "Instrument Sans"'].map((f) => document.fonts.load(f).catch(() => {})));
+  const photo = me?.photo_path ? await loadImg(API.photoUrl(me.photo_path)).catch(() => null) : null;
+  // Soft iridescent sky
+  const bg = x.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, '#fdfcff'); bg.addColorStop(1, '#f5f2ff'); x.fillStyle = bg; x.fillRect(0, 0, W, H);
+  [['#F5A6D8', 120, 260, 520], ['#8FE8E3', 980, 620, 480], ['#B89CFF', 180, 1300, 560], ['#FFF3A6', 940, 1600, 460], ['#6FB7FF', 560, 1880, 420], ['#9FE5B5', 900, 120, 380]].forEach(([col, cx, cy, r]) => {
+    const g = x.createRadialGradient(cx, cy, 0, cx, cy, r); g.addColorStop(0, col + '88'); g.addColorStop(1, col + '00'); x.fillStyle = g; x.fillRect(0, 0, W, H);
+  });
+  x.textAlign = 'center'; x.fillStyle = '#111114';
+  x.font = 'italic 84px "Instrument Serif"'; x.fillText('Ora', W / 2, 220);
+  // The bubble
+  const cx = W / 2, cy = 800, r = 320, w = dimsToW(me?.aura), tot = w.reduce((a, b) => a + b, 0);
+  x.save(); x.filter = 'blur(28px)'; x.fillStyle = 'rgba(17,17,20,.16)'; x.beginPath(); x.ellipse(cx, cy + r + 30, r * .7, 38, 0, 0, Math.PI * 2); x.fill(); x.restore();
+  x.save(); x.beginPath(); x.arc(cx, cy, r * .968, 0, Math.PI * 2); x.clip();
+  if (photo) { const s = Math.max((r * 2) / photo.width, (r * 2) / photo.height); x.drawImage(photo, cx - photo.width * s / 2, cy - photo.height * s / 2, photo.width * s, photo.height * s); }
+  else {
+    const g = x.createLinearGradient(cx - r, cy - r, cx + r, cy + r); g.addColorStop(0, '#f4f4f5'); g.addColorStop(1, '#d9d9dd'); x.fillStyle = g; x.fillRect(cx - r, cy - r, r * 2, r * 2);
+    x.fillStyle = '#111114'; x.font = 'italic 190px "Instrument Serif"'; x.textBaseline = 'middle'; x.fillText(me?.name ? Array.from(low(me.name))[0] : 'o', cx, cy); x.textBaseline = 'alphabetic';
+  }
+  const glass = x.createRadialGradient(cx, cy, r * .8, cx, cy, r); glass.addColorStop(0, 'rgba(255,255,255,0)'); glass.addColorStop(.6, 'rgba(255,255,255,.28)'); glass.addColorStop(1, 'rgba(255,255,255,0)');
+  x.fillStyle = glass; x.fillRect(cx - r, cy - r, r * 2, r * 2); x.restore();
+  // Aura ring: one soft arc per colour, the same as in the app
+  const ring = x.createConicGradient ? x.createConicGradient(-Math.PI / 6 - Math.PI / 2, cx, cy) : null;
+  if (ring && tot) {
+    let a = 0, first = null; const stops = [];
+    w.forEach((v, i) => { if (!v) return; const span = v / tot; if (!first) first = DIMS[i].c; stops.push([a + span / 2, DIMS[i].c]); a += span; });
+    ring.addColorStop(0, first); stops.forEach(([o, col]) => ring.addColorStop(o, col)); ring.addColorStop(1, first);
+  }
+  x.beginPath(); x.arc(cx, cy, r, 0, Math.PI * 2); x.arc(cx, cy, r * .962, 0, Math.PI * 2, true); x.fillStyle = ring || '#d9d9e0'; x.fill();
+  x.lineWidth = 3; x.strokeStyle = 'rgba(17,17,20,.2)'; x.beginPath(); x.arc(cx, cy, r, 0, Math.PI * 2); x.stroke();
+  // Glass highlights
+  [[-1, 24], [1, -24]].forEach(([side, deg]) => {
+    x.save(); x.translate(cx + side * r * .7, cy - r * .22); x.rotate(deg * Math.PI / 180); x.filter = 'blur(3px)';
+    const g = x.createLinearGradient(0, -r * .32, 0, r * .32); g.addColorStop(0, 'rgba(255,255,255,.85)'); g.addColorStop(1, 'rgba(255,255,255,.05)');
+    x.fillStyle = g; x.beginPath(); x.ellipse(0, 0, r * .15, r * .32, 0, 0, Math.PI * 2); x.fill(); x.restore();
+  });
+  x.save(); x.strokeStyle = 'rgba(255,255,255,.9)'; x.lineWidth = 4; x.beginPath(); x.ellipse(cx, cy + r * .78, r * .38, r * .08, 0, 0, Math.PI * 2); x.stroke(); x.restore();
+  // Name, streak and the week
+  x.fillStyle = '#111114'; x.font = '110px "Instrument Serif"'; x.fillText(me?.name ? low(me.name) : 'me', W / 2, 1290);
+  x.font = '300px "Instrument Serif"'; x.fillText(String(streak()), W / 2, 1600);
+  x.fillStyle = '#5b5b63'; x.font = '40px "Instrument Sans"'; x.fillText('day streak', W / 2, 1670);
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(); d.setDate(d.getDate() - (6 - i));
+    const dx = W / 2 + (i - 3) * 96, dy = 1770, done = isDone(API.dayKey(d));
+    if (done) { const g = x.createLinearGradient(dx - 26, dy - 26, dx + 26, dy + 26); g.addColorStop(0, '#F5A6D8'); g.addColorStop(.5, '#B89CFF'); g.addColorStop(1, '#8FE8E3'); x.fillStyle = g; }
+    else x.fillStyle = 'rgba(255,255,255,.75)';
+    x.beginPath(); x.arc(dx, dy, 26, 0, Math.PI * 2); x.fill();
+    x.lineWidth = 2; x.strokeStyle = done ? 'rgba(255,255,255,.9)' : 'rgba(17,17,20,.14)'; x.stroke();
+    x.fillStyle = done ? '#fff' : '#8d8d95'; x.font = '24px "Instrument Sans"'; x.textBaseline = 'middle'; x.fillText('SMTWTFS'[d.getDay()], dx, dy + 1); x.textBaseline = 'alphabetic';
+  }
+  return new Promise((ok) => c.toBlob(ok, 'image/png'));
+}
+async function openShareStreak() {
+  const sh = $('#sheet');
+  sh.setAttribute('aria-label', 'Share your streak');
+  sh.innerHTML = '<div class="grab"></div><p class="label">Share your streak</p><div class="storyprev"><div class="spinner"></div></div>' +
+    '<div class="sharerow"><button class="secondary" id="storySave" disabled>Save image</button><button class="primary" id="storyShare" disabled>' + ICON.share + 'Share to your story</button></div>' +
+    '<p class="fine" style="margin-top:8px">Only your bubble, your name and your streak. In the share menu, choose Instagram, then Story.</p>';
+  $('#sheetBack').classList.add('on'); sh.classList.add('on');
+  const blob = await storyImage().catch((e) => { console.error(e); return null; });
+  if (!blob) { sh.querySelector('.storyprev').innerHTML = '<p class="label">Couldn’t draw the picture. Try again.</p>'; return; }
+  const url = URL.createObjectURL(blob), file = new File([blob], 'ora-streak.png', { type: 'image/png' });
+  sh.querySelector('.storyprev').innerHTML = '<img src="' + url + '" alt="Your Ora streak picture">';
+  const save = () => { const a = document.createElement('a'); a.href = url; a.download = 'ora-streak.png'; a.click(); toast('Saved. Add it to your story from Instagram'); };
+  const sb = sh.querySelector('#storySave'), sp = sh.querySelector('#storyShare');
+  sb.disabled = sp.disabled = false;
+  sb.onclick = save;
+  sp.onclick = async () => {
+    if (navigator.canShare?.({ files: [file] })) { try { await navigator.share({ files: [file] }); closeSheet(); } catch (e) { if (e.name !== 'AbortError') save(); } }
+    else save();
+  };
 }
 
 // ---------------- Exercise sheet ----------------
@@ -766,6 +848,7 @@ function openFAQ() {
       ['What counts toward my three a day?', 'Anything: the temple, today’s task, Ora Master’s pick, or any practice from the Meditation library. Each different practice counts once a day.'],
       ['Why can’t I open the Cloud or Chats?', 'They need a finished profile (a photo and your two answers), and one practice in the current part of the day: the morning, the afternoon (from noon) or the evening (from 6 pm). Three practices in a day open them for the rest of the day.'],
       ['Why did the Cloud lock again this afternoon?', 'Each part of the day starts locked. One practice this afternoon opens it until 6 pm, or do three in the day to keep it open all day.'],
+      ['Can I share my streak?', 'Yes: tap Share in the streak box on your Agenda. It makes a picture with your bubble, your name, your streak and the week, nothing else. Choose Instagram, then Story, or save the image.'],
       ['What happens if I miss a day?', 'Your streak starts again when a day ends with fewer than three. Your levels and aura stay.']
     ]],
     ['Practice', 'The library, the temple and focus bubbles', [
