@@ -29,7 +29,7 @@
       "about": "Move your attention slowly through the body, from the crown of the head to the toes.",
       "steps": ["Lie down or sit comfortably.", "Start at the top of your head.", "Notice each part without judging it.", "Breathe into anything tight, and let it soften."],
       "cues": [["Your head and face", 20], ["Your neck and shoulders", 20], ["Your arms and hands", 20], ["Your chest and belly", 20], ["Your hips and legs", 20], ["Your feet", 20], ["Your whole body, breathing", 20]],
-      "after": { "type": "write", "q": "Where in your body did you feel the most?" }
+      "after": { "type": "cards", "q": "Where did you feel the most?", "opts": ["Head and face", "Chest and heart", "Belly", "Hands and feet"] }
     },
     {
       "id": "metta", "name": "Loving-kindness", "cat": "Meditation", "type": "sit", "dims": ["values", "personality"],
@@ -37,7 +37,7 @@
       "about": "Send warm wishes to yourself, someone you love, a stranger, and everyone.",
       "steps": ["Bring yourself to mind.", "Silently repeat: may you be happy, may you be at peace.", "Then someone you love, then a stranger.", "End with all beings, everywhere."],
       "cues": [["May I be happy", 8], ["May I be at peace", 8], ["May you be happy", 8], ["May you be at peace", 8], ["May all beings be free", 8]],
-      "after": { "type": "write", "q": "Who did you send kindness to, and how did it feel?" }
+      "after": { "type": "cards", "q": "Kindness went most to…", "opts": ["Myself", "Someone I love", "A stranger", "Everyone"] }
     },
     {
       "id": "mantra", "name": "Mantra", "cat": "Meditation", "type": "sit", "dims": ["routine", "values"],
@@ -93,7 +93,7 @@
       "about": "Walk slowly and feel every step. Indoors or out, phone in your pocket.",
       "steps": ["Walk at half your usual speed.", "Feel the heel, the sole, the toes.", "Match your breath to your steps.", "When the mind wanders, come back to the feet."],
       "cues": [["Lift", 3], ["Move", 3], ["Place", 3]],
-      "after": { "type": "write", "q": "What did you notice on your walk?" }
+      "after": { "type": "select", "q": "On your walk, you noticed…", "opts": ["Sounds", "Light", "Smells", "My breath", "My steps", "People"], "multi": true }
     },
     {
       "id": "stretch", "name": "Mindful stretching", "cat": "Body & nature", "type": "sit", "dims": ["lifestyle", "routine"],
@@ -113,7 +113,7 @@
     },
     {
       "id": "gratitude", "name": "Gratitude journal", "cat": "Journaling", "type": "write", "dims": ["values", "personality"],
-      "chars": [60, 120, 200, 300],
+      "chars": [20, 40, 60, 90],
       "about": "Write three things you are grateful for today, and why.",
       "steps": ["Think of three things, big or small.", "Write each one, and why it matters.", "Feel it as you write it."],
       "prompt": "Three things I'm grateful for today…",
@@ -121,7 +121,7 @@
     },
     {
       "id": "morning-pages", "name": "Morning pages", "cat": "Journaling", "type": "write", "dims": ["personality", "goals"],
-      "chars": [150, 300, 500, 750],
+      "chars": [60, 120, 180, 250],
       "about": "Free writing, without stopping or editing. Empty the mind onto the page.",
       "steps": ["Write whatever comes, without stopping.", "Don't fix spelling, don't judge.", "Keep going until you reach the length."],
       "prompt": "Write whatever is on your mind…",
@@ -129,63 +129,63 @@
     },
     {
       "id": "reflection", "name": "Evening reflection", "cat": "Journaling", "type": "write", "dims": ["values", "goals"],
-      "chars": [80, 150, 250, 400],
+      "chars": [20, 40, 70, 100],
       "about": "Look back on your day with curiosity: what went well, what you learned.",
       "steps": ["What went well today?", "What was hard?", "What did you learn about yourself?"],
       "prompt": "Today, I…",
       "after": { "type": "cards", "q": "Today was mostly…", "opts": ["Calm", "Busy", "Joyful", "Difficult"] }
     },
     {
-      "id": "letting-go", "name": "Letting-go letter", "cat": "Journaling", "type": "write", "dims": ["personality", "values"],
-      "chars": [100, 200, 300, 450],
-      "about": "Write a letter to something you are ready to release: a worry, a habit, a past moment.",
-      "steps": ["Name what you want to let go of.", "Thank it for what it taught you.", "Say goodbye, in your own words."],
-      "prompt": "Dear…, I'm letting you go because…",
-      "after": { "type": "cards", "q": "After writing, you feel…", "opts": ["Lighter", "Emotional", "Unsure", "Free"] }
+      "id": "letting-go", "name": "Letting go", "cat": "Self-awareness", "type": "sit", "dims": ["personality", "values"],
+      "about": "Breathe out what you are ready to release: a worry, a habit, a past moment.",
+      "steps": ["Name what you are carrying.", "Breathe it in, and feel its weight.", "Thank it for what it taught you.", "Breathe it out, slowly, and let it go."],
+      "after": { "type": "cards", "q": "After letting go, you feel…", "opts": ["Lighter", "Emotional", "Unsure", "Free"] },
+      "mins": [5, 8, 10, 12],
+      "cues": [["Name what you carry", 10], ["Breathe it in", 6], ["Thank it", 8], ["Breathe it out, slowly", 8], ["Let it go", 10]]
     },
     {
-      "id": "emotion-check", "name": "Emotion check-in", "cat": "Self-awareness", "type": "write", "dims": ["personality", "values"],
-      "chars": [40, 100, 160, 240],
-      "about": "Name what you feel right now, where you feel it, and what it needs.",
-      "steps": ["Pause and ask: what am I feeling?", "Where is it in my body?", "What does this feeling need from me?"],
-      "prompt": "Right now I feel…",
-      "after": { "type": "select", "q": "Pick the feelings that are here", "opts": ["Joy", "Calm", "Love", "Anxiety", "Sadness", "Anger", "Tiredness", "Hope"], "multi": true }
+      "id": "emotion-check", "name": "Emotion check-in", "cat": "Self-awareness", "type": "sit", "dims": ["personality", "values"],
+      "about": "Pause, name what you feel, find it in your body, and let it be.",
+      "steps": ["Pause and ask: what am I feeling?", "Find where it lives in your body.", "Breathe into it, without changing it.", "Ask what it needs from you."],
+      "after": { "type": "select", "q": "Pick the feelings that are here", "opts": ["Joy", "Calm", "Love", "Anxiety", "Sadness", "Anger", "Tiredness", "Hope"], "multi": true },
+      "mins": [3, 5, 7, 10],
+      "cues": [["What am I feeling?", 10], ["Where is it in my body?", 10], ["Breathe into it", 8], ["What does it need?", 10]]
     },
     {
       "id": "values-compass", "name": "Values compass", "cat": "Self-awareness", "type": "write", "dims": ["values", "goals"],
-      "chars": [80, 160, 260, 400],
+      "chars": [20, 40, 70, 100],
       "about": "Find the values that guide you, and one small way to live them today.",
       "steps": ["Which three values matter most to you?", "When did you last live one fully?", "One small way to live it today."],
       "prompt": "What matters most to me is…",
       "after": { "type": "select", "q": "Your top values", "opts": ["Honesty", "Freedom", "Family", "Growth", "Kindness", "Creativity", "Adventure", "Peace"], "multi": true }
     },
     {
-      "id": "self-compassion", "name": "Self-compassion letter", "cat": "Self-awareness", "type": "write", "dims": ["personality", "values"],
-      "chars": [100, 200, 300, 450],
-      "about": "Write to yourself the way a kind friend would.",
-      "steps": ["Think of something you're hard on yourself about.", "Write to yourself as a loving friend would.", "End with one kind wish for yourself."],
-      "prompt": "Dear me…",
-      "after": { "type": "write", "q": "What do you most need to hear from someone who loves you?" }
+      "id": "self-compassion", "name": "Self-compassion", "cat": "Self-awareness", "type": "sit", "dims": ["personality", "values"],
+      "about": "Speak to yourself the way a kind friend would.",
+      "steps": ["Rest a hand on your heart.", "Think of something you are hard on yourself about.", "Say to yourself what a loving friend would say.", "End with one kind wish for yourself."],
+      "after": { "type": "cards", "q": "What do you need most right now?", "opts": ["Rest", "Kindness", "Courage", "Patience"] },
+      "mins": [5, 8, 10, 12],
+      "cues": [["Hand on your heart", 8], ["This is hard, and that’s okay", 10], ["I am not alone in this", 10], ["May I be kind to myself", 10]]
     },
     {
-      "id": "shadow", "name": "Patterns and triggers", "cat": "Self-awareness", "type": "write", "dims": ["personality", "goals"],
-      "chars": [80, 160, 260, 400],
-      "about": "Notice a reaction that keeps repeating, and gently look at where it comes from.",
-      "steps": ["Recall a moment you reacted strongly.", "What did it touch in you?", "What would a calmer you do next time?"],
-      "prompt": "A pattern I notice in myself…",
-      "after": { "type": "cards", "q": "In conflict, you tend to…", "opts": ["Talk it out", "Need space first", "Avoid it", "Get fiery"] }
+      "id": "shadow", "name": "Patterns and triggers", "cat": "Self-awareness", "type": "sit", "dims": ["personality", "goals"],
+      "about": "Recall a reaction that keeps repeating, and gently watch where it comes from.",
+      "steps": ["Recall a moment you reacted strongly.", "Notice what it touched in you.", "Breathe and soften around it.", "Picture a calmer you, next time."],
+      "after": { "type": "cards", "q": "In conflict, you tend to…", "opts": ["Talk it out", "Need space first", "Avoid it", "Get fiery"] },
+      "mins": [5, 8, 10, 12],
+      "cues": [["Recall the moment", 10], ["What did it touch in you?", 10], ["Breathe and soften", 8], ["See a calmer you", 10]]
     },
     {
-      "id": "scripting", "name": "Manifestation scripting", "cat": "Manifestation", "type": "write", "dims": ["goals", "values"],
-      "chars": [100, 200, 350, 500],
-      "about": "Write about the life you want as if it has already happened, in the present tense.",
-      "steps": ["Pick one area: love, work, home, health.", "Write as if it's already true, in the present tense.", "Add details: what you see, feel, hear."],
-      "prompt": "It's a year from now, and I…",
-      "after": { "type": "cards", "q": "What are you calling in most?", "opts": ["Love", "Purpose", "Peace", "Abundance"] }
+      "id": "scripting", "name": "Manifesting", "cat": "Manifestation", "type": "sit", "dims": ["goals", "values"],
+      "about": "Close your eyes and live the life you want as if it has already happened.",
+      "steps": ["Choose one wish: love, work, home, health.", "See it as already true, here and now.", "Notice what you see, hear and feel.", "Say thank you, as if it is done."],
+      "after": { "type": "cards", "q": "What are you calling in most?", "opts": ["Love", "Purpose", "Peace", "Abundance"] },
+      "mins": [5, 8, 10, 12],
+      "cues": [["Choose one wish", 10], ["See it as already true", 10], ["What do you see, hear, feel?", 12], ["Say thank you", 8]]
     },
     {
       "id": "intention", "name": "Daily intention", "cat": "Manifestation", "type": "write", "dims": ["goals", "routine"],
-      "chars": [20, 40, 80, 120],
+      "chars": [8, 15, 25, 40],
       "about": "Set one clear intention for today, in a single sentence.",
       "steps": ["Breathe and ask: how do I want to be today?", "Write it as one sentence.", "Read it back three times."],
       "prompt": "Today, I intend to…",
@@ -197,14 +197,14 @@
       "about": "Close your eyes and meet the person you are becoming.",
       "steps": ["Close your eyes and breathe slowly.", "Picture yourself a few years from now, at peace.", "Notice where you are, who's with you.", "Ask them one question, and listen."],
       "cues": [["See where you are", 10], ["Who is with you?", 10], ["How do you feel?", 10], ["What do they tell you?", 10]],
-      "after": { "type": "write", "q": "What did your future self tell you?" }
+      "after": { "type": "cards", "q": "Your future self felt…", "opts": ["At peace", "Free", "Loved", "Proud"] }
     },
     {
       "id": "first-step", "name": "Take a first step", "cat": "Kindness & action", "type": "do", "dims": ["goals", "routine"],
       "mins": [5, 10, 15, 20],
       "about": "Do the first small step of something you've been putting off.",
       "steps": ["Pick one thing you've been avoiding.", "Find the smallest possible first step.", "Do it now, for a few minutes."],
-      "after": { "type": "write", "q": "What step did you take, and what's next?" }
+      "after": { "type": "cards", "q": "Your step felt…", "opts": ["Easy", "Brave", "Hard, but done", "Exciting"] }
     },
     {
       "id": "offline", "name": "Offline hour", "cat": "Kindness & action", "type": "do", "dims": ["lifestyle", "routine"],
@@ -218,7 +218,7 @@
       "mins": [5, 10, 15, 20],
       "about": "Do one kind thing for someone, ideally without them knowing.",
       "steps": ["Think of someone who could use a lift.", "Do one small kind thing for them.", "Notice how it feels in you."],
-      "after": { "type": "write", "q": "What did you do, and how did it feel?" }
+      "after": { "type": "cards", "q": "Giving felt…", "opts": ["Warm", "Shy", "Joyful", "Natural"] }
     }
   ]
 }

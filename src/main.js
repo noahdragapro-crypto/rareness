@@ -122,7 +122,7 @@ const levelFor = (n) => LIB.levels.reduce((l, x, i) => (n >= x.from ? i + 1 : l)
 const levelOf = (id) => levelFor(sessionsOf(id));
 const levelName = (l) => LIB.levels[l - 1].name;
 const levelDots = (l) => '<span class="ldots" aria-hidden="true">' + [1, 2, 3, 4].map((i) => '<i class="' + (i <= l ? 'on' : '') + '"></i>').join('') + '</span>';
-const practiceLen = (x, l) => (x.type === 'write' ? x.chars[l - 1] + '+ characters' : x.mins[l - 1] + ' min');
+const practiceLen = (x, l) => (x.type === 'write' ? (x.chars[l - 1] <= 40 ? 'a few words' : 'a few lines') : x.mins[l - 1] + ' min');
 const typeLabel = (x) => ({ sit: 'Guided', write: 'Writing', do: 'Do it' }[x.type]);
 
 // ---------------- Bubbles ----------------
@@ -446,7 +446,7 @@ const dimLabel = (k) => DIMS[dimIndex(k)]?.label || '';
 function renderAgenda() {
   const r = rec(), all = todayTasks(), n = Math.min(3, dayCount()), st = streak(), open = cloudOpen();
   // Today's three: the temple, today's task (a reflection one day, an action the next), and Ora Master's pick
-  const temple = all[0], task = dayNum() % 2 ? all[2] : all[1], other = task === all[1] ? all[2] : all[1], pick = suggestion && PRACTICE[suggestion.exercise];
+  const temple = all[0], task = dayNum() % 3 === 0 ? all[1] : all[2], other = task === all[1] ? all[2] : all[1], pick = suggestion && PRACTICE[suggestion.exercise];
   const pickDone = pick && doneToday(pick.id);
   const extra = practicedOn(today()).filter((id) => !pick || id !== pick.id);
   const days = []; for (let i = 6; i >= 0; i--) { const d = new Date(); d.setDate(d.getDate() - i); days.push(d); }
@@ -853,11 +853,11 @@ function openHowItWorks() {
       '<div class="temple-card howtemple"><div class="temple-mini" style="height:84px" aria-hidden="true">' + crackSVG() + '</div><p>Meditation happens in the temple: a dark room, a crack of light that breathes, soft music, for 7 to 15 minutes depending on the day.</p></div>') +
 
     sec('The practices', p(PR.length + ' practices in ' + LIB.categories.length + ' groups, from breath work to journaling and manifestation. Each is one of three kinds:') +
-      '<div class="howkinds">' + [['Guided', 'In the temple room, with gentle cues.'], ['Writing', 'A prompt and a private page.'], ['Do it', 'A small act in real life.']].map(([t, d]) => '<div class="box"><b>' + t + '</b><span>' + d + '</span></div>').join('') + '</div>' +
-      p('Each has four levels. Return to it and you go deeper: longer sessions, more writing. What you do often weighs more in your aura.') +
+      '<div class="howkinds">' + [['Guided', 'In the temple room, with gentle cues. Most practices.'], ['Do it', 'A small act in real life.'], ['Writing', 'A few, for when you feel like it.']].map(([t, d]) => '<div class="box"><b>' + t + '</b><span>' + d + '</span></div>').join('') + '</div>' +
+      p('Each has four levels. Return to it and you go deeper: longer, calmer sessions. What you do often weighs more in your aura.') +
       '<div class="box howlevels">' + LIB.levels.map((l, i) => '<div><span class="plevel">' + levelDots(i + 1) + '<b>' + l.name + '</b></span><span class="label">' + (l.from ? 'after ' + l.from + ' sessions' : 'to begin') + '</span></div>').join('') + '</div>') +
 
-    sec('A question after each one', p('When you finish, one short question slides up. A few words, a card, or a few options. You can always skip it.') +
+    sec('A question after each one', p('When you finish, one short question slides up: tap a card or a few options. No writing, and you can always skip it.') +
       '<div class="howcheck" aria-hidden="true"><span class="label">One question · The temple</span><b>How did your mind feel?</b><div class="cicards">' + ['Still', 'Busy', 'Heavy', 'Light'].map((o, i) => '<span class="cicard' + (i === 0 ? ' on' : '') + '">' + o + '</span>').join('') + '</div></div>' +
       p('It helps us understand what you feel and need, so your suggestions and the people around you fit you better.')) +
 
@@ -894,7 +894,7 @@ function openFAQ() {
     ['Practice', 'The library, the temple and focus bubbles', [
       ['How do levels work?', 'Every practice has four levels: ' + LIB.levels.map((l) => l.name + (l.from ? ' (after ' + l.from + ' sessions)' : '')).join(', ') + '. Each level goes a little deeper.'],
       ['How long is today’s meditation?', 'Between 7 and 15 minutes, depending on the day. The Meditation tab shows today’s length.'],
-      ['Can I leave a practice before it ends?', 'Yes, anytime. It only counts once its time is up, or once you’ve written enough for its level.'],
+      ['Can I leave a practice before it ends?', 'Yes, anytime. It counts once its time is up (or, for the few writing practices, once you’ve written a few words).'],
       ['There’s no sound in the temple.', 'Check your volume, and tap “Sound on” at the top right. If it says “Tap for sound”, one tap starts it.'],
       ['Why doesn’t my phone vibrate in the temple?', 'iPhones don’t let websites vibrate, so the temple plays soft music instead. Android phones vibrate gently.'],
       ['What are focus bubbles?', 'A bubble that floats over the app soon after you open it, then every ten minutes or so. Pop it: it’s a reminder to come back to the present.'],
@@ -956,7 +956,7 @@ function openWriting(x, l) {
     '<label class="hide" for="prWrite">' + esc(x.prompt) + '</label><textarea id="prWrite" class="bigwrite" maxlength="4000" placeholder="' + esc(x.prompt) + '"></textarea>' +
     '<p class="fine" id="prCount"></p><button class="primary" id="prDone" disabled>Done</button><p class="fine" style="text-align:center">Private. Only our AI reads it, to understand you better.</p></div>');
   const ta = pg.querySelector('#prWrite'), bt = pg.querySelector('#prDone'), cnt = pg.querySelector('#prCount');
-  const ok = () => { const n = ta.value.trim().length; bt.disabled = n < min; cnt.textContent = n < min ? (min - n) + ' more characters for this level' : 'Ready when you are'; };
+  const ok = () => { const n = ta.value.trim().length; bt.disabled = n < min; cnt.textContent = n < min ? 'A few more words' : 'Ready when you are'; };
   ta.oninput = ok; ok(); setTimeout(() => ta.focus({ preventScroll: true }), 450);
   bt.onclick = async () => { bt.disabled = true; const r = await recordPractice(x, { level: l, answer: { entry: ta.value.trim() } }); if (r) { popPage(); popPage(); } else bt.disabled = false; };
 }
@@ -1041,7 +1041,7 @@ async function loadSuggestion() {
     suggestion = { day: today(), exercise: r.exercise, reason: r.reason };
   } catch (e) {
     // Offline or not set up: something not done lately, different each day
-    const pool = PR.filter((x) => !myPractices.some((p) => p.exercise === x.id && p.day >= API.dayKey(new Date(Date.now() - 3 * 864e5))));
+    const pool = PR.filter((x) => x.type !== 'write' && !myPractices.some((p) => p.exercise === x.id && p.day >= API.dayKey(new Date(Date.now() - 3 * 864e5))));
     const x = (pool.length ? pool : PR)[dayNum() % (pool.length || PR.length)];
     suggestion = { day: today(), exercise: x.id, reason: x.about };
   }
@@ -2326,7 +2326,7 @@ const SIGNUP = [
 const TEST = SIGNUP;
 const Q0 = 2; // the writing comes after basics and photo
 const STEPS = Q0 + TEST.length;
-const WRITE_MIN = 40;
+const WRITE_MIN = 20;
 const gate = $('#gate');
 const COUNTRIES = 'AD AE AF AG AL AM AO AR AT AU AZ BA BB BD BE BF BG BH BI BJ BN BO BR BS BT BW BY BZ CA CD CF CG CH CI CL CM CN CO CR CU CV CY CZ DE DJ DK DM DO DZ EC EE EG ER ES ET FI FJ FM FR GA GB GD GE GH GM GN GQ GR GT GW GY HK HN HR HT HU ID IE IL IN IQ IR IS IT JM JO JP KE KG KH KI KM KN KR KW KZ LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME MG MH MK ML MM MN MO MR MT MU MV MW MX MY MZ NA NE NG NI NL NO NP NR NZ OM PA PE PG PH PK PL PR PS PT PW PY QA RE RO RS RU RW SA SB SC SD SE SG SI SK SL SM SN SO SR SS ST SV SY SZ TD TG TH TJ TL TM TN TO TR TT TV TW TZ UA UG US UY UZ VA VC VE VN VU WS XK YE ZA ZM ZW'.split(' ');
 // Fixed city list, so everyone's city is spelled the same in our data. Each city knows its country,
@@ -2504,7 +2504,7 @@ function gateOnboard() {
           G.answers[q.dim] = ta.value;
           const n = ta.value.trim().length;
           go.disabled = n < WRITE_MIN;
-          wc.textContent = n < WRITE_MIN ? 'A few more words, please (' + (WRITE_MIN - n) + ' more characters).' : 'Only our AI reads this, to shape your aura and find your matches.';
+          wc.textContent = n < WRITE_MIN ? 'A few words are enough.' : 'Only our AI reads this, to shape your aura and find your matches.';
         };
         ta.oninput = ok; ok();
         $('#mic').onclick = () => toggleDictation(ta, $('#mic'), ok);

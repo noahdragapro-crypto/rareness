@@ -686,3 +686,5 @@ input.field[type=date]::-webkit-date-and-time-value{text-align:left}
 .seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;margin-top:10px;border-radius:14px;background:var(--fill)}
 .seg button{height:36px;border:0;border-radius:10px;background:none;font:inherit;font-size:14px;color:var(--ink2);cursor:pointer}
 .seg button[aria-selected="true"]{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(17,17,20,.12)}
+/* Today's three are the same height: two lines each, cut with … when longer (the full reason is on the practice) */
+.task.hi .tx span{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.7em}
