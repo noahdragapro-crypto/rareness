@@ -82,7 +82,9 @@ function rec(k = today()) {
 // A day counts when three things are done: the daily tasks and practices from the library, in any mix
 // (the temple counts once, as the Meditate task)
 const practicedOn = (k) => [...new Set(myPractices.filter((p) => p.day === k && p.exercise !== 'temple').map((p) => p.exercise))];
-const dayCount = (k = today()) => { const r = rec(k); return (r.q ? 1 : 0) + (r.t ? 1 : 0) + (r.m ? 1 : 0) + practicedOn(k).length; };
+// The temple from the library (or as Ora Master's pick) counts as the Meditate task too
+const meditated = (k) => Boolean(rec(k).m) || myPractices.some((p) => p.day === k && p.exercise === 'temple');
+const dayCount = (k = today()) => { const r = rec(k); return (r.q ? 1 : 0) + (r.t ? 1 : 0) + (meditated(k) ? 1 : 0) + practicedOn(k).length; };
 const isDone = (k) => dayCount(k) >= 3;
 // The day has three parts. The Cloud and chats open with one thing done in the morning, two by the
 // afternoon (from noon) and three by the evening (from 6 pm); doing more earlier counts for later.
@@ -220,8 +222,15 @@ function goTab(i, after) {
 }
 document.querySelectorAll('.tab').forEach((b) => b.addEventListener('click', () => goTab(+b.dataset.tab)));
 
+let wasLocked = null;
 function updateLocks() {
   const locked = !cloudOpen() || !setupDone();
+  // Just locked (a new part of the day began): close any chat or profile left open over the Cloud or Chats
+  if (locked && wasLocked === false && (cur === TAB.cloud || cur === TAB.chats)) {
+    while (pages.length) popPage(true);
+    toast('One more practice opens the Cloud and your chats again');
+  }
+  wasLocked = locked;
   document.querySelectorAll('.tab[data-tab="' + TAB.cloud + '"],.tab[data-tab="' + TAB.chats + '"]').forEach((b) => b.classList.toggle('locked', locked));
   [['#cloudLock', 'Cloud'], ['#chatsLock', 'chats']].forEach(([sel, what]) => {
     const el = $(sel); el.hidden = !locked;
@@ -2501,6 +2510,21 @@ async function enter(user) {
   if (needsMembership()) { if (billing === 'success') confirmMembership(); else gatePaywall(billing === 'cancelled' ? 'Checkout was cancelled. You can try again whenever you like.' : ''); return; }
   startApp();
 }
+// The day and its parts move on while the app stays open (phones keep a home-screen app in memory for
+// days). Checked every 30 seconds and whenever the app comes back to the screen: a new day reloads
+// your activity and today's suggestion and redraws everything; noon and 6 pm redraw and re-lock.
+let clockDay = null, clockPeriod = null;
+async function checkClock() {
+  if (!uid || !appStarted) return;
+  const d = today(), p = periodNow();
+  if (d !== clockDay) {
+    clockDay = d; clockPeriod = p;
+    try { myAnswers = await API.myAnswers(uid); } catch (e) { console.warn('answers', e.message); }
+    try { myPractices = await API.myPractices(uid); } catch (e) { console.warn('practices', e.message); }
+    loadSuggestion(); renderAll();
+  } else if (p !== clockPeriod) { clockPeriod = p; renderAgenda(); renderMeditation(); }
+  updateLocks();
+}
 async function startApp() {
   hideGate();
   try { myAnswers = await API.myAnswers(uid); } catch (e) { fail(e); }
@@ -2511,7 +2535,10 @@ async function startApp() {
   if (!appStarted) {
     appStarted = true;
     requestAnimationFrame(loop);
-    setInterval(updateLocks, 60000);
+    clockDay = today(); clockPeriod = periodNow();
+    setInterval(checkClock, 30000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) checkClock(); });
+    window.addEventListener('pageshow', checkClock); window.addEventListener('focus', checkClock);
     schedulePresent();
     unsubscribeMessages = API.onMessages((m) => { if (openChat && m.chat_id === openChat.id) openChat.add(m); else loadChats(); });
     // If matching never ran for this person (e.g. sign-up closed early), start it now
