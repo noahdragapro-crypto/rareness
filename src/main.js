@@ -530,8 +530,8 @@ async function openJournal() {
         ? '<div class="writebox"><label class="hide" for="jWrite">Write in today’s page</label><textarea id="jWrite" maxlength="4000" placeholder="' + (items.length ? 'Keep writing…' : 'Dear journal…') + '"></textarea>' + micButton('jMic') + '</div>' +
           '<button class="primary" id="jAdd" disabled>Add to today’s page</button><p class="fine">Journal entries are just for you. They don’t count toward your three a day.</p>'
         : '<p class="fine">Writing in the journal needs database update 0009.</p>') + '</div>')).join('') +
-      (older.length ? '<button class="jarchive" id="jArchive"><span class="tx"><b>Archive</b><span>' + older.length + ' older page' + (older.length === 1 ? '' : 's') + ', by date</span></span><span class="chev" aria-hidden="true">›</span></button>' : '');
-    const ab = body.querySelector('#jArchive'); if (ab) ab.onclick = () => openJournalArchive(older, pageNo);
+      (older.length ? '<button class="jarchive" id="jArchive"><span class="tx"><b>Reflecting</b><span>' + older.length + ' older page' + (older.length === 1 ? '' : 's') + ', each in one sentence. Find any day.</span></span><span class="chev" aria-hidden="true">›</span></button>' : '');
+    const ab = body.querySelector('#jArchive'); if (ab) ab.onclick = () => openReflecting(older, pageNo);
     const ta = body.querySelector('#jWrite'); if (!ta) return;
     const add = body.querySelector('#jAdd'), ok = () => { add.disabled = !ta.value.trim(); ta.style.height = 'auto'; ta.style.height = Math.max(110, ta.scrollHeight) + 'px'; };
     ta.oninput = ok;
@@ -545,21 +545,49 @@ async function openJournal() {
   draw();
   pg._onPop = () => stopDictation();
 }
-// The archive: older pages listed by month, each with its date, how much was written and its first line
-function openJournalArchive(days, pageNo) {
-  const months = new Map();
-  days.forEach(([day, items], i) => {
-    const m = new Date(day + 'T12:00').toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
-    if (!months.has(m)) months.set(m, []);
-    months.get(m).push({ day, items, i });
+// Reflecting: older pages by month, each summed up in one sentence, with a month filter and a date search
+const summaries = {}; // day -> sentence, kept for the session
+async function loadSummaries(days) {
+  const want = days.filter((d) => !(d in summaries));
+  for (let i = 0; i < want.length; i += 40) {
+    try { Object.assign(summaries, await API.journalSummaries(want.slice(i, i + 40))); } catch (e) { console.warn('summaries', e.message); return; }
+  }
+}
+function openReflecting(days, pageNo) {
+  const monthOf = (day) => new Date(day + 'T12:00').toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+  const months = [...new Set(days.map(([day]) => monthOf(day)))];
+  let month = '', date = '';
+  const pg = pushPage('Reflecting', '<div class="journal"><header class="jcover"><span class="label">Your journal</span><h1 class="largetitle">Reflecting</h1>' +
+      '<p class="label">' + days.length + ' page' + (days.length === 1 ? '' : 's') + ', each in one sentence</p></header>' +
+    '<div class="jfilter"><label class="lbl" for="jDate">Find a day<input class="field" id="jDate" type="date" min="' + days[days.length - 1][0] + '" max="' + days[0][0] + '"></label>' +
+      '<div class="chips" data-hscroll><button type="button" class="chip on" data-m="">All</button>' + months.map((m) => '<button type="button" class="chip" data-m="' + esc(m) + '">' + esc(m) + '</button>').join('') + '</div></div>' +
+    '<div id="jList"></div></div>');
+  const list = pg.querySelector('#jList'), dateIn = pg.querySelector('#jDate');
+  const row = ([day, items], i) => {
+    const d = new Date(day + 'T12:00'), line = summaries[day] || String(items[0]?.body || '').split('\n')[0];
+    return '<button class="jrow" data-i="' + i + '"><span class="jd"><b>' + d.getDate() + '</b><span>' + d.toLocaleDateString(undefined, { weekday: 'short' }) + '</span></span>' +
+      '<span class="tx"><span class="jsum' + (summaries[day] ? '' : ' wait') + '">' + esc(line) + '</span><span class="jcount">' + items.length + ' entr' + (items.length === 1 ? 'y' : 'ies') + ' · page ' + pageNo(day) + '</span></span></button>';
+  };
+  const draw = () => {
+    const shown = days.map((x, i) => [x, i]).filter(([[day]]) => (date ? day === date : !month || monthOf(day) === month));
+    if (!shown.length) {
+      // Nothing written that day: offer the closest days that have a page
+      const near = days.map((x, i) => [x, i]).sort((a, b) => Math.abs(new Date(a[0][0]) - new Date(date)) - Math.abs(new Date(b[0][0]) - new Date(date))).slice(0, 2);
+      list.innerHTML = '<p class="label" style="text-align:center;margin:8px 0 14px">Nothing written on that day. The closest pages:</p><div class="jmonth">' + near.map(([x, i]) => row(x, i)).join('') + '</div>';
+    } else {
+      const groups = new Map();
+      shown.forEach(([x, i]) => { const m = monthOf(x[0]); if (!groups.has(m)) groups.set(m, []); groups.get(m).push(row(x, i)); });
+      list.innerHTML = [...groups].map(([m, rows]) => '<section class="jmonth" aria-label="' + esc(m) + '"><h2>' + esc(m) + '</h2>' + rows.join('') + '</section>').join('');
+    }
+    list.querySelectorAll('[data-i]').forEach((b) => b.onclick = () => openJournalDay(days, +b.dataset.i, pageNo));
+  };
+  pg.querySelectorAll('[data-m]').forEach((b) => b.onclick = () => {
+    month = b.dataset.m; date = ''; dateIn.value = '';
+    pg.querySelectorAll('[data-m]').forEach((x) => x.classList.toggle('on', x === b)); draw();
   });
-  const pg = pushPage('Archive', '<div class="journal"><header class="jcover"><span class="label">Your journal</span><h1 class="largetitle">Archive</h1><p class="label">' + days.length + ' page' + (days.length === 1 ? '' : 's') + '</p></header>' +
-    [...months].map(([m, list]) => '<section class="jmonth" aria-label="' + esc(m) + '"><h2>' + esc(m) + '</h2>' + list.map(({ day, items, i }) => {
-      const d = new Date(day + 'T12:00'), firstLine = String(items[0]?.body || '').split('\n')[0];
-      return '<button class="jrow" data-i="' + i + '"><span class="jd"><b>' + d.getDate() + '</b><span>' + d.toLocaleDateString(undefined, { weekday: 'short' }) + '</span></span>' +
-        '<span class="tx"><span class="jfirst">' + esc(firstLine) + '</span><span class="jcount">' + items.length + ' entr' + (items.length === 1 ? 'y' : 'ies') + ' · page ' + pageNo(day) + '</span></span></button>';
-    }).join('') + '</section>').join('') + '</div>');
-  pg.querySelectorAll('[data-i]').forEach((b) => b.onclick = () => openJournalDay(days, +b.dataset.i, pageNo));
+  dateIn.onchange = () => { date = dateIn.value; if (date) pg.querySelectorAll('[data-m]').forEach((x) => x.classList.toggle('on', !x.dataset.m)); month = ''; draw(); };
+  draw();
+  loadSummaries(days.map(([day]) => day)).then(draw);
 }
 // One archived page, with the pages before and after it a tap away
 function openJournalDay(days, i, pageNo) {
@@ -567,7 +595,7 @@ function openJournalDay(days, i, pageNo) {
   const box = pg.querySelector('#jDay');
   const show = (j) => {
     i = j; const [day, items] = days[i];
-    box.innerHTML = journalPage(day, items, pageNo(day)) +
+    box.innerHTML = (summaries[day] ? '<p class="jsumtop">' + esc(summaries[day]) + '</p>' : '') + journalPage(day, items, pageNo(day)) +
       '<div class="jnav"><button class="secondary" data-to="' + (i + 1) + '"' + (i + 1 < days.length ? '' : ' disabled') + '>‹ Older</button>' +
       '<button class="secondary" data-to="' + (i - 1) + '"' + (i > 0 ? '' : ' disabled') + '>Newer ›</button></div>';
     box.querySelectorAll('[data-to]').forEach((b) => b.onclick = () => { show(+b.dataset.to); pg.querySelector('.scroll').scrollTo(0, 0); });
@@ -730,7 +758,7 @@ function openFAQ() {
       ['There’s no sound in the temple.', 'Check your volume, and tap “Sound on” at the top right. If it says “Tap for sound”, one tap starts it.'],
       ['Why doesn’t my phone vibrate in the temple?', 'iPhones don’t let websites vibrate, so the temple plays soft music instead. Android phones vibrate gently.'],
       ['What are focus bubbles?', 'A bubble that floats over the app soon after you open it, then every ten minutes or so. Pop it: it’s a reminder to come back to the present.'],
-      ['What is the journal?', 'At the bottom of the Agenda. It keeps everything you’ve written, a page per day: your reflections, practice writing and check-ins, plus anything you add. Write as many entries a day as you like. Pages can’t be changed once written, and journal entries don’t count toward your three a day.'],
+      ['What is the journal?', 'At the bottom of the Agenda. It keeps everything you’ve written, a page per day: your reflections, practice writing and check-ins, plus anything you add. Write as many entries a day as you like. Pages can’t be changed once written, and journal entries don’t count toward your three a day. Older pages are in Reflecting, each summed up in one sentence by our AI; it reads your journal only for that.'],
       ['What is Ora Master?', 'Your guide in the app. It suggests one practice a day and answers questions about meditation, your practice and your aura. It’s at the top of your Chats.']
     ]],
     ['Your aura', 'How it’s made and why it moves', [
