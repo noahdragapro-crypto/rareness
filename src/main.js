@@ -43,7 +43,6 @@ const ICON = {
   x: sv('<path d="M6 6l12 12M18 6L6 18"></path>'),
   more: sv('<circle cx="5" cy="12" r="1"></circle><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle>'),
   smile: sv('<circle cx="12" cy="12" r="9.5"></circle><path d="M8.5 14.2c.9 1.2 2.1 1.8 3.5 1.8s2.6-.6 3.5-1.8"></path><circle cx="9.2" cy="10" r=".6"></circle><circle cx="14.8" cy="10" r=".6"></circle>'),
-  guide: sv('<circle cx="9.5" cy="10" r="5.5"></circle><circle cx="17.3" cy="14.8" r="3.4"></circle><circle cx="11.6" cy="19.2" r="1.9"></circle><path d="M6.9 7.6c.6-.9 1.4-1.5 2.4-1.8" stroke-linecap="round"></path>'),
   pen: sv('<path d="M4 20l1.2-4.4L15.6 5.2a2 2 0 0 1 2.8 0l.4.4a2 2 0 0 1 0 2.8L8.4 18.8z"></path><path d="M13.5 7.3l3.2 3.2"></path>'),
   book: sv('<path d="M12 6.5C10.2 5 7.6 4.5 4 4.8v13.4c3.6-.3 6.2.2 8 1.7 1.8-1.5 4.4-2 8-1.7V4.8c-3.6-.3-6.2.2-8 1.7zM12 6.5v13.4"></path>'),
   mic: sv('<rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"></path>'),
@@ -83,7 +82,7 @@ function rec(k = today()) {
 // A day counts when three things are done: the daily tasks and practices from the library, in any mix
 // (the temple counts once, as the Meditate task)
 const practicedOn = (k) => [...new Set(myPractices.filter((p) => p.day === k && p.exercise !== 'temple').map((p) => p.exercise))];
-// The temple from the library (or as Ora Master's pick) counts as the Meditate task too
+// The temple from the library counts as the Meditate task too
 const meditated = (k) => Boolean(rec(k).m) || myPractices.some((p) => p.day === k && p.exercise === 'temple');
 const dayCount = (k = today()) => { const r = rec(k); return (r.q ? 1 : 0) + (r.t ? 1 : 0) + (meditated(k) ? 1 : 0) + practicedOn(k).length; };
 const isDone = (k) => dayCount(k) >= 3;
@@ -244,7 +243,7 @@ function updateLocks() {
       el.querySelector('[data-finish]').onclick = () => finishSetup();
     } else if (locked) {
       el.innerHTML = '<div class="lock-card"><span style="width:24px;height:24px;display:block">' + ICON.lock + '</span><h2 class="h2">' + (stillToDo() > 1 ? stillToDo() + ' more practices open' : 'One more practice opens') + ' your ' + what + '</h2>' +
-        '<p class="muted" style="margin:0;font-size:14.5px;line-height:1.45">The temple, today’s task, Ora Master’s pick or anything from the library. ' + Math.min(3, dayCount()) + ' of 3 done today; this ' + PERIODS[periodNow()].name.toLowerCase() + ' needs ' + needNow() + '.</p>' +
+        '<p class="muted" style="margin:0;font-size:14.5px;line-height:1.45">The meditation, today’s task, today’s practice or anything from the library. ' + Math.min(3, dayCount()) + ' of 3 done today; this ' + PERIODS[periodNow()].name.toLowerCase() + ' needs ' + needNow() + '.</p>' +
         '<button class="primary" data-go="0">Go to Agenda</button></div>';
       el.querySelector('[data-go]').onclick = () => goTab(0);
     }
@@ -450,7 +449,7 @@ const setSkipped = (list) => store.set(skipKey(), JSON.stringify([...new Set(lis
 function renderAgenda() {
   const r = rec(), all = todayTasks(), n = Math.min(3, dayCount()), st = streak(), open = cloudOpen();
   // Today's three: a 10-minute meditation (the only one you can skip for the day), today's task (an
-  // action, or a short reflection one day in three), and Ora Master's pick
+  // action, or a short reflection one day in three), and today's practice from the library
   const task = dayNum() % 3 === 0 ? all[1] : all[2], pick = suggestion && PRACTICE[suggestion.exercise];
   const pickDone = pick && doneToday(pick.id), skipped = skippedToday();
   const days = []; for (let i = 6; i >= 0; i--) { const d = new Date(); d.setDate(d.getDate() - i); days.push(d); }
@@ -474,7 +473,7 @@ function renderAgenda() {
     '<section class="section" aria-label="Today’s three"><h2 class="h2">Today’s three</h2><div style="display:flex;flex-direction:column;gap:6px">' +
       row('meditate', 'data-task="m"', ICON.m, 'Meditation', 'Meditate', '10 minutes in the temple, eyes closed', meditated(today()), true) +
       row('task', 'data-task="' + task.k + '"', task.icon, 'Today’s task', task.title, task.sub, r[task.k]) +
-      (pick ? row('pick', pickDone ? 'data-pickdone' : 'data-practice="' + pick.id + '"', ICON.guide, 'Ora Master’s pick', pick.name, suggestion.reason, pickDone) : '') +
+      (pick ? row('pick', pickDone ? 'data-pickdone' : 'data-practice="' + pick.id + '"', ICON.m, 'Today’s practice', pick.name, suggestion.reason, pickDone) : '') +
     '</div>' + (skipped.length ? '<button class="link unskip" id="unskip">' + skipped.length + ' skipped today · bring back</button>' : '') +
     '<p class="label" style="margin:2px 0 0;font-size:13px">Anything from the Meditation library counts too.</p></section>';
   document.querySelectorAll('#agendaBody [data-task]').forEach((b) => b.onclick = () => {
@@ -670,7 +669,6 @@ function renderMeditation() {
   const list = PR.filter((x) => !libCat || x.cat === libCat);
   box.innerHTML =
     '<header style="display:flex;flex-direction:column;gap:6px"><span class="brand">Ora</span><h1 class="largetitle">Meditation</h1><div class="subrow"><span class="label">' + n + ' of 3 today · ' + PR.length + ' practices</span>' + howButton() + '</div></header>' +
-    suggestionCard() +
     '<section class="temple-card" aria-label="The temple">' +
       '<div class="temple-mini" aria-hidden="true">' + crackSVG() + '</div>' +
       '<div style="display:flex;flex-direction:column;gap:6px"><h2 class="h2" style="color:#fff">The temple · today’s meditation</h2>' +
@@ -698,7 +696,6 @@ function practiceRow(x) {
 }
 function wirePracticeLinks(root) {
   root.querySelectorAll('[data-practice]').forEach((b) => b.onclick = () => openPractice(b.dataset.practice));
-  root.querySelectorAll('[data-guide]').forEach((b) => b.onclick = () => openGuide());
   root.querySelectorAll('[data-how]').forEach((b) => b.onclick = () => openHowItWorks());
 }
 const howButton = () => '<button class="howbtn" data-how aria-label="How we build your aura">' + bubbleHTML({ w: [1, 1, 1, 1, 1, 1], clear: true }, 14) + '<span>How we build your aura</span></button>';
@@ -720,7 +717,7 @@ function openHowItWorks() {
     sec('Your aura', p('Six colours describe who you are and what you bring to others. It begins with your two answers at sign-up, then grows with everything you practise. Our AI reads it all and updates the colours.') +
       '<div class="box howlines">' + auraLines(aura) + '<p class="fine" style="margin:0">Tap <span class="info static">i</span> to see what a line means. The percentage is that colour’s share of your aura.</p></div>') +
 
-    sec('Three a day', p('Three tasks a day keep your streak. Any task counts, and your Agenda suggests three: a 10-minute meditation (you can skip it for the day), today’s task, and Ora Master’s pick.') +
+    sec('Three a day', p('Three tasks a day keep your streak. Any task counts, and your Agenda suggests three: a 10-minute meditation (you can skip it for the day), today’s task, and today’s practice from the library.') +
       '<div class="box howday">' + [['Morning', 'One task done opens the Cloud and your chats.'], ['Afternoon', 'From noon, they need two done in the day.'], ['Evening', 'From 6 pm, three.']].map(([t, d]) => '<div><b>' + t + '</b><span>' + d + '</span></div>').join('') + '</div>' +
       p('Ideally one in the morning, one in the afternoon and one in the evening. Tasks done earlier count for later: three in the morning keep everything open until midnight, when the count starts again. Fewer than three in a day and the streak starts again.') +
       '<div class="temple-card howtemple"><div class="temple-mini" style="height:84px" aria-hidden="true">' + crackSVG() + '</div><p>Meditation happens in the temple: a dark room, a crack of light that breathes, soft music, for 7 to 15 minutes depending on the day.</p></div>') +
@@ -735,8 +732,6 @@ function openHowItWorks() {
       p('It helps us understand what you feel and need, so your suggestions and the people around you fit you better.')) +
 
     sec('Focus bubbles', '<div class="howrow"><div style="flex:none">' + clear(64) + '</div><p class="explain" style="margin:0">Soon after you open Ora, and every ten minutes or so after, a bubble floats over the screen. Pop it, and come back to the present.</p></div>') +
-
-    sec('Ora Master', p('Your guide. Each day it suggests one practice for what you seem to need, and it answers your questions about meditation and your aura. You’ll find it at the top of your Chats.')) +
 
     sec('The Cloud', cloud + p('The community floats around you. The more you share with someone, the bigger and closer they appear, and the colours around their bubble show what you have in common. Empty bubbles are spots waiting for new people.')) +
 
@@ -758,7 +753,7 @@ function openFAQ() {
       ['Does Ora cost anything?', config.paywall ? 'One payment of ' + price + ' opens everything, for good. No subscription.' : 'Ora is free while the community is growing.']
     ]],
     ['Your day', 'Three practices, morning to evening', [
-      ['What counts toward my three a day?', 'Anything: the 10-minute meditation, today’s task, Ora Master’s pick, the temple, or any practice from the Meditation library. Each different practice counts once a day.'],
+      ['What counts toward my three a day?', 'Anything: the 10-minute meditation, today’s task, today’s practice, the temple, or any practice from the Meditation library. Each different practice counts once a day.'],
       ['Why can’t I open the Cloud or Chats?', 'They need a finished profile (a photo and your two answers), and enough practices for the time of day: one done in the morning, two in the day from noon, three from 6 pm. Midnight starts the count again.'],
       ['Why did the Cloud lock again this afternoon?', 'From noon it asks for two practices done in the day, and from 6 pm three. Do the ones missing and it opens again until midnight.'],
       ['Can I share my streak?', 'Yes: tap Share in the streak box on your Agenda, or Share my bubble on your profile. It makes a picture with your bubble and your name (and your streak, if you choose it), nothing else. Choose Instagram, then Story, or save the image.'],
@@ -771,7 +766,6 @@ function openFAQ() {
       ['There’s no sound in the temple.', 'Check your volume, and tap “Sound on” at the top right. If it says “Tap for sound”, one tap starts it.'],
       ['Why doesn’t my phone vibrate in the temple?', 'iPhones don’t let websites vibrate, so the temple plays soft music instead. Android phones vibrate gently.'],
       ['What are focus bubbles?', 'A bubble that floats over the app soon after you open it, then every ten minutes or so. Pop it: it’s a reminder to come back to the present.'],
-      ['What is Ora Master?', 'Your guide in the app. It suggests one practice a day and answers questions about meditation, your practice and your aura. It’s at the top of your Chats.']
     ]],
     ['Your aura', 'How it’s made and why it moves', [
       ['How is my aura made?', 'Our AI reads your two answers from sign-up, your daily answers, the practices you do and your check-ins, and shows how strongly each of the six colours runs through you.'],
@@ -785,7 +779,6 @@ function openFAQ() {
     ['Privacy and safety', 'What others see, and what they never do', [
       ['What can people see about me?', 'Your photo, name, age, status, about, interests and the information on your profile. After you bump into each other, also your latest practices. Never your answers or writing.'],
       ['Who reads my answers?', 'Nobody. Only our AI reads them, to shape your aura and suggestions.'],
-      ['Are my conversations with Ora Master private?', 'They’re saved on your phone, and your messages are sent to our AI to answer you. Nobody else reads them.'],
       ['Someone is bothering me.', 'Open their profile and tap Block or Report. Blocking hides you from each other and stops messages.']
     ]],
     ['Your profile', 'Changing or leaving', [
@@ -796,7 +789,7 @@ function openFAQ() {
   const html = '<div class="stack faqpage"><header style="display:flex;flex-direction:column;gap:6px"><span class="label">Help</span><h1 class="largetitle">Questions and answers</h1></header>' +
     QA.map(([group, sub, items]) => '<section class="faqgroup" aria-label="' + esc(group) + '"><div class="faqhead"><h2 class="h2">' + esc(group) + '</h2><span class="label">' + esc(sub) + '</span></div><div class="faq">' +
       items.map(([q, a]) => '<details name="faq"><summary>' + esc(q) + '</summary><p>' + esc(a) + '</p></details>').join('') + '</div></section>').join('') +
-    '<p class="label" style="text-align:center;margin-top:8px">Something else? Ask Ora Master in your Chats.</p></div>';
+    '</div>';
   const pg = pushPage('Questions and answers', html);
   // One answer open at a time (also for browsers without <details name>)
   pg.querySelectorAll('.faq details').forEach((d) => d.addEventListener('toggle', () => { if (d.open) pg.querySelectorAll('.faq details[open]').forEach((o) => { if (o !== d) o.open = false; }); }));
@@ -888,81 +881,20 @@ function checkIn(x, row, answer) {
   };
 }
 
-// ---------------- Today's suggestion and the Ora Master chat ----------------
+// ---------------- Today's practice ----------------
+// One practice from the library for today: never writing, not one done in the three days before, and
+// different each day. Kept on the phone for the day so it stays put once done.
 let suggestion = null;
-const MASTER = 'Ora Master';
-const guideButton = () => '<button class="guidebtn glass" data-guide aria-label="Ask ' + MASTER + '">' + ICON.guide + '<span>' + MASTER + '</span></button>';
-// Ora Master's picture: three glass bubbles
-const masterAva = (size) => '<span class="masterava" style="width:' + size + 'px;height:' + size + 'px" aria-hidden="true">' +
-  '<span style="left:0;top:4%;width:62%;height:62%">' + bubbleHTML({ w: [1, 1, 1, 1, 1, 1], clear: true }, Math.round(size * .62)) + '</span>' +
-  '<span style="right:0;top:34%;width:44%;height:44%">' + bubbleHTML({ w: [0, 1, 0, 1, 0, 1], clear: true }, Math.round(size * .44)) + '</span>' +
-  '<span style="left:30%;bottom:0;width:30%;height:30%">' + bubbleHTML({ w: [1, 0, 1, 0, 1, 0], clear: true }, Math.round(size * .3)) + '</span></span>';
 const doneToday = (id) => myPractices.some((p) => p.exercise === id && p.day === today());
-function suggestionCard() {
-  const s = suggestion && PRACTICE[suggestion.exercise];
-  if (!s) return '';
-  return '<section class="suggest" aria-label="For you today"><div class="head"><span class="label">For you today</span>' + guideButton() + '</div>' +
-    '<b>' + esc(s.name) + '</b><p>' + esc(suggestion.reason) + '</p>' +
-    (doneToday(s.id) ? '<button class="secondary" disabled>' + ICON.check + ' Done today</button>' : '<button class="primary" data-practice="' + s.id + '">Start · ' + practiceLen(s, levelOf(s.id)) + '</button>') + '</section>';
-}
-async function loadSuggestion() {
-  const key = 'ora.suggest.' + uid;
-  try { const c = JSON.parse(store.get(key) || 'null'); if (c && c.day === today() && PRACTICE[c.exercise]) { suggestion = c; return; } } catch (e) {}
-  try {
-    const r = await API.guideSuggest();
-    suggestion = { day: today(), exercise: r.exercise, reason: r.reason };
-  } catch (e) {
-    // Offline or not set up: something not done lately, different each day
-    const pool = PR.filter((x) => x.type !== 'write' && !myPractices.some((p) => p.exercise === x.id && p.day >= API.dayKey(new Date(Date.now() - 3 * 864e5))));
-    const x = (pool.length ? pool : PR)[dayNum() % (pool.length || PR.length)];
-    suggestion = { day: today(), exercise: x.id, reason: x.about };
-  }
-  store.set(key, JSON.stringify(suggestion));
-  // Ora Master also sends it in the chat, once a day
-  const msgs = guideMsgs();
-  if (!msgs.some((m) => m.day === today() && m.suggest)) {
-    msgs.push({ role: 'assistant', day: today(), at: Date.now(), suggest: suggestion.exercise, content: 'For today, I’d suggest ' + PRACTICE[suggestion.exercise].name + '. ' + suggestion.reason });
-    saveGuide(msgs);
-  }
-  renderAgenda(); renderMeditation(); renderChats();
-}
-const guideKey = () => 'ora.guide.' + uid;
-function guideMsgs() { try { return JSON.parse(store.get(guideKey()) || '[]'); } catch (e) { return []; } }
-function saveGuide(m) { store.set(guideKey(), JSON.stringify(m.slice(-60))); }
-// A new message from Ora Master shows on the Chats tab until the conversation is opened
-const guideSeenKey = () => 'ora.guideSeen.' + uid;
-function guideUnread() {
-  if (!uid) return false;
-  const last = guideMsgs().slice(-1)[0];
-  return !!last && last.role === 'assistant' && (last.at || 0) > Number(store.get(guideSeenKey()) || 0);
-}
-function markGuideSeen() { store.set(guideSeenKey(), String(Date.now())); renderChats(); }
-function openGuide() {
-  const pg = pushPage(MASTER, '<div class="threadhead" style="cursor:default">' + masterAva(84) + '<b style="font-family:var(--serif);font-size:24px;font-weight:400">' + MASTER + '</b><span class="label">Ask about meditation, your practice, your aura</span></div><div class="thread" id="gThread"></div><div style="height:80px"></div>',
-    { footer: '<form class="composer glass" id="gComposer"><label for="gIn" class="hide">Message Ora Master</label><input id="gIn" autocomplete="off" placeholder="Ask Ora Master" maxlength="1000"><button class="send" id="gSend" aria-label="Send" disabled>' + ICON.send + '</button></form>' });
-  const th = pg.querySelector('#gThread'), sc = pg.querySelector('.scroll'), inp = pg.querySelector('#gIn'), sb = pg.querySelector('#gSend');
-  let msgs = guideMsgs();
-  if (!msgs.length) msgs.push({ role: 'assistant', day: today(), content: 'Hello' + (me?.name ? ' ' + low(me.name) : '') + '. I’m Ora Master. Ask me anything about meditation, the practices, or how your aura and the people around you are found.' });
-  const draw = (typing) => {
-    th.innerHTML = msgs.map((m) => '<div class="msg ' + (m.role === 'user' ? 'me' : 'them') + '">' + esc(m.content) +
-      (m.suggest && PRACTICE[m.suggest] ? (m.day === today() && doneToday(m.suggest) ? '<button class="secondary small" disabled>' + ICON.check + ' Done today</button>'
-        : '<button class="primary small" data-practice="' + m.suggest + '">Start ' + esc(PRACTICE[m.suggest].name) + '</button>') : '') + '</div>').join('') +
-      (typing ? '<div class="msg them typing"><i></i><i></i><i></i></div>' : '');
-    sc.scrollTop = sc.scrollHeight; wirePracticeLinks(th);
-  };
-  draw(); markGuideSeen();
-  inp.oninput = () => { sb.disabled = !inp.value.trim(); };
-  pg.querySelector('#gComposer').onsubmit = async (e) => {
-    e.preventDefault();
-    const x = inp.value.trim(); if (!x) return;
-    inp.value = ''; sb.disabled = true;
-    msgs.push({ role: 'user', day: today(), content: x }); saveGuide(msgs); draw(true);
-    try {
-      const r = await API.guideChat(msgs.map((m) => ({ role: m.role, content: m.content })));
-      msgs.push({ role: 'assistant', day: today(), at: Date.now(), content: r.reply });
-    } catch (err) { msgs.push({ role: 'assistant', day: today(), at: Date.now(), content: err.message || 'I couldn’t answer just now. Try again in a moment.' }); }
-    saveGuide(msgs); draw(); markGuideSeen();
-  };
+function loadSuggestion() {
+  const key = 'ora.pick.' + uid;
+  try { const c = JSON.parse(store.get(key) || 'null'); if (c && c.day === today() && PRACTICE[c.exercise]) { suggestion = { ...c, reason: PRACTICE[c.exercise].about }; return; } } catch (e) {}
+  const since = API.dayKey(new Date(Date.now() - 3 * 864e5));
+  const ok = PR.filter((x) => x.type !== 'write' && x.id !== 'temple');
+  const pool = ok.filter((x) => !myPractices.some((p) => p.exercise === x.id && p.day >= since && p.day < today()));
+  const list = pool.length ? pool : ok, x = list[dayNum() % list.length];
+  suggestion = { day: today(), exercise: x.id, reason: x.about };
+  store.set(key, JSON.stringify({ day: today(), exercise: x.id }));
 }
 
 // A crack of light down the middle of a dark wall. Drawn from a seeded random walk so it looks
@@ -1412,7 +1344,7 @@ async function renderProfile() {
           : '<p class="label" style="margin:0">Nothing yet. Your favourite practices will show here.</p>',
           '<span class="label">' + thisWeek + ' this week</span>') +
         (config.paywall && me.paid_at ? '<p class="label" style="margin:0;text-align:center">Unlocked on ' + new Date(me.paid_at).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' }) + '. One-time payment.</p>' : '') +
-        '<section class="plinks"><button class="task" data-guide><span class="tx"><b>Ora Master</b><span>Ask about meditation, your practice, your aura</span></span><span class="chev" aria-hidden="true">›</span></button>' +
+        '<section class="plinks">' +
           '<button class="task" id="faqBtn"><span class="tx"><b>Questions and answers</b><span>Everything people usually ask</span></span><span class="chev" aria-hidden="true">›</span></button></section>' +
         '<section class="section" aria-label="Account" style="gap:6px"><button class="secondary" id="signOutBtn">Sign out</button>' +
           '<button class="link danger" id="deleteBtn" style="align-self:center">Delete my account</button></section>');
@@ -1846,11 +1778,10 @@ async function loadChats() {
   try { chatList = await API.chats(uid); chatList.forEach((c) => { if (c.other) c.other.name = low(c.other.name); }); renderChats(); } catch (e) { console.error(e); }
 }
 function renderChats() {
-  const unread = chatList.filter((c) => c.unread).length + (guideUnread() ? 1 : 0), badge = $('#chatBadge');
+  const unread = chatList.filter((c) => c.unread).length, badge = $('#chatBadge');
   badge.hidden = !unread; badge.textContent = unread > 9 ? '9+' : unread;
   $('.tab[data-tab="' + TAB.chats + '"]').setAttribute('aria-label', unread ? 'Chats, ' + unread + ' unread' : 'Chats');
   $('#chatsBody').innerHTML = '<header style="display:flex;flex-direction:column;gap:6px"><span class="brand">Ora</span><h1 class="largetitle">Chats</h1><p class="label" style="font-size:14px;line-height:1.45">A chat opens only when you both bump each other. Nobody sees who bumped them.</p></header>' +
-    guideRow() +
     (chatList.length ? '<section aria-label="Conversations" class="hair">' + chatList.map((c) => {
       const p = c.other, last = c.last;
       return '<button class="crow' + (c.unread ? ' unread' : '') + '" data-thread="' + c.id + '">' + bubbleHTML({ w: dimsToW(c.match?.dims), photo: API.photoUrl(p.photo_path) }, 58) +
@@ -1862,13 +1793,6 @@ function renderChats() {
   document.querySelectorAll('[data-thread]').forEach((b) => b.onclick = () => openThread(b.dataset.thread));
   wirePracticeLinks($('#chatsBody'));
   const tc = $('#toCloud'); if (tc) tc.onclick = () => goTab(TAB.cloud);
-}
-// Ora Master sits at the top of Chats, always there
-function guideRow() {
-  const last = uid ? guideMsgs().slice(-1)[0] : null, unread = guideUnread();
-  return '<section aria-label="' + MASTER + '" class="hair"><button class="crow' + (unread ? ' unread' : '') + '" data-guide>' + masterAva(58) +
-    '<span class="tx"><div><b>' + MASTER + '</b><time>' + (last?.day === today() ? 'today' : '') + '</time></div><p>' + esc(last ? last.content : 'Ask about meditation, your practice and your aura') + '</p></span>' +
-    (unread ? '<span class="udot" aria-label="Unread"></span>' : '') + '</button></section>';
 }
 let openChat = null; // { id, draw(message) }
 // ---------------- Emoji, stickers and GIFs ----------------
@@ -2519,8 +2443,23 @@ async function enter(user) {
 // days). Checked every 30 seconds and whenever the app comes back to the screen: a new day reloads
 // your activity and today's suggestion and redraws everything; noon and 6 pm redraw and lock again.
 let clockDay = null, clockPeriod = null;
-async function checkClock() {
+// A home-screen app can stay loaded for days and never fetch a new version. When it comes back to the
+// screen, compare its script with the one the site serves now, and reload quietly if it changed
+// (not during a session in the temple, a check-in or an open sheet).
+let lastVersionCheck = 0;
+async function checkVersion(back) {
+  if (!back && Date.now() - lastVersionCheck < 10 * 60000) return;
+  lastVersionCheck = Date.now();
+  const mine = document.querySelector('script[type="module"][src*="/assets/"]')?.getAttribute('src'); if (!mine) return;
+  try {
+    const html = await fetch('/?v=' + Date.now(), { cache: 'no-store' }).then((r) => r.text());
+    const live = (/src="(\/assets\/[^"]+\.js)"/.exec(html) || [])[1];
+    if (live && live !== mine && !$('.temple') && !$('.checkin') && !$('#sheet.on') && !$('#gate:not([hidden])')) location.reload();
+  } catch (e) {}
+}
+async function checkClock(back = false) {
   if (!uid || !appStarted) return;
+  checkVersion(back);
   const d = today(), p = periodNow();
   if (d !== clockDay) {
     clockDay = d; clockPeriod = p;
@@ -2542,8 +2481,8 @@ async function startApp() {
     requestAnimationFrame(loop);
     clockDay = today(); clockPeriod = periodNow();
     setInterval(checkClock, 30000);
-    document.addEventListener('visibilitychange', () => { if (!document.hidden) checkClock(); });
-    window.addEventListener('pageshow', checkClock); window.addEventListener('focus', checkClock);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) checkClock(true); });
+    window.addEventListener('pageshow', () => checkClock(true)); window.addEventListener('focus', () => checkClock(true));
     schedulePresent();
     unsubscribeMessages = API.onMessages((m) => { if (openChat && m.chat_id === openChat.id) openChat.add(m); else loadChats(); });
     // If matching never ran for this person (e.g. sign-up closed early), start it now

@@ -131,7 +131,7 @@ function people() {
     '</div>' + card('Top interests', '', bars(s.interests, n), 'wide');
 }
 function activity() {
-  return heading('What people use', 'Last 30 days. Ora Master chats and focus bubbles stay on each phone, so they can’t be counted here.') +
+  return heading('What people use', 'Last 30 days. Focus bubbles stay on each phone, so they can’t be counted here.') +
     '<div class="grid two">' + card('Features', 'times used', bars(data.features, 0)) + card('Profiles', 'members who filled it in', bars(data.profileUse, data.users.length)) + '</div>' +
     heading('By gender', 'Averages per member. Tasks are counted the way the app does: the daily tasks plus each different library practice, over the last 30 days.') +
     card('Activity per member', '', table(['', 'Members', 'Finished sign-up', 'Active this week', 'Tasks (30 days)', 'Active days (30)', 'Bumps sent', 'Chats', 'Messages sent'],

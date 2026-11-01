@@ -96,9 +96,6 @@ export async function savePractice(uid, p) {
 export async function practiceAnswer(id, answer) { check(await sb.from('practices').update({ answer }).eq('id', id)); }
 // What someone practises most (only for you, or someone you share a chat with)
 export async function practiceSummary(id) { return check(await sb.rpc('practice_summary', { target: id })) || []; }
-// The Ora guide: today's suggestion and the guide chat
-export const guideSuggest = () => api('guide', 'POST', { mode: 'suggest', day: dayKey() });
-export const guideChat = (messages) => api('guide', 'POST', { mode: 'chat', messages });
 
 // ---------- Cloud, bumps, safety ----------
 // What a member wrote about themselves, for their profile page (members can read finished profiles)
