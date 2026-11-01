@@ -243,7 +243,7 @@ function updateLocks() {
       el.querySelector('[data-finish]').onclick = () => finishSetup();
     } else if (locked) {
       el.innerHTML = '<div class="lock-card"><span style="width:24px;height:24px;display:block">' + ICON.lock + '</span><h2 class="h2">' + (stillToDo() > 1 ? stillToDo() + ' more practices open' : 'One more practice opens') + ' your ' + what + '</h2>' +
-        '<p class="muted" style="margin:0;font-size:14.5px;line-height:1.45">The meditation, today’s task, today’s practice or anything from the library. ' + Math.min(3, dayCount()) + ' of 3 done today; this ' + PERIODS[periodNow()].name.toLowerCase() + ' needs ' + needNow() + '.</p>' +
+        '<p class="muted" style="margin:0;font-size:14.5px;line-height:1.45">The meditation, today’s task or anything from the library. ' + Math.min(3, dayCount()) + ' of 3 done today; this ' + PERIODS[periodNow()].name.toLowerCase() + ' needs ' + needNow() + '.</p>' +
         '<button class="primary" data-go="0">Go to Agenda</button></div>';
       el.querySelector('[data-go]').onclick = () => goTab(0);
     }
@@ -448,10 +448,9 @@ const skippedToday = () => { try { return JSON.parse(store.get(skipKey()) || '[]
 const setSkipped = (list) => store.set(skipKey(), JSON.stringify([...new Set(list)]));
 function renderAgenda() {
   const r = rec(), all = todayTasks(), n = Math.min(3, dayCount()), st = streak(), open = cloudOpen();
-  // Today's three: a 10-minute meditation (the only one you can skip for the day), today's task (an
-  // action, or a short reflection one day in three), and today's practice from the library
-  const task = dayNum() % 3 === 0 ? all[1] : all[2], pick = suggestion && PRACTICE[suggestion.exercise];
-  const pickDone = pick && doneToday(pick.id), skipped = skippedToday();
+  // Today's three: a 10-minute meditation (the only one you can skip for the day) and today's task (an
+  // action, or a short reflection one day in three); the third is anything from the library
+  const task = dayNum() % 3 === 0 ? all[1] : all[2], skipped = skippedToday();
   const days = []; for (let i = 6; i >= 0; i--) { const d = new Date(); d.setDate(d.getDate() - i); days.push(d); }
   const week = days.map((d, i) => {
     const done = isDone(API.dayKey(d)), isToday = i === 6;
@@ -473,9 +472,8 @@ function renderAgenda() {
     '<section class="section" aria-label="Today’s three"><h2 class="h2">Today’s three</h2><div style="display:flex;flex-direction:column;gap:6px">' +
       row('meditate', 'data-task="m"', ICON.m, 'Meditation', 'Meditate', '10 minutes in the temple, eyes closed', meditated(today()), true) +
       row('task', 'data-task="' + task.k + '"', task.icon, 'Today’s task', task.title, task.sub, r[task.k]) +
-      (pick ? row('pick', pickDone ? 'data-pickdone' : 'data-practice="' + pick.id + '"', ICON.m, 'Today’s practice', pick.name, suggestion.reason, pickDone) : '') +
     '</div>' + (skipped.length ? '<button class="link unskip" id="unskip">' + skipped.length + ' skipped today · bring back</button>' : '') +
-    '<p class="label" style="margin:2px 0 0;font-size:13px">Anything from the Meditation library counts too.</p></section>';
+    '<p class="label" style="margin:2px 0 0;font-size:13px">For your third, choose anything from the Meditation library.</p></section>';
   document.querySelectorAll('#agendaBody [data-task]').forEach((b) => b.onclick = () => {
     const t = all.find((x) => x.k === b.dataset.task);
     if (t.k === 'm') { openTemple({ mins: 10 }); return; } // a 10-minute session, open any time, even after it's done
@@ -484,8 +482,6 @@ function renderAgenda() {
   });
   const oc = $('#openCloud'); if (oc) oc.onclick = () => goTab(TAB.cloud);
   $('#shareStreak').onclick = () => openShare('streak');
-  // A suggestion, once done, stays done for the day
-  document.querySelectorAll('#agendaBody [data-pickdone]').forEach((b) => b.onclick = () => toast('Already done today'));
   // Skip: hidden until tomorrow (or until brought back)
   document.querySelectorAll('#agendaBody [data-skip]').forEach((b) => b.onclick = () => { setSkipped([...skippedToday(), b.dataset.skip]); renderAgenda(); toast('Skipped for today'); });
   const us = $('#unskip'); if (us) us.onclick = () => { setSkipped([]); renderAgenda(); };
@@ -717,7 +713,7 @@ function openHowItWorks() {
     sec('Your aura', p('Six colours describe who you are and what you bring to others. It begins with your two answers at sign-up, then grows with everything you practise. Our AI reads it all and updates the colours.') +
       '<div class="box howlines">' + auraLines(aura) + '<p class="fine" style="margin:0">Tap <span class="info static">i</span> to see what a line means. The percentage is that colour’s share of your aura.</p></div>') +
 
-    sec('Three a day', p('Three tasks a day keep your streak. Any task counts, and your Agenda suggests three: a 10-minute meditation (you can skip it for the day), today’s task, and today’s practice from the library.') +
+    sec('Three a day', p('Three tasks a day keep your streak. Any task counts, and your Agenda suggests a 10-minute meditation (you can skip it for the day) and today’s task; the third is anything you like from the Meditation library.') +
       '<div class="box howday">' + [['Morning', 'One task done opens the Cloud and your chats.'], ['Afternoon', 'From noon, they need two done in the day.'], ['Evening', 'From 6 pm, three.']].map(([t, d]) => '<div><b>' + t + '</b><span>' + d + '</span></div>').join('') + '</div>' +
       p('Ideally one in the morning, one in the afternoon and one in the evening. Tasks done earlier count for later: three in the morning keep everything open until midnight, when the count starts again. Fewer than three in a day and the streak starts again.') +
       '<div class="temple-card howtemple"><div class="temple-mini" style="height:84px" aria-hidden="true">' + crackSVG() + '</div><p>Meditation happens in the temple: a dark room, a crack of light that breathes, soft music, for 7 to 15 minutes depending on the day.</p></div>') +
@@ -753,7 +749,7 @@ function openFAQ() {
       ['Does Ora cost anything?', config.paywall ? 'One payment of ' + price + ' opens everything, for good. No subscription.' : 'Ora is free while the community is growing.']
     ]],
     ['Your day', 'Three practices, morning to evening', [
-      ['What counts toward my three a day?', 'Anything: the 10-minute meditation, today’s task, today’s practice, the temple, or any practice from the Meditation library. Each different practice counts once a day.'],
+      ['What counts toward my three a day?', 'Anything: the 10-minute meditation, today’s task, the temple, or any practice from the Meditation library. Each different practice counts once a day.'],
       ['Why can’t I open the Cloud or Chats?', 'They need a finished profile (a photo and your two answers), and enough practices for the time of day: one done in the morning, two in the day from noon, three from 6 pm. Midnight starts the count again.'],
       ['Why did the Cloud lock again this afternoon?', 'From noon it asks for two practices done in the day, and from 6 pm three. Do the ones missing and it opens again until midnight.'],
       ['Can I share my streak?', 'Yes: tap Share in the streak box on your Agenda, or Share my bubble on your profile. It makes a picture with your bubble and your name (and your streak, if you choose it), nothing else. Choose Instagram, then Story, or save the image.'],
@@ -902,21 +898,6 @@ function checkIn(x, row, answer) {
   };
 }
 
-// ---------------- Today's practice ----------------
-// One practice from the library for today: never writing, not one done in the three days before, and
-// different each day. Kept on the phone for the day so it stays put once done.
-let suggestion = null;
-const doneToday = (id) => myPractices.some((p) => p.exercise === id && p.day === today());
-function loadSuggestion() {
-  const key = 'ora.pick.' + uid;
-  try { const c = JSON.parse(store.get(key) || 'null'); if (c && c.day === today() && PRACTICE[c.exercise]) { suggestion = { ...c, reason: PRACTICE[c.exercise].about }; return; } } catch (e) {}
-  const since = API.dayKey(new Date(Date.now() - 3 * 864e5));
-  const ok = PR.filter((x) => x.type !== 'write' && x.id !== 'temple');
-  const pool = ok.filter((x) => !myPractices.some((p) => p.exercise === x.id && p.day >= since && p.day < today()));
-  const list = pool.length ? pool : ok, x = list[dayNum() % list.length];
-  suggestion = { day: today(), exercise: x.id, reason: x.about };
-  store.set(key, JSON.stringify({ day: today(), exercise: x.id }));
-}
 
 // A crack of light down the middle of a dark wall. Drawn from a seeded random walk so it looks
 // natural (uneven edges, chips, hairline fractures branching off) and stays the same every time.
@@ -2462,7 +2443,7 @@ async function enter(user) {
 }
 // The day and its parts move on while the app stays open (phones keep a home-screen app in memory for
 // days). Checked every 30 seconds and whenever the app comes back to the screen: a new day reloads
-// your activity and today's suggestion and redraws everything; noon and 6 pm redraw and lock again.
+// your activity and redraws everything; noon and 6 pm redraw and lock again.
 let clockDay = null, clockPeriod = null;
 // A home-screen app can stay loaded for days and never fetch a new version. When it comes back to the
 // screen, compare its script with the one the site serves now, and reload quietly if it changed
@@ -2486,7 +2467,7 @@ async function checkClock(back = false) {
     clockDay = d; clockPeriod = p;
     try { myAnswers = await API.myAnswers(uid); } catch (e) { console.warn('answers', e.message); }
     try { myPractices = await API.myPractices(uid); } catch (e) { console.warn('practices', e.message); }
-    loadSuggestion(); renderAll();
+    renderAll();
   } else if (p !== clockPeriod) { clockPeriod = p; renderAgenda(); renderMeditation(); }
   updateLocks();
 }
@@ -2494,7 +2475,6 @@ async function startApp() {
   hideGate();
   try { myAnswers = await API.myAnswers(uid); } catch (e) { fail(e); }
   try { myPractices = await API.myPractices(uid); } catch (e) { console.warn('practices', e.message); myPractices = []; }
-  loadSuggestion();
   buildCloud(people); renderAll(); paint();
   loadCloud(); loadChats();
   if (!appStarted) {
