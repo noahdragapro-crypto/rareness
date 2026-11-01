@@ -176,12 +176,12 @@
       "cues": [["Recall the moment", 10], ["What did it touch in you?", 10], ["Breathe and soften", 8], ["See a calmer you", 10]]
     },
     {
-      "id": "scripting", "name": "Manifesting", "cat": "Manifestation", "type": "sit", "dims": ["goals", "values"],
-      "about": "Close your eyes and live the life you want as if it has already happened.",
-      "steps": ["Choose one wish: love, work, home, health.", "See it as already true, here and now.", "Notice what you see, hear and feel.", "Say thank you, as if it is done."],
-      "after": { "type": "cards", "q": "What are you calling in most?", "opts": ["Love", "Purpose", "Peace", "Abundance"] },
-      "mins": [5, 8, 10, 12],
-      "cues": [["Choose one wish", 10], ["See it as already true", 10], ["What do you see, hear, feel?", 12], ["Say thank you", 8]]
+      "id": "scripting", "name": "Manifestation scripting", "cat": "Manifestation", "type": "write", "dims": ["goals", "values"],
+      "chars": [30, 60, 90, 120],
+      "about": "Write about the life you want as if it has already happened, in the present tense.",
+      "steps": ["Pick one area: love, work, home, health.", "Write as if it’s already true, in the present tense.", "Add details: what you see, feel, hear."],
+      "prompt": "It’s a year from now, and I…",
+      "after": { "type": "cards", "q": "What are you calling in most?", "opts": ["Love", "Purpose", "Peace", "Abundance"] }
     },
     {
       "id": "intention", "name": "Daily intention", "cat": "Manifestation", "type": "write", "dims": ["goals", "routine"],
