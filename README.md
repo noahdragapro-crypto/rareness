@@ -118,8 +118,8 @@ npm run build
 ## The flow for a new member
 
 1. Page 1: first name, age (18+), email, gender, who they're looking for, and a city from a fixed list. A **Log in** link (shown first on a device that was signed in before) takes just the email. For now there is no email check: entering an email signs you straight in (`api/auth/email.ts`), and a returning member only needs their email. Their country is taken from Vercel's location header and can be changed in the profile. To limit who can get in, set `TESTER_EMAILS` to a comma-separated list. Bring back email verification before a public launch, since anyone who knows a member's email can sign in as them.
-2. Page 2: photo (with reframing) and a status (optional, 20 characters).
-3. Aura writing: two open questions, written or dictated (microphone button where the browser supports it), with ideas listed above each box: **Tell us about yourself** and **Who are you looking for?** Claude reads both to shape the aura and to match people: it weighs how well each person fits who the other is looking for, in both directions.
+2. Page 2: photo (with reframing), a status (optional, 20 characters) and About you (optional, 160 characters).
+3. Aura, two pages: **What does meditation mean to you?** (tell us a bit more about your experience; written or dictated, a few words are enough), then **What are you into?**: interests as small chips in five groups on one page (pick at least 3). Both go to the AI to read the aura and are kept on the profile.
    From page 2 on, **Finish later, start today's practice** goes straight to the Agenda and meditation; the Cloud and chats stay locked until the photo and both answers are done.
 4. Pay $5 once in Stripe Checkout.
 5. The app: Agenda (today's three: a skippable 10-minute meditation, a small action), Cloud and Chats. Their profile opens from the bubble in the top-right corner.

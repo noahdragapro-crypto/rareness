@@ -57,15 +57,15 @@ const ICON = {
 const SIL = '<svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="36" r="17" fill="rgba(17,17,20,.16)"></circle><path d="M14 100C14 70 32 58 50 58s36 12 36 42z" fill="rgba(17,17,20,.16)"></path></svg>';
 
 // ---------------- Daily exercises (the same for everyone on a given day) ----------------
-// Self-development, longevity, nature, business and art, plus a few elements and small joys for fun
-const INTERESTS = [
-  'Longevity', 'Biohacking', 'Breathwork', 'Cold plunge', 'Fasting', 'Nutrition', 'Sleep', 'Meditation', 'Journaling',
-  'Stoicism', 'Psychology', 'Philosophy', 'Reading', 'Science', 'Strength', 'Running', 'Yoga', 'Dancing',
-  'Nature', 'Animals', 'Hiking', 'Surfing', 'Mountains', 'Ocean', 'Forests', 'Gardening', 'Campfires',
-  'Fire', 'Cold', 'Rain', 'Stars', 'Moon', 'Sunrises', 'Silence', 'Saunas', 'Tea',
-  'Dogs', 'Cats', 'Vinyl', 'Poetry', 'Chess', 'Fermenting', 'Business', 'Investing', 'AI',
-  'Art', 'Photography', 'Design', 'Writing', 'Music', 'Ceramics'
+// Interests in five small groups (sign-up shows them on one page; the profile uses the flat list)
+const INTEREST_GROUPS = [
+  ['Body & breath', ['Meditation', 'Breathwork', 'Yoga', 'Sleep', 'Nutrition', 'Fasting', 'Cold plunge', 'Saunas', 'Longevity', 'Biohacking', 'Strength', 'Running', 'Dancing']],
+  ['Mind', ['Journaling', 'Reading', 'Psychology', 'Philosophy', 'Stoicism', 'Science', 'Poetry', 'Chess', 'AI', 'Business', 'Investing']],
+  ['Nature', ['Nature', 'Hiking', 'Mountains', 'Ocean', 'Surfing', 'Forests', 'Gardening', 'Campfires', 'Animals', 'Dogs', 'Cats']],
+  ['Small joys', ['Sunrises', 'Stars', 'Moon', 'Rain', 'Fire', 'Cold', 'Silence', 'Tea', 'Vinyl', 'Fermenting']],
+  ['Making things', ['Art', 'Music', 'Photography', 'Design', 'Writing', 'Ceramics']]
 ];
+const INTERESTS = INTEREST_GROUPS.flatMap(([, list]) => list);
 
 // ---------------- App state ----------------
 let uid = null, me = null, myAnswers = [], myPractices = [], people = [], chatList = [], config = { paywall: false };
@@ -242,7 +242,7 @@ function updateLocks() {
     const el = $(sel); el.hidden = !locked;
     if (locked && !setupDone()) {
       el.innerHTML = '<div class="lock-card"><span style="width:24px;height:24px;display:block">' + ICON.lock + '</span><h2 class="h2">Finish your profile to open your ' + what + '</h2>' +
-        '<p class="muted" style="margin:0;font-size:14.5px;line-height:1.45">' + (me?.photo_path ? 'Two short questions left' : 'A photo and two short questions') + ', so we can read your aura and find the people who share the most with you.</p>' +
+        '<p class="muted" style="margin:0;font-size:14.5px;line-height:1.45">' + (me?.photo_path ? 'One short question and your interests left' : 'A photo, one short question and your interests') + ', so we can read your aura and find the people who share the most with you.</p>' +
         '<button class="primary" data-finish>Finish my profile</button></div>';
       el.querySelector('[data-finish]').onclick = () => finishSetup();
     } else if (locked) {
@@ -733,7 +733,7 @@ function openHowItWorks() {
     '<header class="howtop"><span class="label">How Ora works</span><h1 class="largetitle">How we build your aura</h1></header>' +
     '<section class="howhero">' + bubbleHTML(youObj(), 128) + '<p class="reason-line">The ring of colours around your bubble is your aura.</p></section>' +
 
-    sec('Your aura', p('Six colours describe who you are and what you bring to others. It begins with your two answers at sign-up, then grows with everything you practise. Our AI reads it all and updates the colours.') +
+    sec('Your aura', p('Six colours describe who you are and what you bring to others. It begins with what you share at sign-up (what meditation means to you, and your interests), then grows with everything you practise. Our AI reads it all and updates the colours.') +
       '<div class="box howlines">' + auraLines(aura) + '<p class="fine" style="margin:0">Tap <span class="info static">i</span> to see what a line means. The percentage is that colour’s share of your aura.</p></div>') +
 
     sec('Two a day', p('Your Agenda has two tasks each day: a 10-minute meditation (a simple timer, or tap “Already done” if you’ve meditated today) and a small action.') +
@@ -770,7 +770,7 @@ function openFAQ() {
     ]],
     ['Your day', 'Three practices, morning to evening', [
       ['What counts each day?', 'The two tasks on your Agenda: the 10-minute meditation (the temple counts too) and today’s action. Both done open the Cloud and chats until midnight, and keep your streak.'],
-      ['Why can’t I open the Cloud or Chats?', 'They need a finished profile (a photo and your two answers), and both of today’s tasks: the 10-minute meditation and the action. Then they stay open until midnight.'],
+      ['Why can’t I open the Cloud or Chats?', 'They need a finished profile (a photo, what meditation means to you and your interests), and both of today’s tasks: the 10-minute meditation and the action. Then they stay open until midnight.'],
       ['I meditated on my own. Does it count?', 'Yes. Tap “Already done” on today’s meditation, or “I’ve already meditated today” on its timer.'],
       ['Can I share my streak?', 'Yes: tap Share in the streak box on your Agenda, or Share my bubble on your profile. It makes a picture with your bubble and your name (and your streak, if you choose it), nothing else. Choose Instagram, then Story, or save the image.'],
       ['What happens if I miss a day?', 'Your streak starts again when a day ends with fewer than three. Your levels and aura stay.']
@@ -783,7 +783,7 @@ function openFAQ() {
       ['What are focus bubbles?', 'A bubble that floats over the app soon after you open it, then every ten minutes or so. Pop it: it’s a reminder to come back to the present.'],
     ]],
     ['Your aura', 'How it’s made and why it moves', [
-      ['How is my aura made?', 'Our AI reads your two answers from sign-up, your daily answers, the practices you do and your check-ins, and shows how strongly each of the six colours runs through you.'],
+      ['How is my aura made?', 'Our AI reads what you shared at sign-up (what meditation means to you and your interests), your daily answers, the practices you do and your check-ins, and shows how strongly each of the six colours runs through you.'],
       ['Why did my aura change?', 'It updates as you practise and answer. The more you practise, the more it reflects who you are today.'],
       ['Why is someone big and close in my Cloud?', 'You have a lot in common: your words, your practice and what you’re each hoping to find.']
     ]],
@@ -2127,17 +2127,14 @@ function runSplash() {
 // Aura writing: two open questions, written or dictated. Claude reads them to shape the aura and to match.
 // Saved as sign-up answers; the dim is only where they're filed (the AI reads the words, not the label).
 const SIGNUP = [
-  { dim: 'personality', prompt: 'Tell us about yourself', title: 'Tell us about yourself',
-    hints: ['Who are you, in a few honest lines?', 'What does your meditation practice look like?', 'What book are you reading right now?', 'What’s your peace temple, the place or moment where you feel calm?', 'What lights you up lately?'],
-    ph: 'Write freely, or tap the microphone and just talk.' },
-  // The stored prompt stays the same so earlier answers keep matching; only what people see changed
-  { dim: 'goals', prompt: 'Who are you looking for?', title: 'Who would you love to meet?',
-    hints: ['What kind of friends or community are you hoping to find?', 'What do they care about, and how do they live?', 'Do they meditate? What’s their peace temple?', 'What would you love to do or share together?', 'What makes a friendship feel right to you?'],
-    ph: 'Describe them in your own words.' }
+  { dim: 'personality', prompt: 'What does meditation mean to you?', title: 'What does meditation mean to you?', sub: 'Tell us a bit more about your experience.',
+    hints: ['Are you new to it, or have you practised for a while?', 'When and where do you like to meditate?', 'What does it bring you?', 'What would you like it to help you with?'],
+    ph: 'Write freely, or tap the microphone and just talk.' }
 ];
+const INTEREST_MIN = 3;
 const TEST = SIGNUP;
-const Q0 = 2; // the writing comes after basics and photo
-const STEPS = Q0 + TEST.length;
+const Q0 = 2; // the aura pages come after basics and photo: the meditation question, then interests
+const STEPS = Q0 + TEST.length + 1;
 const WRITE_MIN = 20;
 const gate = $('#gate');
 const COUNTRIES = 'AD AE AF AG AL AM AO AR AT AU AZ BA BB BD BE BF BG BH BI BJ BN BO BR BS BT BW BY BZ CA CD CF CG CH CI CL CM CN CO CR CU CV CY CZ DE DJ DK DM DO DZ EC EE EG ER ES ET FI FJ FM FR GA GB GD GE GH GM GN GQ GR GT GW GY HK HN HR HT HU ID IE IL IN IQ IR IS IT JM JO JP KE KG KH KI KM KN KR KW KZ LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME MG MH MK ML MM MN MO MR MT MU MV MW MX MY MZ NA NE NG NI NL NO NP NR NZ OM PA PE PG PH PK PL PR PS PT PW PY QA RE RO RS RU RW SA SB SC SD SE SG SI SK SL SM SN SO SR SS ST SV SY SZ TD TG TH TJ TL TM TN TO TR TT TV TW TZ UA UG US UY UZ VA VC VE VN VU WS XK YE ZA ZM ZW'.split(' ');
@@ -2284,30 +2281,36 @@ function gateOnboard() {
       '<div style="display:flex;justify-content:center;padding:6px 0"><button id="obPhoto" style="border:0;background:none;padding:0;cursor:pointer;position:relative" aria-label="' + (me.photo_path ? 'Change photo' : 'Add a photo') + '">' + bubbleHTML(youObj(), 176) + '<span class="gbtn glass cam" style="position:absolute;right:2px;bottom:2px">' + ICON.cam + '</span></button></div>' +
       '<label class="lbl" for="obStatus">Your status<input class="field" id="obStatus" maxlength="20" value="' + esc(G.status ?? me.status ?? '') + '" placeholder="What’s on your mind"></label>' +
       '<p class="fine" style="margin-top:-6px">Shown above your bubble in other people’s Cloud. 20 characters.</p>' +
+      '<label class="lbl" for="obBio">About you (optional)<textarea id="obBio" maxlength="160" placeholder="Who you are, what you love" style="min-height:84px">' + esc(G.bio ?? me.bio ?? '') + '</textarea></label>' +
       '<p class="err" id="err" role="alert" hidden></p><div class="grow"></div><button class="primary" id="go">' + (me.photo_path ? 'Continue' : 'Add a photo') + '</button>' +
       '<button class="link" id="later" style="align-self:center;color:var(--ink2)">Finish later, start today’s practice</button>',
       () => {
         gate.querySelector('[data-back]').onclick = () => { G.step--; gateOnboard(); };
-        $('#later').onclick = async () => { const st = $('#obStatus').value.trim(); if (st && st !== (me.status || '')) me = await API.saveProfile(uid, { status: st }).catch(() => me); skipSetup(); };
+        // Status and bio, saved together when they changed
+        const fields = () => { const p = {}, st = $('#obStatus').value.trim(), bio = $('#obBio').value.trim(); if (st !== (me.status || '')) p.status = st; if (bio !== (me.bio || '')) p.bio = bio; return p; };
+        $('#later').onclick = async () => { const p = fields(); if (Object.keys(p).length) me = await API.saveProfile(uid, p).catch(() => me); skipSetup(); };
         $('#obStatus').oninput = (e) => { G.status = e.target.value; };
+        $('#obBio').oninput = (e) => { G.bio = e.target.value; };
         const pick = () => pickPhoto(async (blob) => { await savePhoto(blob); gateOnboard(); });
         $('#obPhoto').onclick = pick;
         $('#go').onclick = async () => {
           if (!me.photo_path) return pick();
-          const status = $('#obStatus').value.trim();
-          if (status !== (me.status || '')) { try { me = await API.saveProfile(uid, { status }); } catch (x) { fail(x); return; } }
+          const p = fields();
+          if (Object.keys(p).length) { try { me = await API.saveProfile(uid, p); } catch (x) { fail(x); return; } }
           G.step++; gateOnboard();
         };
       });
+  } else if (i - Q0 >= TEST.length) {
+    gateInterests(i);
   } else {
-    const k = i - Q0, q = TEST[k], last = k === TEST.length - 1;
+    const k = i - Q0, q = TEST[k];
     const val = G.answers[q.dim] ?? '';
-    showGate(stepsBar(i) + backBtn + '<p class="label">Your aura · ' + (k + 1) + ' of ' + TEST.length + '</p><h1 class="largetitle">' + esc(q.title) + '</h1>' +
+    showGate(stepsBar(i) + backBtn + '<p class="label">Your aura · ' + (k + 1) + ' of ' + (TEST.length + 1) + '</p><h1 class="largetitle">' + esc(q.title) + '</h1>' + (q.sub ? '<p class="lead" style="margin-top:-6px">' + esc(q.sub) + '</p>' : '') +
       '<div class="hints"><span class="label">Some ideas</span><ul>' + q.hints.map((h) => '<li>' + esc(h) + '</li>').join('') + '</ul></div>' +
       '<div class="writebox"><label class="hide" for="obWrite">' + esc(q.title) + '</label><textarea id="obWrite" maxlength="1500" placeholder="' + esc(q.ph) + '">' + esc(val) + '</textarea>' +
         micButton() + '</div>' +
       '<p class="fine" id="wcount" style="margin-top:-4px"></p>' +
-      '<div class="grow"></div><button class="primary" id="go" disabled>' + (last ? 'Read my aura' : 'Continue') + '</button>' +
+      '<div class="grow"></div><button class="primary" id="go" disabled>' + 'Continue' + '</button>' +
       '<button class="link" id="later" style="align-self:center;color:var(--ink2)">Finish later, start today’s practice</button>',
       () => {
         gate.querySelector('[data-back]').onclick = () => { stopDictation(); G.step--; gateOnboard(); };
@@ -2320,7 +2323,7 @@ function gateOnboard() {
         };
         ta.oninput = ok; ok();
         $('#mic').onclick = () => toggleDictation(ta, $('#mic'), ok);
-        go.onclick = () => { stopDictation(); if (last) finishOnboarding(); else { G.step++; gateOnboard(); } };
+        go.onclick = () => { stopDictation(); G.step++; gateOnboard(); };
         $('#later').onclick = () => { stopDictation(); skipSetup(); };
       });
   }
@@ -2374,6 +2377,31 @@ function toggleDictation(ta, btn, onChange) {
 // Skip the rest of setup for now: the Agenda and meditation open right away; the Cloud and chats
 // wait until the photo and the two aura answers are done.
 function skipSetup() { startApp(); }
+// The last aura page: interests, all on one page, small chips in a few groups
+function gateInterests(i) {
+  const picked = new Set(G.interests?.length ? G.interests : me?.interests || []);
+  showGate(stepsBar(i) + backBtn + '<p class="label">Your aura · ' + (TEST.length + 1) + ' of ' + (TEST.length + 1) + '</p><h1 class="largetitle">What are you into?</h1>' +
+    '<p class="lead" style="margin-top:-6px">Pick at least ' + INTEREST_MIN + ', as many as you like.</p>' +
+    '<div class="igroups">' + INTEREST_GROUPS.map(([g, list]) => '<section><span class="label">' + esc(g) + '</span><div class="chips">' +
+      list.map((x) => '<button type="button" class="chip ichip' + (picked.has(x) ? ' on' : '') + '" data-int="' + esc(x) + '" aria-pressed="' + picked.has(x) + '">' + esc(x) + '</button>').join('') + '</div></section>').join('') + '</div>' +
+    '<div class="grow"></div><div class="istick"><button class="primary" id="go" disabled>Read my aura</button>' +
+    '<button class="link" id="later" style="align-self:center;color:var(--ink2)">Finish later, start today’s practice</button></div>',
+    () => {
+      gate.querySelector('[data-back]').onclick = () => { G.interests = [...picked]; G.step--; gateOnboard(); };
+      const go = $('#go'), sync = () => { go.disabled = picked.size < INTEREST_MIN; go.textContent = picked.size < INTEREST_MIN ? (INTEREST_MIN - picked.size) + ' more to pick' : 'Read my aura · ' + picked.size + ' picked'; };
+      gate.querySelectorAll('[data-int]').forEach((b) => b.onclick = () => {
+        const v = b.dataset.int; if (picked.has(v)) picked.delete(v); else picked.add(v);
+        b.classList.toggle('on', picked.has(v)); b.setAttribute('aria-pressed', picked.has(v)); G.interests = [...picked]; sync();
+      });
+      sync();
+      go.onclick = async () => {
+        busy(go, true, 'One moment…');
+        try { me = await API.saveProfile(uid, { interests: [...picked] }); } catch (x) { fail(x); sync(); return; }
+        finishOnboarding();
+      };
+      $('#later').onclick = async () => { if (picked.size) me = await API.saveProfile(uid, { interests: [...picked] }).catch(() => me); skipSetup(); };
+    });
+}
 function finishSetup() { G = { email: G.email, step: me.photo_path ? Q0 : 1, answers: G.answers || {}, interests: [] }; gateOnboard(); }
 const setupDone = () => Boolean(me?.onboarded);
 
@@ -2381,7 +2409,9 @@ async function finishOnboarding() {
   showGate('<div class="grow"></div><div style="display:flex;justify-content:center">' + bubbleHTML(youObj(), 190) + '</div>' +
     '<h1 class="largetitle" style="text-align:center">Reading your aura…</h1><p class="lead" style="text-align:center;margin:0 auto">This takes a few seconds.</p><div style="display:flex;justify-content:center"><div class="spinner"></div></div><div class="grow"></div>');
   try {
-    await API.signupAnswers(uid, SIGNUP.map((q) => ({ dim: q.dim, prompt: q.prompt, data: { text: String(G.answers[q.dim] || '').trim() } })));
+    // The meditation answer, and the interests as words the AI can read
+    await API.signupAnswers(uid, SIGNUP.map((q) => ({ dim: q.dim, prompt: q.prompt, data: { text: String(G.answers[q.dim] || '').trim() } }))
+      .concat((me.interests || []).length ? [{ dim: 'interests', prompt: 'What are you into?', data: { text: me.interests.join(', '), picks: me.interests } }] : []));
     me = await API.saveProfile(uid, { onboarded: true });
   } catch (e) { fail(e); gateOnboard(); return; }
   try { await API.api('match'); } catch (e) { console.error(e); }
