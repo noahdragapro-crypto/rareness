@@ -121,7 +121,7 @@ const levelFor = (n) => LIB.levels.reduce((l, x, i) => (n >= x.from ? i + 1 : l)
 const levelOf = (id) => levelFor(sessionsOf(id));
 const levelName = (l) => LIB.levels[l - 1].name;
 const levelDots = (l) => '<span class="ldots" aria-hidden="true">' + [1, 2, 3, 4].map((i) => '<i class="' + (i <= l ? 'on' : '') + '"></i>').join('') + '</span>';
-const practiceLen = (x, l) => (x.type === 'write' ? (x.chars[l - 1] <= 40 ? 'a few words' : 'a few lines') : x.mins[l - 1] + ' min');
+const practiceLen = (x, l) => (x.quick ? 'any length' : x.type === 'write' ? (x.chars[l - 1] <= 40 ? 'a few words' : 'a few lines') : x.mins[l - 1] + ' min');
 const typeLabel = (x) => ({ sit: 'Guided', write: 'Writing', do: 'Do it' }[x.type]);
 
 // ---------------- Bubbles ----------------
@@ -796,8 +796,29 @@ function openFAQ() {
 }
 
 // ---------------- One practice: its page, then the guided room, the writing page or the action ----------------
+// A quick writing practice (like Write a vision): a small pop-up to write right away, any length
+function openQuickWrite(x) {
+  const el = document.createElement('section');
+  el.className = 'checkin glass'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', x.name);
+  el.innerHTML = '<p class="label">' + esc(x.name) + '</p><h2>' + esc(x.prompt) + '</h2>' +
+    '<label class="hide" for="qwText">' + esc(x.prompt) + '</label><textarea id="qwText" maxlength="4000" placeholder="Write freely…"></textarea>' +
+    '<div class="ci-actions"><button class="link" id="qwCancel" style="color:var(--ink2)">Cancel</button><button class="primary" id="qwSave" disabled>Save</button></div>';
+  $('#app').appendChild(el);
+  requestAnimationFrame(() => el.classList.add('on'));
+  const ta = el.querySelector('#qwText'), save = el.querySelector('#qwSave');
+  const close = () => { el.classList.remove('on'); setTimeout(() => el.remove(), 400); };
+  setTimeout(() => ta.focus(), 350);
+  ta.oninput = () => { save.disabled = !ta.value.trim(); };
+  el.querySelector('#qwCancel').onclick = close;
+  save.onclick = async () => {
+    save.disabled = true;
+    const r = await recordPractice(x, { level: levelOf(x.id), answer: { entry: ta.value.trim() } });
+    if (r) close(); else save.disabled = false;
+  };
+}
 function openPractice(id) {
   const x = PRACTICE[id]; if (!x) return;
+  if (x.quick) { openQuickWrite(x); return; }
   const n = sessionsOf(id), l = levelFor(n), next = LIB.levels[l];
   const body = '<div class="stack">' +
     '<header style="display:flex;flex-direction:column;gap:6px"><span class="label">' + esc(x.cat) + ' · ' + typeLabel(x) + '</span><h1 class="largetitle">' + esc(x.name) + '</h1></header>' +

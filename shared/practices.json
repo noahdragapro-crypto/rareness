@@ -177,6 +177,7 @@
     },
     {
       "id": "scripting", "name": "Write a vision", "cat": "Manifestation", "type": "write", "dims": ["goals", "values"],
+      "quick": true,
       "chars": [30, 60, 90, 120],
       "about": "Write the vision of the life you want, as if it has already happened.",
       "steps": ["Pick one area: love, work, home, health.", "Describe it as if it’s already true, in the present tense.", "Add details: what you see, feel, hear."],
