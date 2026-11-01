@@ -634,3 +634,9 @@ input.field[type=date]::-webkit-date-and-time-value{text-align:left}
 .tline{margin:0;max-width:280px;color:var(--ink2);font-size:15px;line-height:1.5}
 .medtimer .primary{width:100%;max-width:260px}
 .medtimer .link{font-size:14.5px;color:var(--ink2);max-width:280px}
+/* The library, coming soon: a blurred glimpse with a soft label on top */
+.soon{position:relative;border-radius:var(--r);overflow:hidden}
+.soonlist{display:flex;flex-direction:column;gap:4px;filter:blur(5px);opacity:.75;pointer-events:none;user-select:none}
+.soonlabel{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;text-align:center;background:rgba(255,255,255,.35)}
+.soonlabel b{font-family:var(--serif);font-weight:400;font-size:28px}
+.soonlabel span{font-size:14px;color:var(--ink2)}

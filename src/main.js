@@ -79,16 +79,18 @@ function rec(k = today()) {
   for (const a of myAnswers) if (a.day === k && r[a.kind] === false) r[a.kind] = a;
   return r;
 }
-// A day counts when three things are done: the daily tasks and practices from the library, in any mix
+// Activities done in a day: the daily tasks and practices, in any mix
 // (the temple counts once, as the Meditate task)
 const practicedOn = (k) => [...new Set(myPractices.filter((p) => p.day === k && p.exercise !== 'temple').map((p) => p.exercise))];
 // The temple from the library counts as the Meditate task too
 const meditated = (k) => Boolean(rec(k).m) || myPractices.some((p) => p.day === k && p.exercise === 'temple');
 const dayCount = (k = today()) => { const r = rec(k); return (r.q ? 1 : 0) + (r.t ? 1 : 0) + (meditated(k) ? 1 : 0) + practicedOn(k).length; };
-const isDone = (k) => dayCount(k) >= 3;
+// A day counts for the streak when both of today's tasks are done: the meditation and the action
+const isDone = (k) => meditated(k) && Boolean(rec(k).t);
+const doneOfTwo = (k = today()) => (meditated(k) ? 1 : 0) + (rec(k).t ? 1 : 0);
 // The Cloud and chats open once both of today's tasks are done, the 10-minute meditation and the action,
 // and stay open until midnight ("I’ve already meditated today" counts as the meditation). Three activities in
-// a day (anything from the library counts) keep the streak.
+// The streak counts days with both tasks done.
 const periodNow = () => { const h = new Date().getHours(); return h >= 18 ? 2 : h >= 12 ? 1 : 0; };
 const cloudOpen = () => meditated(today()) && Boolean(rec().t);
 // What's still missing, in words: 'meditate and take today’s action', 'take today’s action'...
@@ -476,9 +478,9 @@ function openTimer() {
   pg._onPop = stop;
 }
 function renderAgenda() {
-  const r = rec(), all = todayTasks(), n = Math.min(3, dayCount()), st = streak(), open = cloudOpen();
-  // Today's three: a 10-minute meditation (or "I’ve already meditated today") and an action that
-  // changes every day; the third is anything from the library
+  const r = rec(), all = todayTasks(), n = doneOfTwo(), st = streak(), open = cloudOpen();
+  // Today: a 10-minute meditation (or "I’ve already meditated today") and an action that changes
+  // every day. Both open the Cloud and chats until midnight and keep the streak.
   const task = all[2];
   const days = []; for (let i = 6; i >= 0; i--) { const d = new Date(); d.setDate(d.getDate() - i); days.push(d); }
   const week = days.map((d, i) => {
@@ -494,15 +496,14 @@ function renderAgenda() {
       '<div class="head"><div><div class="big">' + st + '</div><div class="label" style="margin-top:4px">day streak</div></div>' +
         '<div class="streakside"><button class="sharebtn" id="shareStreak" aria-label="Share your streak">' + ICON.share + 'Share</button><div class="label" style="text-align:right">best ' + Math.max(bestStreak(), st) + '<br>' + totalDone() + ' exercises</div></div></div>' +
       '<div class="week">' + week + '</div>' +
-      '<div style="display:flex;flex-direction:column;gap:6px"><div class="head" style="font-size:13.5px"><span>' + n + ' of 3 today</span><span class="muted">' + (n === 3 ? 'Streak saved' : (3 - n) + ' to go') + '</span></div>' +
-      '<div class="prog">' + [0, 1, 2].map((i) => '<span class="' + (i < n ? 'on' : '') + '"></span>').join('') + '</div></div>' +
-      (open ? '<button class="primary" id="openCloud">Open the Cloud</button>' : '<p class="muted" style="margin:0;font-size:13px;line-height:1.45">' + missingTasks() + ' to open the Cloud and your chats. Three today keep your streak.' + '</p>') +
+      '<div style="display:flex;flex-direction:column;gap:6px"><div class="head" style="font-size:13.5px"><span>' + n + ' of 2 today</span><span class="muted">' + (n === 2 ? 'Streak saved' : (2 - n) + ' to go') + '</span></div>' +
+      '<div class="prog">' + [0, 1].map((i) => '<span class="' + (i < n ? 'on' : '') + '"></span>').join('') + '</div></div>' +
+      (open ? '<button class="primary" id="openCloud">Open the Cloud</button>' : '<p class="muted" style="margin:0;font-size:13px;line-height:1.45">' + missingTasks() + ' to open the Cloud and your chats and keep your streak.' + '</p>') +
     '</section>' +
-    '<section class="section" aria-label="Today’s three"><h2 class="h2">Today’s three</h2><div style="display:flex;flex-direction:column;gap:6px">' +
+    '<section class="section" aria-label="Today"><h2 class="h2">Today</h2><div style="display:flex;flex-direction:column;gap:6px">' +
       row('meditate', 'data-task="m"', ICON.m, 'Meditation', 'Meditate', 'A simple 10-minute timer', meditated(today()), true) +
       row('task', 'data-task="' + task.k + '"', task.icon, 'Today’s task', task.title, task.sub, r[task.k]) +
-    '</div>' +
-    '<p class="label" style="margin:2px 0 0;font-size:13px">For your third, choose anything from the Meditation library.</p></section>';
+    '</div></section>';
   document.querySelectorAll('#agendaBody [data-task]').forEach((b) => b.onclick = () => {
     const t = all.find((x) => x.k === b.dataset.task);
     if (t.k === 'm') { openTimer(t); return; } // a simple 10-minute timer, open any time, even after it's done
@@ -664,7 +665,7 @@ $('#sheetBack').onclick = closeSheet;
 let matching = false;
 // After any task or practice: say what it opened, and refresh the aura and matches when the Cloud opens
 function afterDone(wasOpen, wasDone, msg) {
-  if (!wasDone && todayDone()) toast('Three today. Your streak is safe.');
+  if (!wasDone && todayDone()) toast('Both done. Your streak is safe.');
   else if (!wasOpen && cloudOpen()) toast('The Cloud and chats are open.');
   else if (msg) toast(msg);
   if (((!wasOpen && cloudOpen()) || (!wasDone && todayDone())) && !matching) {
@@ -686,31 +687,25 @@ async function complete(t, data, msg, btn) {
 // ---------------- Meditation: the page, the temple, and present bubbles ----------------
 // Focus bubbles: the first within 45 seconds of opening the app, then one every 10 to 12 minutes
 const FOCUS_FIRST = [20, 45], FOCUS_EVERY = [600, 720];
-let libCat = '';
 function renderMeditation() {
   const box = $('#medBody'); if (!box) return;
-  const t = todayTasks().find((x) => x.k === 'm'), done = Boolean(rec().m), mins = t.mins, n = Math.min(3, dayCount());
-  const list = PR.filter((x) => !libCat || x.cat === libCat);
+  const t = todayTasks().find((x) => x.k === 'm'), done = Boolean(rec().m), mins = t.mins, n = doneOfTwo();
   box.innerHTML =
-    '<header style="display:flex;flex-direction:column;gap:6px"><span class="brand">Ora</span><h1 class="largetitle">Meditation</h1><div class="subrow"><span class="label">' + n + ' of 3 today · ' + PR.length + ' practices</span>' + howButton() + '</div></header>' +
+    '<header style="display:flex;flex-direction:column;gap:6px"><span class="brand">Ora</span><h1 class="largetitle">Meditation</h1><div class="subrow"><span class="label">' + n + ' of 2 today</span>' + howButton() + '</div></header>' +
     '<section class="temple-card" aria-label="The temple">' +
       '<div class="temple-mini" aria-hidden="true">' + crackSVG() + '</div>' +
       '<div style="display:flex;flex-direction:column;gap:6px"><h2 class="h2" style="color:#fff">The temple · today’s meditation</h2>' +
       '<p style="margin:0;color:rgba(255,255,255,.7);font-size:14.5px;line-height:1.45">' + (done ? 'Done for today. The temple stays open whenever you need it.' : 'A dark, quiet room with soft music. Today’s session is <b style="color:#fff;font-weight:500">' + mins + ' minutes</b>.') + '</p></div>' +
       '<button class="primary light" id="enterTemple">Enter the temple</button>' +
     '</section>' +
+    // The library is coming soon: a blurred glimpse of it behind a soft label
     '<section class="section" aria-label="Library"><h2 class="h2">Library</h2>' +
-      '<div class="catrow" role="tablist" data-hscroll>' + [''].concat(LIB.categories).map((c) => '<button role="tab" aria-selected="' + (c === libCat) + '" data-cat="' + esc(c) + '">' + esc(c || 'All') + '</button>').join('') + '</div>' +
-      '<div style="display:flex;flex-direction:column;gap:4px">' + list.map(practiceRow).join('') + '</div></section>' +
-    '<section class="section" aria-label="How practice works"><h2 class="h2">How practice works</h2>' +
-      '<p class="explain">Every practice has four levels: ' + LIB.levels.map((l) => l.name).join(', ') + '. You move up after ' + LIB.levels.slice(1).map((l) => l.from).join(', ') + ' sessions, and sessions grow a little deeper at each level.</p>' +
-      '<p class="explain">Three a day, from your daily tasks or from this library, opens the Cloud and your chats. The more you practise, the more your aura reflects who you really are, and the better your matches. After each practice, one short question helps us understand you; only our AI reads your answers.</p>' +
-      '<p class="explain">People you’ve bumped into can see which practices you do most, and join you.</p></section>' +
+      '<div class="soon" aria-label="Coming soon"><div class="soonlist" aria-hidden="true">' + PR.filter((x) => x.id !== 'temple').slice(0, 4).map((x) => '<div class="task prow"><span class="tx"><em>' + esc(x.cat) + ' · ' + typeLabel(x) + '</em><b>' + esc(x.name) + '</b></span></div>').join('') + '</div>' +
+      '<div class="soonlabel"><b>Coming soon</b><span>Guided practices, breath work and more.</span></div></div></section>' +
     '<section class="section" aria-label="Focus bubbles"><h2 class="h2">Focus bubbles</h2>' +
       '<div style="display:flex;gap:14px;align-items:center"><div style="flex:none">' + bubbleHTML({ w: [1, 1, 1, 1, 1, 1], clear: true }, 64) + '</div>' +
       '<p class="explain" style="margin:0">Soon after you open Ora, and then every ten minutes or so, a bubble floats up over whatever you’re doing. Pop it: you’re here, now.</p></div></section>';
   box.querySelector('#enterTemple').onclick = () => openTemple();
-  box.querySelectorAll('[data-cat]').forEach((b) => b.onclick = () => { libCat = b.dataset.cat; renderMeditation(); });
   wirePracticeLinks(box);
 }
 function practiceRow(x) {
@@ -741,15 +736,12 @@ function openHowItWorks() {
     sec('Your aura', p('Six colours describe who you are and what you bring to others. It begins with your two answers at sign-up, then grows with everything you practise. Our AI reads it all and updates the colours.') +
       '<div class="box howlines">' + auraLines(aura) + '<p class="fine" style="margin:0">Tap <span class="info static">i</span> to see what a line means. The percentage is that colour’s share of your aura.</p></div>') +
 
-    sec('Three a day', p('Three tasks a day keep your streak. Any task counts, and your Agenda suggests a 10-minute meditation (a simple timer, or tap “Already done” if you’ve meditated today) and a small action; the third is anything you like from the Meditation library.') +
+    sec('Two a day', p('Your Agenda has two tasks each day: a 10-minute meditation (a simple timer, or tap “Already done” if you’ve meditated today) and a small action.') +
       '<div class="box howday">' + [['Meditate', '10 minutes in the temple.'], ['Take an action', 'A small one, different every day.'], ['Then', 'The Cloud and your chats open until midnight.']].map(([t, d]) => '<div><b>' + t + '</b><span>' + d + '</span></div>').join('') + '</div>' +
-      p('A third activity from the library keeps your streak; fewer than three in a day and the streak starts again.') +
+      p('Both done keeps your streak too; miss a day and the streak starts again.') +
       '<div class="temple-card howtemple"><div class="temple-mini" style="height:84px" aria-hidden="true">' + crackSVG() + '</div><p>Meditation happens in the temple: a dark room, a crack of light that breathes, soft music, for 7 to 15 minutes depending on the day.</p></div>') +
 
-    sec('The practices', p(PR.length + ' practices in ' + LIB.categories.length + ' groups, from breath work to journaling and manifestation. Each is one of three kinds:') +
-      '<div class="howkinds">' + [['Guided', 'In the temple room, with gentle cues. Most practices.'], ['Do it', 'A small act in real life.'], ['Writing', 'A few, for when you feel like it.']].map(([t, d]) => '<div class="box"><b>' + t + '</b><span>' + d + '</span></div>').join('') + '</div>' +
-      p('Each has four levels. Return to it and you go deeper: longer, calmer sessions. What you do often weighs more in your aura.') +
-      '<div class="box howlevels">' + LIB.levels.map((l, i) => '<div><span class="plevel">' + levelDots(i + 1) + '<b>' + l.name + '</b></span><span class="label">' + (l.from ? 'after ' + l.from + ' sessions' : 'to begin') + '</span></div>').join('') + '</div>') +
+    sec('The practices', p('A library of guided practices, breath work and small actions is coming soon. For now, your day is the meditation and the action, and the temple is always open in the Meditation tab.')) +
 
     sec('A question after each one', p('When you finish, one short question slides up: tap a card or a few options. No writing, and you can always skip it.') +
       '<div class="howcheck" aria-hidden="true"><span class="label">One question · The temple</span><b>How did your mind feel?</b><div class="cicards">' + ['Still', 'Busy', 'Heavy', 'Light'].map((o, i) => '<span class="cicard' + (i === 0 ? ' on' : '') + '">' + o + '</span>').join('') + '</div></div>' +
@@ -777,16 +769,15 @@ function openFAQ() {
       ['Does Ora cost anything?', config.paywall ? 'One payment of ' + price + ' opens everything, for good. No subscription.' : 'Ora is free while the community is growing.']
     ]],
     ['Your day', 'Three practices, morning to evening', [
-      ['What counts toward my three a day?', 'Anything: the 10-minute meditation, today’s action, the temple, or any practice from the Meditation library. Each different practice counts once a day.'],
+      ['What counts each day?', 'The two tasks on your Agenda: the 10-minute meditation (the temple counts too) and today’s action. Both done open the Cloud and chats until midnight, and keep your streak.'],
       ['Why can’t I open the Cloud or Chats?', 'They need a finished profile (a photo and your two answers), and both of today’s tasks: the 10-minute meditation and the action. Then they stay open until midnight.'],
       ['I meditated on my own. Does it count?', 'Yes. Tap “Already done” on today’s meditation, or “I’ve already meditated today” on its timer.'],
       ['Can I share my streak?', 'Yes: tap Share in the streak box on your Agenda, or Share my bubble on your profile. It makes a picture with your bubble and your name (and your streak, if you choose it), nothing else. Choose Instagram, then Story, or save the image.'],
       ['What happens if I miss a day?', 'Your streak starts again when a day ends with fewer than three. Your levels and aura stay.']
     ]],
-    ['Practice', 'The library, the temple and focus bubbles', [
-      ['How do levels work?', 'Every practice has four levels: ' + LIB.levels.map((l) => l.name + (l.from ? ' (after ' + l.from + ' sessions)' : '')).join(', ') + '. Each level goes a little deeper.'],
-      ['How long is today’s meditation?', 'Between 7 and 15 minutes, depending on the day. The Meditation tab shows today’s length.'],
-      ['Can I leave a practice before it ends?', 'Yes, anytime. It counts once its time is up (or, for the few writing practices, once you’ve written a few words).'],
+    ['Practice', 'The meditation, the temple and focus bubbles', [
+      ['How long is today’s meditation?', 'Ten minutes on the timer from your Agenda. The temple in the Meditation tab has its own length, 7 to 15 minutes depending on the day.'],
+      ['Can I stop the meditation before it ends?', 'Yes, anytime. It counts once its time is up, or tap “I’ve already meditated today” if you meditated on your own.'],
       ['There’s no sound in the temple.', 'Check your volume, and tap “Sound on” at the top right. If it says “Tap for sound”, one tap starts it.'],
       ['Why doesn’t my phone vibrate in the temple?', 'iPhones don’t let websites vibrate, so the temple plays soft music instead. Android phones vibrate gently.'],
       ['What are focus bubbles?', 'A bubble that floats over the app soon after you open it, then every ten minutes or so. Pop it: it’s a reminder to come back to the present.'],
