@@ -2127,9 +2127,8 @@ function runSplash() {
 // Aura writing: two open questions, written or dictated. Claude reads them to shape the aura and to match.
 // Saved as sign-up answers; the dim is only where they're filed (the AI reads the words, not the label).
 const SIGNUP = [
-  { dim: 'personality', prompt: 'What does meditation mean to you?', title: 'What does meditation mean to you?', sub: 'Tell us a bit more about your experience.',
-    hints: ['Are you new to it, or have you practised for a while?', 'When and where do you like to meditate?', 'What does it bring you?', 'What would you like it to help you with?'],
-    ph: 'Write freely, or tap the microphone and just talk.' }
+  { dim: 'personality', prompt: 'What does meditation mean to you? Tell us a bit more about your experience?', title: 'What does meditation mean to you?', sub: 'Tell us a bit more about your experience?',
+    hints: [], ph: 'Write freely, or tap the microphone and just talk.' }
 ];
 const INTEREST_MIN = 3;
 const TEST = SIGNUP;
@@ -2306,7 +2305,7 @@ function gateOnboard() {
     const k = i - Q0, q = TEST[k];
     const val = G.answers[q.dim] ?? '';
     showGate(stepsBar(i) + backBtn + '<p class="label">Your aura · ' + (k + 1) + ' of ' + (TEST.length + 1) + '</p><h1 class="largetitle">' + esc(q.title) + '</h1>' + (q.sub ? '<p class="lead" style="margin-top:-6px">' + esc(q.sub) + '</p>' : '') +
-      '<div class="hints"><span class="label">Some ideas</span><ul>' + q.hints.map((h) => '<li>' + esc(h) + '</li>').join('') + '</ul></div>' +
+      (q.hints.length ? '<div class="hints"><span class="label">Some ideas</span><ul>' + q.hints.map((h) => '<li>' + esc(h) + '</li>').join('') + '</ul></div>' : '') +
       '<div class="writebox"><label class="hide" for="obWrite">' + esc(q.title) + '</label><textarea id="obWrite" maxlength="1500" placeholder="' + esc(q.ph) + '">' + esc(val) + '</textarea>' +
         micButton() + '</div>' +
       '<p class="fine" id="wcount" style="margin-top:-4px"></p>' +
