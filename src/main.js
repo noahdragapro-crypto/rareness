@@ -759,7 +759,7 @@ function openHowItWorks() {
 
     sec('The Cloud', cloud + p('The community floats around you. The more you share with someone, the bigger and closer they appear, and the colours around their bubble show what you have in common. Empty bubbles are spots waiting for new people.')) +
 
-    sec('Bumping into people', p('Bump someone you’d like to know. They won’t find out unless they bump you back. When you both do, a chat opens, where you can talk, send stickers and GIFs, and share practices to do together.')) +
+    sec('Bumping into people', p('Bump someone you’d like to know. They won’t find out unless they bump you back. When you both do, a chat opens, where you can talk and send stickers and GIFs.')) +
 
     sec('What stays private', p('Your answers, your writing and your check-ins are read only by our AI. Others see your photo, name, age if you gave it, status, about and interests and, after a mutual bump, the practices you do most.')) +
     '</div>';
@@ -798,7 +798,6 @@ function openFAQ() {
     ]],
     ['Friends', 'Bumps and chats', [
       ['How does bumping work?', 'Tap Bump on someone’s profile. They won’t know, unless they bump you too. Then a chat opens for both of you.'],
-      ['How do I share a practice with a friend?', 'In a chat, tap the smiley button, then Practices, and pick one. They get a card to start it.']
     ]],
     ['Privacy and safety', 'What others see, and what they never do', [
       ['What can people see about me?', 'Your photo, name, age, status, about, interests and the information on your profile. After you bump into each other, also your latest practices. Never your answers or writing.'],
@@ -1853,7 +1852,7 @@ async function openThread(chatId) {
   const p = c.other;
   const head = '<button class="threadhead" id="threadHead" aria-label="See ' + esc(p.name || 'their') + '’s profile">' + bubbleHTML({ w: dimsToW(c.match?.dims), photo: API.photoUrl(p.photo_path) }, 84) + '<b style="font-family:var(--serif);font-size:24px;font-weight:400">' + esc(p.name || 'Someone') + '</b>' + '<span class="label">' + (c.match ? c.match.score + '% in common · ' : '') + 'See profile</span></button>';
   const pg = pushPage(p.name || 'Chat', head + '<div class="thread" id="thread"><div class="spinner" style="align-self:center"></div></div><div style="height:80px"></div>',
-    { footer: '<div class="tray glass" id="tray" hidden><div class="traytabs" role="tablist">' + ['Emoji', 'Stickers', 'GIFs', 'Practices'].map((x, i) => '<button type="button" role="tab" data-tt="' + i + '" aria-selected="' + (i === 0) + '">' + x + '</button>').join('') + '</div><div class="traybody" id="trayBody"></div></div>' +
+    { footer: '<div class="tray glass" id="tray" hidden><div class="traytabs" role="tablist">' + ['Emoji', 'Stickers', 'GIFs'].map((x, i) => '<button type="button" role="tab" data-tt="' + i + '" aria-selected="' + (i === 0) + '">' + x + '</button>').join('') + '</div><div class="traybody" id="trayBody"></div></div>' +
       '<form class="composer glass" id="composer"><button type="button" class="traybtn" id="trayBtn" aria-label="Emoji, stickers and GIFs" aria-expanded="false">' + ICON.smile + '</button><label for="msgIn" class="hide">Message</label><input id="msgIn" autocomplete="off" placeholder="Message ' + esc(p.name || '') + '" maxlength="1000"><button class="send" id="sendBtn" aria-label="Send" disabled>' + ICON.send + '</button></form>' });
   const th = pg.querySelector('#thread'), sc = pg.querySelector('.scroll'), inp = pg.querySelector('#msgIn'), sb = pg.querySelector('#sendBtn');
   pg.querySelector('#threadHead').onclick = () => {
@@ -1919,18 +1918,14 @@ async function openThread(chatId) {
     } else if (tab === 1) {
       tb.innerHTML = '<div class="stickergrid">' + STICKERS.map((x) => '<button type="button" data-st="' + x + '" aria-label="Send sticker ' + x + '">' + x + '</button>').join('') + '</div>';
       tb.querySelectorAll('[data-st]').forEach((b) => b.onclick = async () => { if (await sendBody('[[sticker:' + b.dataset.st + ']]')) openTray(false); });
-    } else if (tab === 2) {
+    } else {
       // GIFs: quick searches in Ora's spirit, or anything you type
       tb.innerHTML = '<input class="field gifsearch" id="gifQ" placeholder="Search GIFs" value="' + esc(gifQ) + '" autocomplete="off">' +
         '<div class="gifchips" data-hscroll>' + GIF_TOPICS.map((g) => '<button type="button" data-gq="' + esc(g) + '" aria-pressed="' + (g === gifQ) + '">' + esc(g) + '</button>').join('') + '</div><div class="gifgrid" id="gifGrid"></div>';
       tb.querySelector('#gifQ').oninput = (e) => { gifQ = e.target.value; clearTimeout(gifT); gifT = setTimeout(loadGifs, 350); };
       tb.querySelectorAll('[data-gq]').forEach((b) => b.onclick = () => { gifQ = b.dataset.gq; tb.querySelector('#gifQ').value = gifQ; tb.querySelectorAll('[data-gq]').forEach((x) => x.setAttribute('aria-pressed', x === b)); loadGifs(); });
       loadGifs();
-    } else {
-      // Share a practice: your friend gets a card they can start right away
-      tb.innerHTML = '<p class="label" style="margin:2px 2px 0">Send a practice to do together</p><div class="sharelist">' +
-        PR.map((x) => '<button type="button" data-share="' + x.id + '"><b>' + esc(x.name) + '</b><span>' + esc(x.cat) + ' · ' + typeLabel(x) + '</span></button>').join('') + '</div>';
-      tb.querySelectorAll('[data-share]').forEach((b) => b.onclick = async () => { if (await sendBody('[[practice:' + b.dataset.share + ']]')) openTray(false); });
+
     }
   }
   pg._onPop = () => { openChat = null; clearInterval(readTimer); loadChats(); };

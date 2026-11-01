@@ -96,7 +96,7 @@ The **profile** shows the name with a small line (city · main language · age, 
 
 ## Chats
 
-Text, emoji, Ora-themed stickers, GIFs (with quick topics like Meditate, Breathe, Namaste) and shared practices: a card your friend can start with one tap. GIFs need a free GIPHY key in `GIPHY_API_KEY` (developers.giphy.com → Create an app → API). Under your latest message the other person sees nothing new, and you see **Sent** or **Read**; "Read" needs `supabase/migrations/0005_read_receipts.sql`.
+Text, emoji, Ora-themed stickers and GIFs (with quick topics like Meditate, Breathe, Namaste). Practice cards sent before are still shown. GIFs need a free GIPHY key in `GIPHY_API_KEY` (developers.giphy.com → Create an app → API). Under your latest message the other person sees nothing new, and you see **Sent** or **Read**; "Read" needs `supabase/migrations/0005_read_receipts.sql`.
 
 ## Team dashboard
 
