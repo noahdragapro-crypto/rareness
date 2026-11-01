@@ -453,7 +453,7 @@ function alreadyMeditated() {
 }
 function openTimer() {
   const total = 10 * 60;
-  const pg = pushPage('Meditation', '<div class="timer"><p class="label">Today’s meditation</p><div class="tclock" id="tClock">10:00</div>' +
+  const pg = pushPage('Meditation', '<div class="medtimer"><p class="label">Today’s meditation</p><div class="tclock" id="tClock">10:00</div>' +
     '<p class="tline" id="tLine">Sit comfortably, close your eyes, and breathe.</p>' +
     '<button class="primary" id="tGo">Start</button>' +
     '<button class="link" id="tAlready">I’ve already meditated today</button></div>');
