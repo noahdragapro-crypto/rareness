@@ -624,8 +624,13 @@ input.field[type=date]::-webkit-date-and-time-value{text-align:left}
 .seg button[aria-selected="true"]{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(17,17,20,.12)}
 /* Today's three are the same height: two lines each, cut with … when longer (the full reason is on the practice) */
 .task.hi .tx span{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.7em}
-/* Today's three: a small Skip on each, hidden for the day once tapped */
+/* Today’s meditation: "Already done" on its box */
 .taskwrap{position:relative}
 .skipbtn{position:absolute;top:8px;right:10px;height:24px;padding:0 10px;border-radius:12px;border:.5px solid rgba(17,17,20,.12);background:rgba(255,255,255,.7);font:inherit;font-size:12px;color:var(--ink2);cursor:pointer}
 .task.hi .st{margin-top:22px}
-.unskip{align-self:flex-start;font-size:13px;color:var(--ink2);padding:2px 0}
+/* Today's meditation: a simple timer */
+.timer{display:flex;flex-direction:column;align-items:center;gap:18px;text-align:center;padding-top:8vh}
+.tclock{font-family:var(--serif);font-size:96px;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.tline{margin:0;max-width:280px;color:var(--ink2);font-size:15px;line-height:1.5}
+.timer .primary{width:100%;max-width:260px;height:52px;min-height:52px;flex:none}
+.timer .link{font-size:14.5px;color:var(--ink2);max-width:280px}

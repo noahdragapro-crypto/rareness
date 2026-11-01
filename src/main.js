@@ -87,7 +87,7 @@ const meditated = (k) => Boolean(rec(k).m) || myPractices.some((p) => p.day === 
 const dayCount = (k = today()) => { const r = rec(k); return (r.q ? 1 : 0) + (r.t ? 1 : 0) + (meditated(k) ? 1 : 0) + practicedOn(k).length; };
 const isDone = (k) => dayCount(k) >= 3;
 // The Cloud and chats open once both of today's tasks are done, the 10-minute meditation and the action,
-// and stay open until midnight. Skipping the meditation keeps them closed that day. Three activities in
+// and stay open until midnight ("I’ve already meditated today" counts as the meditation). Three activities in
 // a day (anything from the library counts) keep the streak.
 const periodNow = () => { const h = new Date().getHours(); return h >= 18 ? 2 : h >= 12 ? 1 : 0; };
 const cloudOpen = () => meditated(today()) && Boolean(rec().t);
@@ -96,7 +96,6 @@ function missingTasks() {
   const m = !meditated(today()), t = !rec().t;
   return m && t ? 'Meditate and take today’s action' : m ? 'Meditate 10 minutes' : t ? 'Take today’s action' : '';
 }
-const meditationSkipped = () => !meditated(today()) && skippedToday().includes('meditate');
 const todayDone = () => isDone(today());
 function streak() {
   const d = new Date(); let n = 0;
@@ -245,8 +244,8 @@ function updateLocks() {
         '<button class="primary" data-finish>Finish my profile</button></div>';
       el.querySelector('[data-finish]').onclick = () => finishSetup();
     } else if (locked) {
-      el.innerHTML = '<div class="lock-card"><span style="width:24px;height:24px;display:block">' + ICON.lock + '</span><h2 class="h2">' + (meditationSkipped() ? 'Your ' + what + ' rest today' : missingTasks() + ' to open your ' + what) + '</h2>' +
-        '<p class="muted" style="margin:0;font-size:14.5px;line-height:1.45">' + (meditationSkipped() ? 'You skipped today’s meditation, so they open again tomorrow. You can bring it back on your Agenda.' : 'Both of today’s tasks, the 10-minute meditation and the action, open them until midnight.') + '</p>' +
+      el.innerHTML = '<div class="lock-card"><span style="width:24px;height:24px;display:block">' + ICON.lock + '</span><h2 class="h2">' + missingTasks() + ' to open your ' + what + '</h2>' +
+        '<p class="muted" style="margin:0;font-size:14.5px;line-height:1.45">Both of today’s tasks, the 10-minute meditation and the action, open them until midnight.</p>' +
         '<button class="primary" data-go="0">Go to Agenda</button></div>';
       el.querySelector('[data-go]').onclick = () => goTab(0);
     }
@@ -445,23 +444,50 @@ function todayTasks(off = 0) {
   ];
 }
 const dimLabel = (k) => DIMS[dimIndex(k)]?.label || '';
-// Skipped suggestions, kept on this phone for today only
-const skipKey = () => 'ora.skip.' + uid + '.' + today();
-const skippedToday = () => { try { return JSON.parse(store.get(skipKey()) || '[]'); } catch (e) { return []; } };
-const setSkipped = (list) => store.set(skipKey(), JSON.stringify([...new Set(list)]));
+// Today's meditation: a simple timer, not the temple. Ten minutes, start and pause, with a sentence to
+// tick it off when you've already meditated today. Counts the same as the temple.
+const medTask = () => todayTasks().find((x) => x.k === 'm');
+function alreadyMeditated() {
+  if (meditated(today())) { toast('Already done today'); return; }
+  complete(medTask(), { minutes: 0, already: true }, 'Meditation marked as done');
+}
+function openTimer() {
+  const total = 10 * 60;
+  const pg = pushPage('Meditation', '<div class="timer"><p class="label">Today’s meditation</p><div class="tclock" id="tClock">10:00</div>' +
+    '<p class="tline" id="tLine">Sit comfortably, close your eyes, and breathe.</p>' +
+    '<button class="primary" id="tGo">Start</button>' +
+    '<button class="link" id="tAlready">I’ve already meditated today</button></div>');
+  const clock = pg.querySelector('#tClock'), go = pg.querySelector('#tGo'), line = pg.querySelector('#tLine');
+  let left = total, endAt = 0, tick = null, lock = null;
+  const show = () => { clock.textContent = String(Math.floor(left / 60)).padStart(2, '0') + ':' + String(left % 60).padStart(2, '0'); };
+  const stop = () => { clearInterval(tick); tick = null; try { lock?.release(); } catch (e) {} lock = null; };
+  const finish = () => {
+    stop(); left = 0; show(); go.hidden = true; line.textContent = 'Well done.';
+    if (!meditated(today())) complete(medTask(), { minutes: 10, timed: true }, '10 calm minutes. Well done.');
+    setTimeout(() => popPage(), 1400);
+  };
+  go.onclick = () => {
+    if (tick) { stop(); left = Math.max(0, Math.round((endAt - Date.now()) / 1000)); go.textContent = 'Resume'; return; }
+    endAt = Date.now() + left * 1000; go.textContent = 'Pause';
+    try { navigator.wakeLock?.request('screen').then((l) => { lock = l; }).catch(() => {}); } catch (e) {}
+    tick = setInterval(() => { left = Math.max(0, Math.round((endAt - Date.now()) / 1000)); show(); if (!left) finish(); }, 250);
+  };
+  pg.querySelector('#tAlready').onclick = () => { stop(); popPage(); alreadyMeditated(); };
+  pg._onPop = stop;
+}
 function renderAgenda() {
   const r = rec(), all = todayTasks(), n = Math.min(3, dayCount()), st = streak(), open = cloudOpen();
-  // Today's three: a 10-minute meditation (the only one you can skip for the day) and an action that
+  // Today's three: a 10-minute meditation (or "I’ve already meditated today") and an action that
   // changes every day; the third is anything from the library
-  const task = all[2], skipped = skippedToday();
+  const task = all[2];
   const days = []; for (let i = 6; i >= 0; i--) { const d = new Date(); d.setDate(d.getDate() - i); days.push(d); }
   const week = days.map((d, i) => {
     const done = isDone(API.dayKey(d)), isToday = i === 6;
     return '<div class="wd">' + 'SMTWTFS'[d.getDay()] + '<b class="' + (done ? 'done' : '') + (isToday && !done ? ' today' : '') + '">' + (done ? ICON.check : '') + '</b></div>';
   }).join('');
-  const row = (key, attrs, ic, label, title, sub, done, canSkip = false) => skipped.includes(key) ? '' : '<div class="taskwrap"><button class="task hi' + (done ? ' done' : '') + '" ' + attrs + '><span class="ic">' + ic + '</span>' +
+  const row = (key, attrs, ic, label, title, sub, done, already = false) => '<div class="taskwrap"><button class="task hi' + (done ? ' done' : '') + '" ' + attrs + '><span class="ic">' + ic + '</span>' +
     '<span class="tx"><em>' + label + '</em><b>' + esc(title) + '</b><span>' + esc(sub) + '</span></span><span class="st">' + (done ? ICON.check : '') + '</span></button>' +
-    (done || !canSkip ? '' : '<button class="skipbtn" data-skip="' + key + '" aria-label="Skip ' + esc(title) + ' for today">Skip</button>') + '</div>';
+    (done || !already ? '' : '<button class="skipbtn" data-already aria-label="I’ve already meditated today">Already done</button>') + '</div>';
   $('#agendaBody').innerHTML =
     '<header style="display:flex;flex-direction:column;gap:6px"><span class="brand">Ora</span><h1 class="largetitle">Agenda</h1><div class="subrow"><span class="label">' + new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' }) + '</span>' + howButton() + '</div></header>' +
     '<section class="box" style="display:flex;flex-direction:column;gap:12px" aria-label="Streak">' +
@@ -470,24 +496,23 @@ function renderAgenda() {
       '<div class="week">' + week + '</div>' +
       '<div style="display:flex;flex-direction:column;gap:6px"><div class="head" style="font-size:13.5px"><span>' + n + ' of 3 today</span><span class="muted">' + (n === 3 ? 'Streak saved' : (3 - n) + ' to go') + '</span></div>' +
       '<div class="prog">' + [0, 1, 2].map((i) => '<span class="' + (i < n ? 'on' : '') + '"></span>').join('') + '</div></div>' +
-      (open ? '<button class="primary" id="openCloud">Open the Cloud</button>' : '<p class="muted" style="margin:0;font-size:13px;line-height:1.45">' + (meditationSkipped() ? 'Meditation skipped: the Cloud and your chats open again tomorrow.' : missingTasks() + ' to open the Cloud and your chats. Three today keep your streak.') + '</p>') +
+      (open ? '<button class="primary" id="openCloud">Open the Cloud</button>' : '<p class="muted" style="margin:0;font-size:13px;line-height:1.45">' + missingTasks() + ' to open the Cloud and your chats. Three today keep your streak.' + '</p>') +
     '</section>' +
     '<section class="section" aria-label="Today’s three"><h2 class="h2">Today’s three</h2><div style="display:flex;flex-direction:column;gap:6px">' +
-      row('meditate', 'data-task="m"', ICON.m, 'Meditation', 'Meditate', '10 minutes in the temple, eyes closed', meditated(today()), true) +
+      row('meditate', 'data-task="m"', ICON.m, 'Meditation', 'Meditate', 'A simple 10-minute timer', meditated(today()), true) +
       row('task', 'data-task="' + task.k + '"', task.icon, 'Today’s task', task.title, task.sub, r[task.k]) +
-    '</div>' + (skipped.length ? '<button class="link unskip" id="unskip">' + skipped.length + ' skipped today · bring back</button>' : '') +
+    '</div>' +
     '<p class="label" style="margin:2px 0 0;font-size:13px">For your third, choose anything from the Meditation library.</p></section>';
   document.querySelectorAll('#agendaBody [data-task]').forEach((b) => b.onclick = () => {
     const t = all.find((x) => x.k === b.dataset.task);
-    if (t.k === 'm') { openTemple({ mins: 10 }); return; } // a 10-minute session, open any time, even after it's done
+    if (t.k === 'm') { openTimer(t); return; } // a simple 10-minute timer, open any time, even after it's done
     if (rec()[t.k]) { toast('Already done today'); return; }
     openSheet(t);
   });
   const oc = $('#openCloud'); if (oc) oc.onclick = () => goTab(TAB.cloud);
   $('#shareStreak').onclick = () => openShare('streak');
-  // Skip: hidden until tomorrow (or until brought back)
-  document.querySelectorAll('#agendaBody [data-skip]').forEach((b) => b.onclick = () => { setSkipped([...skippedToday(), b.dataset.skip]); renderAgenda(); updateLocks(); toast('Skipped. The Cloud and your chats stay closed today'); });
-  const us = $('#unskip'); if (us) us.onclick = () => { setSkipped([]); renderAgenda(); updateLocks(); };
+  // "I’ve already meditated today": the meditation counts as done
+  const al = $('#agendaBody [data-already]'); if (al) al.onclick = () => alreadyMeditated();
   wirePracticeLinks($('#agendaBody'));
 }
 
@@ -716,9 +741,9 @@ function openHowItWorks() {
     sec('Your aura', p('Six colours describe who you are and what you bring to others. It begins with your two answers at sign-up, then grows with everything you practise. Our AI reads it all and updates the colours.') +
       '<div class="box howlines">' + auraLines(aura) + '<p class="fine" style="margin:0">Tap <span class="info static">i</span> to see what a line means. The percentage is that colour’s share of your aura.</p></div>') +
 
-    sec('Three a day', p('Three tasks a day keep your streak. Any task counts, and your Agenda suggests a 10-minute meditation (you can skip it for the day) and a small action; the third is anything you like from the Meditation library.') +
+    sec('Three a day', p('Three tasks a day keep your streak. Any task counts, and your Agenda suggests a 10-minute meditation (a simple timer, or tap “Already done” if you’ve meditated today) and a small action; the third is anything you like from the Meditation library.') +
       '<div class="box howday">' + [['Meditate', '10 minutes in the temple.'], ['Take an action', 'A small one, different every day.'], ['Then', 'The Cloud and your chats open until midnight.']].map(([t, d]) => '<div><b>' + t + '</b><span>' + d + '</span></div>').join('') + '</div>' +
-      p('Skip the meditation and they stay closed that day. A third activity from the library keeps your streak; fewer than three in a day and the streak starts again.') +
+      p('A third activity from the library keeps your streak; fewer than three in a day and the streak starts again.') +
       '<div class="temple-card howtemple"><div class="temple-mini" style="height:84px" aria-hidden="true">' + crackSVG() + '</div><p>Meditation happens in the temple: a dark room, a crack of light that breathes, soft music, for 7 to 15 minutes depending on the day.</p></div>') +
 
     sec('The practices', p(PR.length + ' practices in ' + LIB.categories.length + ' groups, from breath work to journaling and manifestation. Each is one of three kinds:') +
@@ -754,7 +779,7 @@ function openFAQ() {
     ['Your day', 'Three practices, morning to evening', [
       ['What counts toward my three a day?', 'Anything: the 10-minute meditation, today’s action, the temple, or any practice from the Meditation library. Each different practice counts once a day.'],
       ['Why can’t I open the Cloud or Chats?', 'They need a finished profile (a photo and your two answers), and both of today’s tasks: the 10-minute meditation and the action. Then they stay open until midnight.'],
-      ['I skipped the meditation. Why is the Cloud closed?', 'Skipping the meditation keeps the Cloud and chats closed for the day. Changed your mind? Tap “bring back” under Today’s three and meditate.'],
+      ['I meditated on my own. Does it count?', 'Yes. Tap “Already done” on today’s meditation, or “I’ve already meditated today” on its timer.'],
       ['Can I share my streak?', 'Yes: tap Share in the streak box on your Agenda, or Share my bubble on your profile. It makes a picture with your bubble and your name (and your streak, if you choose it), nothing else. Choose Instagram, then Story, or save the image.'],
       ['What happens if I miss a day?', 'Your streak starts again when a day ends with fewer than three. Your levels and aura stay.']
     ]],
