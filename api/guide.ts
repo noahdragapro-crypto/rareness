@@ -25,7 +25,7 @@ export const POST = handle(async (request) => {
 
   if (body.mode === "suggest") {
     // Ora Master picks something to do and grow with (meditation, breath, body, action), never writing:
-    // writing is optional in Ora, for the journal and the short daily reflection
+    // writing is optional in Ora, kept for the short daily reflection and a few library practices
     const ids = catalog().practices.filter((x) => x.type !== "write").map((x) => x.id);
     if (aiEnabled()) {
       try {

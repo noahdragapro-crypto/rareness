@@ -79,18 +79,6 @@ export async function myAnswers(uid, days = 90) {
 export async function saveAnswer(uid, a) {
   return check(await sb.from('answers').upsert({ user_id: uid, ...a }, { onConflict: 'user_id,day,kind,dim' }).select().single());
 }
-// The journal: every written answer (all time) and free journal entries, read-only once written
-export async function allAnswers(uid) {
-  return check(await sb.from('answers').select('day,kind,prompt,data,created_at').eq('user_id', uid).order('created_at', { ascending: false }).limit(3000));
-}
-export async function journal(uid) {
-  return check(await sb.from('journal').select('id,day,body,created_at').eq('user_id', uid).order('created_at', { ascending: false }).limit(3000));
-}
-export async function addJournal(uid, body) {
-  return check(await sb.from('journal').insert({ user_id: uid, day: dayKey(), body }).select('id,day,body,created_at').single());
-}
-// One sentence per journal page, for Reflecting (written once on the server, then kept)
-export const journalSummaries = (days) => api('journal', 'POST', { days }).then((r) => r.summaries || {});
 export async function signupAnswers(uid, rows) {
   const day = dayKey();
   const payload = rows.map((r) => ({ user_id: uid, day, kind: 'signup', dim: r.dim, prompt: r.prompt, data: r.data }));
