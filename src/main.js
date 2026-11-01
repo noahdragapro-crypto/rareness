@@ -447,29 +447,20 @@ const dimLabel = (k) => DIMS[dimIndex(k)]?.label || '';
 const skipKey = () => 'ora.skip.' + uid + '.' + today();
 const skippedToday = () => { try { return JSON.parse(store.get(skipKey()) || '[]'); } catch (e) { return []; } };
 const setSkipped = (list) => store.set(skipKey(), JSON.stringify([...new Set(list)]));
-// A practice for today that grows the colours of your aura that show least: never writing, never the
-// temple (it has its own place in the Meditation tab), and not the same as Ora Master's pick
-function auraPractice(notId) {
-  const a = me?.aura || {}, keys = Object.keys(a).filter((k) => typeof a[k] === 'number').sort((x, y) => a[x] - a[y]);
-  const ok = PR.filter((x) => x.type !== 'write' && x.id !== 'temple' && x.id !== notId);
-  const pool = ok.filter((x) => keys.slice(0, 2).some((k) => x.dims.includes(k)));
-  const list = pool.length ? pool : ok;
-  return list.length ? list[(dayNum() * 7 + 3) % list.length] : null;
-}
 function renderAgenda() {
   const r = rec(), all = todayTasks(), n = Math.min(3, dayCount()), st = streak(), open = cloudOpen();
-  // Today's three: today's task (an action, or a short reflection one day in three), a practice for your
-  // aura, and Ora Master's pick. Each can be skipped for the day.
+  // Today's three: a 10-minute meditation (the only one you can skip for the day), today's task (an
+  // action, or a short reflection one day in three), and Ora Master's pick
   const task = dayNum() % 3 === 0 ? all[1] : all[2], pick = suggestion && PRACTICE[suggestion.exercise];
-  const pickDone = pick && doneToday(pick.id), aura = auraPractice(pick?.id), skipped = skippedToday();
+  const pickDone = pick && doneToday(pick.id), skipped = skippedToday();
   const days = []; for (let i = 6; i >= 0; i--) { const d = new Date(); d.setDate(d.getDate() - i); days.push(d); }
   const week = days.map((d, i) => {
     const done = isDone(API.dayKey(d)), isToday = i === 6;
     return '<div class="wd">' + 'SMTWTFS'[d.getDay()] + '<b class="' + (done ? 'done' : '') + (isToday && !done ? ' today' : '') + '">' + (done ? ICON.check : '') + '</b></div>';
   }).join('');
-  const row = (key, attrs, ic, label, title, sub, done) => skipped.includes(key) ? '' : '<div class="taskwrap"><button class="task hi' + (done ? ' done' : '') + '" ' + attrs + '><span class="ic">' + ic + '</span>' +
+  const row = (key, attrs, ic, label, title, sub, done, canSkip = false) => skipped.includes(key) ? '' : '<div class="taskwrap"><button class="task hi' + (done ? ' done' : '') + '" ' + attrs + '><span class="ic">' + ic + '</span>' +
     '<span class="tx"><em>' + label + '</em><b>' + esc(title) + '</b><span>' + esc(sub) + '</span></span><span class="st">' + (done ? ICON.check : '') + '</span></button>' +
-    (done ? '' : '<button class="skipbtn" data-skip="' + key + '" aria-label="Skip ' + esc(title) + ' for today">Skip</button>') + '</div>';
+    (done || !canSkip ? '' : '<button class="skipbtn" data-skip="' + key + '" aria-label="Skip ' + esc(title) + ' for today">Skip</button>') + '</div>';
   $('#agendaBody').innerHTML =
     '<header style="display:flex;flex-direction:column;gap:6px"><span class="brand">Ora</span><h1 class="largetitle">Agenda</h1><div class="subrow"><span class="label">' + new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' }) + '</span>' + howButton() + '</div></header>' +
     '<section class="box" style="display:flex;flex-direction:column;gap:12px" aria-label="Streak">' +
@@ -481,14 +472,14 @@ function renderAgenda() {
       (open ? '<button class="primary" id="openCloud">Open the Cloud</button>' : '<p class="muted" style="margin:0;font-size:13px;line-height:1.45">' + (stillToDo() > 1 ? stillToDo() + ' more tasks open' : 'One more task opens') + ' the Cloud and your chats. Three today keep your streak.</p>') +
     '</section>' +
     '<section class="section" aria-label="Today’s three"><h2 class="h2">Today’s three</h2><div style="display:flex;flex-direction:column;gap:6px">' +
+      row('meditate', 'data-task="m"', ICON.m, 'Meditation', 'Meditate', '10 minutes in the temple, eyes closed', meditated(today()), true) +
       row('task', 'data-task="' + task.k + '"', task.icon, 'Today’s task', task.title, task.sub, r[task.k]) +
-      (aura ? row('aura', doneToday(aura.id) ? 'data-pickdone' : 'data-practice="' + aura.id + '"', ICON.m, 'For your aura', aura.name, aura.about, doneToday(aura.id)) : '') +
       (pick ? row('pick', pickDone ? 'data-pickdone' : 'data-practice="' + pick.id + '"', ICON.guide, 'Ora Master’s pick', pick.name, suggestion.reason, pickDone) : '') +
     '</div>' + (skipped.length ? '<button class="link unskip" id="unskip">' + skipped.length + ' skipped today · bring back</button>' : '') +
     '<p class="label" style="margin:2px 0 0;font-size:13px">Anything from the Meditation library counts too.</p></section>';
   document.querySelectorAll('#agendaBody [data-task]').forEach((b) => b.onclick = () => {
     const t = all.find((x) => x.k === b.dataset.task);
-    if (t.k === 'm') { openTemple(); return; } // the temple is open any time, even after today's session
+    if (t.k === 'm') { openTemple({ mins: 10 }); return; } // a 10-minute session, open any time, even after it's done
     if (rec()[t.k]) { toast('Already done today'); return; }
     openSheet(t);
   });
@@ -729,7 +720,7 @@ function openHowItWorks() {
     sec('Your aura', p('Six colours describe who you are and what you bring to others. It begins with your two answers at sign-up, then grows with everything you practise. Our AI reads it all and updates the colours.') +
       '<div class="box howlines">' + auraLines(aura) + '<p class="fine" style="margin:0">Tap <span class="info static">i</span> to see what a line means. The percentage is that colour’s share of your aura.</p></div>') +
 
-    sec('Three a day', p('Three tasks a day keep your streak. Any task counts, and your Agenda suggests three: today’s task, a practice for your aura, and Ora Master’s pick. Skip any you don’t feel like today.') +
+    sec('Three a day', p('Three tasks a day keep your streak. Any task counts, and your Agenda suggests three: a 10-minute meditation (you can skip it for the day), today’s task, and Ora Master’s pick.') +
       '<div class="box howday">' + [['Morning', 'One task done opens the Cloud and your chats.'], ['Afternoon', 'From noon, they need two done in the day.'], ['Evening', 'From 6 pm, three.']].map(([t, d]) => '<div><b>' + t + '</b><span>' + d + '</span></div>').join('') + '</div>' +
       p('Ideally one in the morning, one in the afternoon and one in the evening. Tasks done earlier count for later: three in the morning keep everything open until midnight, when the count starts again. Fewer than three in a day and the streak starts again.') +
       '<div class="temple-card howtemple"><div class="temple-mini" style="height:84px" aria-hidden="true">' + crackSVG() + '</div><p>Meditation happens in the temple: a dark room, a crack of light that breathes, soft music, for 7 to 15 minutes depending on the day.</p></div>') +
@@ -767,7 +758,7 @@ function openFAQ() {
       ['Does Ora cost anything?', config.paywall ? 'One payment of ' + price + ' opens everything, for good. No subscription.' : 'Ora is free while the community is growing.']
     ]],
     ['Your day', 'Three practices, morning to evening', [
-      ['What counts toward my three a day?', 'Anything: today’s task, the practices suggested on your Agenda, the temple, or any practice from the Meditation library. Each different practice counts once a day. You can skip a suggestion for the day.'],
+      ['What counts toward my three a day?', 'Anything: the 10-minute meditation, today’s task, Ora Master’s pick, the temple, or any practice from the Meditation library. Each different practice counts once a day.'],
       ['Why can’t I open the Cloud or Chats?', 'They need a finished profile (a photo and your two answers), and enough practices for the time of day: one done in the morning, two in the day from noon, three from 6 pm. Midnight starts the count again.'],
       ['Why did the Cloud lock again this afternoon?', 'From noon it asks for two practices done in the day, and from 6 pm three. Do the ones missing and it opens again until midnight.'],
       ['Can I share my streak?', 'Yes: tap Share in the streak box on your Agenda, or Share my bubble on your profile. It makes a picture with your bubble and your name (and your streak, if you choose it), nothing else. Choose Instagram, then Story, or save the image.'],
@@ -1026,7 +1017,7 @@ function crackSVG() {
 // meditation (the Meditate task); with a practice it runs that practice's cues for its length.
 function openTemple(opts = {}) {
   const daily = !opts.practice, med = todayTasks().find((x) => x.k === 'm');
-  const mins = daily ? med.mins : opts.mins, cues = opts.cues || [['Breathe in', 4], ['Breathe out', 4]];
+  const mins = daily ? opts.mins || med.mins : opts.mins, cues = opts.cues || [['Breathe in', 4], ['Breathe out', 4]];
   const el = document.createElement('section');
   el.className = 'temple'; el.setAttribute('aria-label', daily ? 'The temple' : opts.practice.name);
   const soundOn = store.get('ora.templeSound') !== 'off';
