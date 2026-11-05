@@ -693,7 +693,7 @@ function renderMeditation() {
   box.innerHTML =
     '<header style="display:flex;flex-direction:column;gap:6px"><span class="brand">Ora</span><h1 class="largetitle">Meditation</h1><div class="subrow"><span class="label">' + n + ' of 2 today</span>' + howButton() + '</div></header>' +
     '<section class="temple-card" aria-label="The temple">' +
-      '<div class="temple-mini" aria-hidden="true">' + crackSVG() + '</div>' +
+      '<div class="temple-mini" aria-hidden="true">' + auroraCanvas() + '</div>' +
       '<div style="display:flex;flex-direction:column;gap:6px"><h2 class="h2" style="color:#fff">The temple · today’s meditation</h2>' +
       '<p style="margin:0;color:rgba(255,255,255,.7);font-size:14.5px;line-height:1.45">' + (done ? 'Done for today. The temple stays open whenever you need it.' : 'A dark, quiet room with soft music. Today’s session is <b style="color:#fff;font-weight:500">' + mins + ' minutes</b>.') + '</p></div>' +
       '<button class="primary light" id="enterTemple">Enter the temple</button>' +
@@ -705,6 +705,7 @@ function renderMeditation() {
     '<section class="section" aria-label="Focus bubbles"><h2 class="h2">Focus bubbles</h2>' +
       '<div style="display:flex;gap:14px;align-items:center"><div style="flex:none">' + bubbleHTML({ w: [1, 1, 1, 1, 1, 1], clear: true }, 64) + '</div>' +
       '<p class="explain" style="margin:0">Soon after you open Ora, and then every ten minutes or so, a bubble floats up over whatever you’re doing. Pop it: you’re here, now.</p></div></section>';
+  wakeAuroras(box);
   box.querySelector('#enterTemple').onclick = () => openTemple();
   wirePracticeLinks(box);
 }
@@ -739,7 +740,7 @@ function openHowItWorks() {
     sec('Two a day', p('Your Agenda has two tasks each day: a 10-minute meditation (a simple timer, or tap “Already done” if you’ve meditated today) and a small action.') +
       '<div class="box howday">' + [['Meditate', '10 minutes in the temple.'], ['Take an action', 'A small one, different every day.'], ['Then', 'The Cloud and your chats open until midnight.']].map(([t, d]) => '<div><b>' + t + '</b><span>' + d + '</span></div>').join('') + '</div>' +
       p('Both done keeps your streak too; miss a day and the streak starts again.') +
-      '<div class="temple-card howtemple"><div class="temple-mini" style="height:84px" aria-hidden="true">' + crackSVG() + '</div><p>Meditation happens in the temple: a dark room, a crack of light that breathes, soft music, for 7 to 15 minutes depending on the day.</p></div>') +
+      '<div class="temple-card howtemple"><div class="temple-mini" style="height:84px" aria-hidden="true">' + auroraCanvas() + '</div><p>Meditation happens in the temple: a dark room, an aurora of light that breathes, soft music, for 7 to 15 minutes depending on the day.</p></div>') +
 
     sec('The practices', p('A library of guided practices, breath work and small actions is coming soon. For now, your day is the meditation and the action, and the temple is always open in the Meditation tab.')) +
 
@@ -755,7 +756,7 @@ function openHowItWorks() {
 
     sec('What stays private', p('Your answers, your writing and your check-ins are read only by our AI. Others see your photo, name, age if you gave it, status, about and interests and, after a mutual bump, the practices you do most.')) +
     '</div>';
-  pushPage('How we build your aura', html);
+  wakeAuroras(pushPage('How we build your aura', html));
 }
 
 // ---------------- Questions and answers (from the profile only) ----------------
@@ -917,55 +918,82 @@ function checkIn(x, row, answer) {
 }
 
 
-// A crack of light down the middle of a dark wall. Drawn from a seeded random walk so it looks
-// natural (uneven edges, chips, hairline fractures branching off) and stays the same every time.
-let crackCache = '';
-function crackSVG() {
-  if (crackCache) return crackCache;
-  let seed = 20261028;
-  const rnd = () => { seed |= 0; seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
-  const W = 120, H = 240, N = 90, f = (n) => n.toFixed(2);
-  // The main fissure: wanders left and right, now and then kinks, pulled gently back to the centre
-  const pts = []; let x = W / 2, dx = 0;
-  for (let i = 0; i <= N; i++) {
-    const y = i / N * H;
-    dx = dx * .55 + (rnd() - .5) * 2.6 + (W / 2 - x) * .04 + (rnd() < .08 ? (rnd() - .5) * 7 : 0);
-    x += dx; pts.push([x, y]);
-  }
-  // Widest in the middle, never even: each edge is chipped on its own
-  const width = (i) => { const t = i / N; return (.15 + 3.1 * Math.pow(Math.sin(Math.PI * t), 1.3)) * (.7 + rnd() * .6); };
-  const L = [], R = [];
-  pts.forEach(([px, py], i) => { const w = width(i); L.push([px - w * (.4 + rnd() * .8), py]); R.push([px + w * (.4 + rnd() * .8), py]); });
-  const shape = 'M' + L.concat(R.reverse()).map(([a, c]) => f(a) + ' ' + f(c)).join(' L') + ' Z';
-  // Hairline fractures: short random walks that branch off and fade, sometimes splitting again
-  const cracks = [];
-  const grow = (sx, sy, ang, len, w) => {
-    let cx = sx, cy = sy, a = ang; const seg = [[cx, cy]];
-    for (let k = 0; k < len; k++) {
-      a += (rnd() - .5) * .7; cx += Math.cos(a) * 2.6; cy += Math.sin(a) * 2.6; seg.push([cx, cy]);
-      if (k > 3 && rnd() < .07 && w > .35) grow(cx, cy, a + (rnd() < .5 ? -1 : 1) * (.5 + rnd() * .6), Math.floor(len * .5), w * .6);
-    }
-    cracks.push({ d: 'M' + seg.map(([a2, c2]) => f(a2) + ' ' + f(c2)).join(' L'), w });
+// The temple's light: an aurora borealis gathered in the middle of a dark screen. Three curtains of light
+// with a bright lower edge, green rising into lavender and pink, rippling slowly like draped fabric and
+// growing a little with each breath (8 seconds). Soft glow without canvas filters (older iPhones lack
+// them): the light is drawn at low resolution and scaled up smoothly, which blurs it, then added on top.
+const auroraCanvas = (cls = '') => '<canvas class="aurora ' + cls + '" data-aurora aria-hidden="true"></canvas>';
+const AU = { green: [72, 200, 130], aqua: [64, 198, 196], lavender: [160, 128, 248], pink: [236, 132, 200] };
+const auWave = (u, t, s) => (Math.sin(u * 2.1 + t * .8 + s) + Math.sin(u * 5.3 - t * 1.2 + s * 1.9) * .55 + Math.sin(u * 11.7 + t * 2.1 + s * 3.1) * .3) / 1.85;
+const auMix = (p, q, k, a) => 'rgba(' + p.map((v, i) => Math.round(v + (q[i] - v) * k)).join(',') + ',' + a + ')';
+const auLerp = (p, q, k) => p.map((v, j) => v + (q[j] - v) * k);
+function startAurora(cv) {
+  const ctx = cv.getContext('2d'), mid = document.createElement('canvas'), glow = document.createElement('canvas'), wash = document.createElement('canvas');
+  const mx = mid.getContext('2d'), gx = glow.getContext('2d'), wx = wash.getContext('2d');
+  const t0 = performance.now(), DRAPES = [
+    { y: .52, h: .3, amp: .045, speed: .3, alpha: 1, seed: 0, wide: .36 },
+    { y: .45, h: .24, amp: .04, speed: .24, alpha: .55, seed: 3.7, wide: .3 },
+    { y: .58, h: .17, amp: .03, speed: .38, alpha: .4, seed: 7.1, wide: .26 }];
+  let W = 0, H = 0, raf = 0, stopped = false;
+  const full = cv.classList.contains('full');
+  const fit = () => {
+    const w = cv.clientWidth, h = cv.clientHeight; if (!w || !h || (w === W && h === H)) return;
+    W = w; H = h; const dpr = Math.min(2, window.devicePixelRatio || 1);
+    cv.width = W * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    // The light layers: detail near full resolution, glow and wash much smaller (they become the blur)
+    [[mid, mx, .85], [glow, gx, .14], [wash, wx, .1]].forEach(([c, x, k]) => { c.width = Math.max(1, Math.round(W * k)); c.height = Math.max(1, Math.round(H * k)); x.setTransform(k, 0, 0, k, 0, 0); });
   };
-  for (let i = 6; i < N - 6; i += 3 + Math.floor(rnd() * 5)) {
-    if (rnd() < .45) continue;
-    const [px, py] = pts[i], side = rnd() < .5 ? -1 : 1;
-    // Out to one side, mostly running downward, sometimes up
-    const out = side * (.45 + rnd() * .85), ang = rnd() < .3 ? -Math.PI / 2 + out : Math.PI / 2 - out;
-    grow(px, py, ang, 5 + Math.floor(rnd() * 12), .5 + rnd() * .6);
-  }
-  crackCache = '<svg class="crack" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><defs>' +
-    '<linearGradient id="clight" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff3df" stop-opacity=".5"></stop><stop offset=".5" stop-color="#fffaf2"></stop><stop offset="1" stop-color="#fff3df" stop-opacity=".5"></stop></linearGradient>' +
-    '<filter id="cglow" x="-60%" y="-10%" width="220%" height="120%"><feGaussianBlur stdDeviation="3.2"></feGaussianBlur></filter>' +
-    '<filter id="crough"><feTurbulence type="fractalNoise" baseFrequency="1.4" numOctaves="2" seed="7"></feTurbulence><feDisplacementMap in="SourceGraphic" scale="1.2"></feDisplacementMap></filter></defs>' +
-    '<path class="cglow" d="' + shape + '" filter="url(#cglow)"></path>' +
-    cracks.map((c) => '<path class="cbranch" d="' + c.d + '" style="stroke-width:' + f(c.w) + '"></path>').join('') +
-    '<path class="cfill" d="' + shape + '" filter="url(#crough)"></path></svg>';
-  return crackCache;
+  const frame = (now) => {
+    if (stopped || !cv.isConnected) return;
+    fit(); if (!W) { raf = requestAnimationFrame(frame); return; }
+    // In a small card the aurora fills the width; in the temple it sits in the middle
+    const t = (now - t0) / 1000, S = full ? Math.min(W, H) : Math.min(W * .9, H * 2.4), breath = (1 - Math.cos((t % 8) / 8 * Math.PI * 2)) / 2;
+    mx.clearRect(0, 0, W, H); wx.clearRect(0, 0, W, H);
+    const along = (u) => ({ base: auLerp(AU.green, AU.aqua, (Math.sin(u * 2.3 + t * .11) + 1) / 4), tip: auLerp(AU.lavender, AU.pink, (Math.sin(u * 1.7 - t * .09 + 2) + 1) / 2), strength: .75 + .25 * (Math.sin(u * 3.1 + t * .07) + 1) / 2 });
+    for (const D of DRAPES) {
+      const RAYS = W < 200 ? 70 : 150, half = Math.min(W * .46, S * D.wide * 1.25), x0 = W / 2 - half, x1 = W / 2 + half, edge = [];
+      for (let i = 0; i <= RAYS; i++) {
+        const u = i / RAYS, px = x0 + (x1 - x0) * u;
+        const py = H * D.y + S * D.amp * (Math.sin(u * 5.2 + t * D.speed + D.seed) + .45 * Math.sin(u * 11.3 - t * D.speed * 1.6 + D.seed * 2)) - S * .02 * breath;
+        const shimmer = Math.min(1, Math.max(0, (auWave(u * 6 + D.seed, t * .7, D.seed) + 1) / 2 * .8 + (auWave(u * 31, t * 2.2, D.seed * 1.3) + 1) / 2 * .2));
+        const ends = Math.sin(Math.PI * u), col = along(u);
+        const len = S * D.h * (.45 + .55 * Math.pow(shimmer, 1.4)) * col.strength * Math.pow(ends, .6) * (.85 + .3 * breath);
+        edge.push([px, py, col, ends, len]);
+        const g = mx.createLinearGradient(px, py, px, py - len), al = .7 * D.alpha * (.45 + .55 * shimmer) * Math.pow(ends, .5);
+        g.addColorStop(0, auMix(col.base, col.base, 0, al)); g.addColorStop(.3, auMix(col.base, col.base, 0, al * .65));
+        g.addColorStop(.55, auMix(col.base, col.tip, .55, al * .55)); g.addColorStop(.8, auMix(col.tip, col.tip, 0, al * .45)); g.addColorStop(1, auMix(col.tip, col.tip, 0, 0));
+        mx.strokeStyle = g; mx.lineWidth = 1.4 + 2.8 * shimmer; mx.lineCap = 'round';
+        mx.beginPath(); mx.moveTo(px, py + 2); mx.lineTo(px, py - len); mx.stroke();
+      }
+      for (let i = 1; i < edge.length; i++) {
+        const [ax, ay, ca, ea, la] = edge[i - 1], [bx, by] = edge[i];
+        mx.strokeStyle = auMix(ca.base, ca.base, 0, .35 * D.alpha * ea); mx.lineWidth = 2;
+        mx.beginPath(); mx.moveTo(ax, ay); mx.lineTo(bx, by); mx.stroke();
+        wx.strokeStyle = auMix(ca.base, ca.base, 0, .2 * D.alpha * ea); wx.lineWidth = S * .16 * ea;
+        wx.beginPath(); wx.moveTo(ax, ay - S * .08); wx.lineTo(bx, by - S * .08); wx.stroke();
+        wx.strokeStyle = auMix(ca.tip, ca.tip, 0, .16 * D.alpha * ea); wx.lineWidth = S * .14 * ea;
+        wx.beginPath(); wx.moveTo(ax, ay - la * .8); wx.lineTo(bx, by - la * .8); wx.stroke();
+      }
+    }
+    // The glow: the detail layer shrunk down, to be scaled back up
+    gx.setTransform(1, 0, 0, 1, 0, 0); gx.clearRect(0, 0, glow.width, glow.height); gx.drawImage(mid, 0, 0, glow.width, glow.height);
+    ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = '#050608'; ctx.fillRect(0, 0, W, H);
+    // Light adds up and glows, like the real thing
+    ctx.globalCompositeOperation = 'lighter'; ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(wash, 0, 0, W, H);
+    ctx.globalAlpha = .85; ctx.drawImage(glow, 0, 0, W, H);
+    ctx.globalAlpha = .9; ctx.drawImage(mid, 0, 0, W, H);
+    ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+    raf = requestAnimationFrame(frame);
+  };
+  raf = requestAnimationFrame(frame);
+  return { stop() { stopped = true; cancelAnimationFrame(raf); } };
 }
+// Start every aurora canvas inside a freshly drawn part of the page (each stops itself once removed)
+const wakeAuroras = (root) => root.querySelectorAll('canvas[data-aurora]:not([data-on])').forEach((c) => { c.dataset.on = '1'; startAurora(c); });
 
-// The temple: black screen, a breathing crack of light, and a soft, slow vibration for as long as it's open
-// The temple room: black, the breathing crack, soft music and vibration. With no options it's today's
+// The temple: a dark screen, an aurora of light that breathes, and a soft, slow vibration for as long as it's open
+// The temple room: dark, the breathing aurora, soft music and vibration. With no options it's today's
 // meditation (the Meditate task); with a practice it runs that practice's cues for its length.
 function openTemple(opts = {}) {
   const daily = !opts.practice, med = todayTasks().find((x) => x.k === 'm');
@@ -974,9 +1002,9 @@ function openTemple(opts = {}) {
   el.className = 'temple'; el.setAttribute('aria-label', daily ? 'The temple' : opts.practice.name);
   const soundOn = store.get('ora.templeSound') !== 'off';
   el.innerHTML = '<button class="temple-leave" aria-label="Leave">Leave</button>' +
-    '<button class="temple-sound" aria-pressed="' + soundOn + '">' + (soundOn ? 'Sound on' : 'Sound off') + '</button>' + crackSVG() +
+    '<button class="temple-sound" aria-pressed="' + soundOn + '">' + (soundOn ? 'Sound on' : 'Sound off') + '</button>' + auroraCanvas('full') +
     '<p class="temple-time">00:00 · ' + mins + ' min</p><p class="temple-note" aria-live="polite">' + (daily ? 'Settle in. Let your eyes close.' : esc(opts.practice.name) + '. Settle in.') + '</p>';
-  $('#app').appendChild(el);
+  $('#app').appendChild(el); wakeAuroras(el);
   requestAnimationFrame(() => el.classList.add('in'));
   const t0 = Date.now();
   let counted = daily ? Boolean(rec().m) : false, finished = false, lock = null, cueT = null;
