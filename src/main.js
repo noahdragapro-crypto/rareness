@@ -412,7 +412,7 @@ function edgeSwipe(pg, under) {
 }
 
 // ---------------- Agenda ----------------
-// Every day: a meditation (done in the Meditation tab, 7 to 15 minutes depending on the day),
+// Every day: a meditation (10 minutes),
 // a reflection and an action, both of which change daily.
 const REFLECT = [
   ['What comes to your mind when it’s clear?', 'values'], ['What are you grateful for today?', 'values'],
@@ -432,8 +432,8 @@ const ACTIONS = [
   'Write three lines about today.', 'Listen to one song with your eyes closed.', 'Do one kind thing nobody will notice.'
 ];
 const dayNum = (off = 0) => Math.floor((Date.now() - new Date().getTimezoneOffset() * 60000) / 86400000) + off;
-// Today's meditation length, 7 to 15 minutes, the same all day for everyone
-const medMinutes = (off = 0) => 7 + ((dayNum(off) * 7 + 3) % 9);
+// A meditation session is always 10 minutes
+const medMinutes = () => 10;
 function todayTasks(off = 0) {
   const aura = me?.aura || {}, keys = Object.keys(aura).filter((k) => typeof aura[k] === 'number');
   const weak = keys.length >= 3 ? keys.sort((a, b) => aura[a] - aura[b]).slice(0, 2) : [];
@@ -740,7 +740,7 @@ function openHowItWorks() {
     sec('Two a day', p('Your Agenda has two tasks each day: a 10-minute meditation (a simple timer, or tap “Already done” if you’ve meditated today) and a small action.') +
       '<div class="box howday">' + [['Meditate', '10 minutes in the temple.'], ['Take an action', 'A small one, different every day.'], ['Then', 'The Cloud and your chats open until midnight.']].map(([t, d]) => '<div><b>' + t + '</b><span>' + d + '</span></div>').join('') + '</div>' +
       p('Both done keeps your streak too; miss a day and the streak starts again.') +
-      '<div class="temple-card howtemple"><div class="temple-mini" style="height:84px" aria-hidden="true">' + auroraCanvas() + '</div><p>Meditation happens in the temple: a dark room, an aurora of light that breathes, soft music, for 7 to 15 minutes depending on the day.</p></div>') +
+      '<div class="temple-card howtemple"><div class="temple-mini" style="height:84px" aria-hidden="true">' + auroraCanvas() + '</div><p>Meditation happens in the temple: a dark room, an aurora of light that breathes, soft music, for 10 minutes.</p></div>') +
 
     sec('The practices', p('A library of guided practices, breath work and small actions is coming soon. For now, your day is the meditation and the action, and the temple is always open in the Meditation tab.')) +
 
@@ -777,7 +777,7 @@ function openFAQ() {
       ['What happens if I miss a day?', 'Your streak starts again when a day ends with fewer than three. Your levels and aura stay.']
     ]],
     ['Practice', 'The meditation, the temple and focus bubbles', [
-      ['How long is today’s meditation?', 'Ten minutes on the timer from your Agenda. The temple in the Meditation tab has its own length, 7 to 15 minutes depending on the day.'],
+      ['How long is today’s meditation?', 'Always 10 minutes, on the timer from your Agenda or in the temple.'],
       ['Can I stop the meditation before it ends?', 'Yes, anytime. It counts once its time is up, or tap “I’ve already meditated today” if you meditated on your own.'],
       ['There’s no sound in the temple.', 'Check your volume, and tap “Sound on” at the top right. If it says “Tap for sound”, one tap starts it.'],
       ['Why doesn’t my phone vibrate in the temple?', 'iPhones don’t let websites vibrate, so the temple plays soft music instead. Android phones vibrate gently.'],
