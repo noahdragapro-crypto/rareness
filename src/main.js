@@ -230,7 +230,8 @@ document.querySelectorAll('.tab').forEach((b) => b.addEventListener('click', () 
 
 let wasLocked = null;
 function updateLocks() {
-  const locked = !cloudOpen() || !setupDone();
+  // Open to everyone who signed up: finishing the rest of sign-up isn't needed for now
+  const locked = !cloudOpen();
   // Just locked (a new part of the day began): close any chat or profile left open over the Cloud or Chats
   if (locked && wasLocked === false && (cur === TAB.cloud || cur === TAB.chats)) {
     while (pages.length) popPage(true);
@@ -240,12 +241,7 @@ function updateLocks() {
   document.querySelectorAll('.tab[data-tab="' + TAB.cloud + '"],.tab[data-tab="' + TAB.chats + '"]').forEach((b) => b.classList.toggle('locked', locked));
   [['#cloudLock', 'Cloud'], ['#chatsLock', 'chats']].forEach(([sel, what]) => {
     const el = $(sel); el.hidden = !locked;
-    if (locked && !setupDone()) {
-      el.innerHTML = '<div class="lock-card"><span style="width:24px;height:24px;display:block">' + ICON.lock + '</span><h2 class="h2">Finish your profile to open your ' + what + '</h2>' +
-        '<p class="muted" style="margin:0;font-size:14.5px;line-height:1.45">' + (me?.photo_path ? 'One short question and your interests left' : 'A photo, one short question and your interests') + ', so we can read your aura and find the people who share the most with you.</p>' +
-        '<button class="primary" data-finish>Finish my profile</button></div>';
-      el.querySelector('[data-finish]').onclick = () => finishSetup();
-    } else if (locked) {
+    if (locked) {
       el.innerHTML = '<div class="lock-card"><span style="width:24px;height:24px;display:block">' + ICON.lock + '</span><h2 class="h2">' + missingTasks() + ' to open your ' + what + '</h2>' +
         '<p class="muted" style="margin:0;font-size:14.5px;line-height:1.45">Both of today’s tasks, the 10-minute meditation and the action, open them until midnight.</p>' +
         '<button class="primary" data-go="0">Go to Agenda</button></div>';
@@ -771,7 +767,7 @@ function openFAQ() {
     ]],
     ['Your day', 'Three practices, morning to evening', [
       ['What counts each day?', 'The two tasks on your Agenda: the 10-minute meditation (the temple counts too) and today’s action. Both done open the Cloud and chats until midnight, and keep your streak.'],
-      ['Why can’t I open the Cloud or Chats?', 'They need a finished profile (a photo, what meditation means to you and your interests), and both of today’s tasks: the 10-minute meditation and the action. Then they stay open until midnight.'],
+      ['Why can’t I open the Cloud or Chats?', 'They need both of today’s tasks: the 10-minute meditation and the action. Then they stay open until midnight.'],
       ['I meditated on my own. Does it count?', 'Yes. Tap “Already done” on today’s meditation, or “I’ve already meditated today” on its timer.'],
       ['Can I share my streak?', 'Yes: tap Share in the streak box on your Agenda, or Share my bubble on your profile. It makes a picture with your bubble and your name (and your streak, if you choose it), nothing else. Choose Instagram, then Story, or save the image.'],
       ['What happens if I miss a day?', 'Your streak starts again when a day ends with fewer than three. Your levels and aura stay.']
@@ -1392,7 +1388,7 @@ async function renderProfile() {
           : '<p class="label" style="margin:0">Nothing yet. Your favourite practices will show here.</p>',
           '<span class="label">' + thisWeek + ' this week</span>') +
         (config.paywall && me.paid_at ? '<p class="label" style="margin:0;text-align:center">Unlocked on ' + new Date(me.paid_at).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' }) + '. One-time payment.</p>' : '') +
-        '<section class="plinks">' +
+        '<section class="plinks">' + (me.onboarded ? '' : '<button class="task" id="finishAura"><span class="tx"><b>Read my aura</b><span>One short question and your interests, whenever you like</span></span><span class="chev" aria-hidden="true">›</span></button>') +
           '<button class="task" id="faqBtn"><span class="tx"><b>Questions and answers</b><span>Everything people usually ask</span></span><span class="chev" aria-hidden="true">›</span></button></section>' +
         '<section class="section" aria-label="Account" style="gap:6px"><button class="secondary" id="signOutBtn">Sign out</button>' +
           '<button class="link danger" id="deleteBtn" style="align-self:center">Delete my account</button></section>');
@@ -1415,6 +1411,7 @@ async function renderProfile() {
   if (!E) {
     $('#shareBubble').onclick = () => openShare('bubble');
     $('#faqBtn').onclick = () => openFAQ();
+    const fa = $('#finishAura'); if (fa) fa.onclick = () => { popPage(true); finishSetup(); };
     $('#signOutBtn').onclick = async () => { await API.signOut(); location.reload(); };
   } else {
     const root = $('#profileBody');
@@ -2430,7 +2427,6 @@ function gateInterests(i) {
     });
 }
 function finishSetup() { G = { email: G.email, step: me.photo_path ? Q0 : 1, answers: G.answers || {}, interests: [] }; gateOnboard(); }
-const setupDone = () => Boolean(me?.onboarded);
 
 async function finishOnboarding() {
   showGate('<div class="grow"></div><div style="display:flex;justify-content:center">' + bubbleHTML(youObj(), 190) + '</div>' +
